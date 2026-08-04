@@ -57,8 +57,8 @@ SSL:      required
 | **Branch** | `main` |
 | **Root Directory** | `apps/api` |
 | **Runtime** | Node |
-| **Build Command** | `npm install` |
-| **Start Command** | `npx tsx src/index.ts` |
+| **Build Command** | `npm run build` *(runs `prisma generate && tsc`)* |
+| **Start Command** | `npm run start:prod` *(runs `prisma migrate deploy && tsx src/index.ts`)* |
 | **Node Version** | `20` |
 | **Auto-Deploy** | Yes (on push to `main`) |
 
