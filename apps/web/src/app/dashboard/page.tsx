@@ -22,7 +22,10 @@ import {
     CheckCircle2,
     XCircle,
     Receipt,
-    FileText
+    FileText,
+    Wallet,
+    AlertCircle,
+    AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -34,6 +37,7 @@ import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
 import { LandlordApplicationsTab } from "@/components/dashboard/LandlordApplicationsTab";
 import { TransactionsTab } from "@/components/dashboard/TransactionsTab";
 import { MonetizationModal } from "@/components/landlord/MonetizationModal";
+import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
 import { Rocket } from "lucide-react";
 import { toast } from "sonner";
 
@@ -125,6 +129,7 @@ function DashboardContent() {
     }, [searchParams, isLoaded, user]);
 
     const [loading, setLoading] = useState(true);
+    const [dbUser, setDbUser] = useState<any>(null);
     const [role, setRole] = useState<string | null>(null);
     const [userVerified, setUserVerified] = useState(false);
     const [stats, setStats] = useState({
@@ -147,10 +152,10 @@ function DashboardContent() {
         try {
             setLoading(true);
 
-            let dbUser;
+            let fetchedUser;
             try {
                 const userRes = await api.get(`/users/me?clerkId=${user.id}`);
-                dbUser = userRes.data.data;
+                fetchedUser = userRes.data.data;
             } catch (err: any) {
                 if (err.response?.status === 404) {
                     const createRes = await api.post("/users", {
@@ -161,17 +166,18 @@ function DashboardContent() {
                         lastName: user.lastName,
                         avatar: user.imageUrl,
                     });
-                    dbUser = createRes.data.data;
+                    fetchedUser = createRes.data.data;
                 } else {
                     throw err;
                 }
             }
 
-            const dbUserId = dbUser.id;
-            setRole(dbUser.role);
-            setUserVerified(dbUser.verified);
+            const dbUserId = fetchedUser.id;
+            setDbUser(fetchedUser);
+            setRole(fetchedUser.role);
+            setUserVerified(fetchedUser.verified);
 
-            if (dbUser.role === "LANDLORD") {
+            if (fetchedUser.role === "LANDLORD") {
                 const res = await api.get(`/properties?landlordId=${dbUserId}`);
                 const userProperties = res.data.data.properties || [];
                 setProperties(userProperties);
@@ -224,6 +230,7 @@ function DashboardContent() {
         { id: "applications", label: "Applications", icon: FileText },
         { id: "tours", label: "Physical Tours", icon: Calendar },
         { id: "transactions", label: "Transactions", icon: Receipt },
+        { id: "payouts", label: "Payout Settings", icon: Wallet },
         { id: "messages", label: "Messages", icon: MessageSquare },
     ];
 
@@ -269,6 +276,34 @@ function DashboardContent() {
                     )}
                 </div>
 
+                {/* Landlord Unlinked Settlement Notice Banner */}
+                {role === "LANDLORD" && dbUser && !dbUser.settlementLinkedAt && (
+                    <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-4 sm:p-5 shadow-sm">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-start sm:items-center gap-3.5">
+                                <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-xs shrink-0">
+                                    <Wallet className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-amber-950 text-sm sm:text-base flex items-center gap-2">
+                                        AfriExchange Settlement Account Required
+                                        <Badge className="bg-amber-200 text-amber-900 border-none text-[10px] font-bold">Action Needed</Badge>
+                                    </h3>
+                                    <p className="text-xs sm:text-sm text-amber-800 mt-0.5">
+                                        Link your verified AfriExchange account to receive released rent escrow payments directly to your mobile wallet.
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                onClick={() => setActiveTab("payouts")}
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm h-10 px-5 rounded-xl shrink-0 shadow-sm"
+                            >
+                                Link Account Now
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Mobile & Desktop Scrollable Tabs */}
                 <div className="bg-[var(--bg-card)] rounded-2xl shadow-[var(--shadow-sm)] border border-[var(--border-color)] mb-6 font-bold overflow-hidden">
                     <div className="border-b border-[var(--border-color)] px-2 sm:px-6">
@@ -300,7 +335,7 @@ function DashboardContent() {
                     <div className="p-4 sm:p-6">
                         {activeTab === "overview" && (
                             role === "LANDLORD"
-                                ? <OverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} />
+                                ? <OverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} dbUser={dbUser} />
                                 : <TenantOverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} />
                         )}
                         {activeTab === "properties" && role === "LANDLORD" && <PropertiesTab properties={properties} loading={loading} onRefresh={fetchDashboardData} />}
@@ -308,6 +343,11 @@ function DashboardContent() {
                         {activeTab === "favorites" && role === "TENANT" && <FavoritesTab favorites={favorites} loading={loading} />}
                         {activeTab === "applications" && (role === "LANDLORD" ? <LandlordApplicationsTab /> : <ApplicationsTab />)}
                         {activeTab === "transactions" && role === "LANDLORD" && <TransactionsTab />}
+                        {activeTab === "payouts" && role === "LANDLORD" && (
+                            <div className="space-y-6">
+                                <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchDashboardData} />
+                            </div>
+                        )}
                         {activeTab === "messages" && <Inbox initialConversationId={activeConversationId} />}
                     </div>
                 </div>
@@ -316,7 +356,7 @@ function DashboardContent() {
     );
 }
 
-function OverviewTab({ stats, activities, loading, onTabChange }: { stats: any; activities: Activity[]; loading: boolean; onTabChange: (tab: string) => void }) {
+function OverviewTab({ stats, activities, loading, onTabChange, dbUser }: { stats: any; activities: Activity[]; loading: boolean; onTabChange: (tab: string) => void; dbUser: any }) {
     const statCards = [
         { label: "Total Properties", value: stats.total, icon: Home, bgColor: "bg-blue-500/10", iconColor: "text-blue-500" },
         { label: "Total Views", value: stats.views, icon: Eye, bgColor: "bg-emerald-500/10", iconColor: "text-emerald-500" },
@@ -351,7 +391,7 @@ function OverviewTab({ stats, activities, loading, onTabChange }: { stats: any; 
             {/* Quick Actions */}
             <div className="bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)]">
                 <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <Link href="/properties/new">
                         <Button className="w-full bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 justify-start gap-3 h-14 rounded-xl text-white">
                             <Plus className="h-5 w-5" />
@@ -361,6 +401,31 @@ function OverviewTab({ stats, activities, loading, onTabChange }: { stats: any; 
                             </div>
                         </Button>
                     </Link>
+
+                    <Button
+                        variant="outline"
+                        onClick={() => onTabChange("payouts")}
+                        className={cn(
+                            "w-full justify-start gap-3 h-14 rounded-xl border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]",
+                            dbUser?.settlementLinkedAt ? "border-emerald-200" : "border-amber-300 bg-amber-50/40"
+                        )}
+                    >
+                        <Wallet className={cn("h-5 w-5 shrink-0", dbUser?.settlementLinkedAt ? "text-emerald-600" : "text-amber-600")} />
+                        <div className="text-left font-bold truncate">
+                            <p className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-1.5">
+                                AfriExchange Payouts
+                                {dbUser?.settlementLinkedAt ? (
+                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-full">Active</span>
+                                ) : (
+                                    <span className="text-[10px] font-bold text-amber-700 bg-amber-200 px-1.5 py-0.2 rounded-full">Link Needed</span>
+                                )}
+                            </p>
+                            <p className="text-xs text-[var(--text-secondary)] font-medium truncate">
+                                {dbUser?.settlementLinkedAt ? "Manage settlement wallet" : "Link account for rent escrow"}
+                            </p>
+                        </div>
+                    </Button>
+
                     <Link href="/search">
                         <Button variant="outline" className="w-full justify-start gap-3 h-14 rounded-xl border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)]">
                             <Search className="h-5 w-5 text-[var(--color-brand-orange)]" />

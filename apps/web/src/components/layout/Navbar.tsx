@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { Menu, X, PlusCircle, Home, Search, BookOpen, LayoutDashboard, Shield } from "lucide-react";
+import { Menu, X, PlusCircle, Home, Search, BookOpen, LayoutDashboard, Shield, Wallet, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/layout/ThemeProvider";
 import { useState } from "react";
@@ -49,11 +49,19 @@ export function Navbar() {
                                             </Link>
                                         )}
                                         {isLandlord && (
-                                            <Link href="/dashboard?tab=properties"
-                                                className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
-                                                    text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
-                                                My Properties
-                                            </Link>
+                                            <>
+                                                <Link href="/dashboard?tab=properties"
+                                                    className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
+                                                        text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
+                                                    My Properties
+                                                </Link>
+                                                <Link href="/dashboard?tab=payouts"
+                                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold
+                                                        text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
+                                                    <Wallet className="h-4 w-4" />
+                                                    Payouts
+                                                </Link>
+                                            </>
                                         )}
                                         <Link href="/dashboard"
                                             className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
@@ -99,7 +107,20 @@ export function Navbar() {
                         </SignedOut>
 
                         <SignedIn>
-                            <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "h-9 w-9" } }} />
+                            <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "h-9 w-9" } }}>
+                                <UserButton.MenuItems>
+                                    <UserButton.Link
+                                        label="Payout Settings"
+                                        labelIcon={<Wallet className="h-4 w-4 text-emerald-600" />}
+                                        href="/dashboard?tab=payouts"
+                                    />
+                                    <UserButton.Link
+                                        label="My Profile"
+                                        labelIcon={<User className="h-4 w-4" />}
+                                        href="/dashboard/profile"
+                                    />
+                                </UserButton.MenuItems>
+                            </UserButton>
                         </SignedIn>
 
                         {!loading && (
@@ -146,12 +167,20 @@ export function Navbar() {
                                     </Link>
                                 )}
                                 {isLandlord && (
-                                    <Link href="/dashboard?tab=properties" onClick={closeMobile}
-                                        className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
-                                            text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
-                                        <Home className="h-5 w-5 text-[var(--color-brand-green)]" />
-                                        My Properties
-                                    </Link>
+                                    <>
+                                        <Link href="/dashboard?tab=properties" onClick={closeMobile}
+                                            className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
+                                                text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
+                                            <Home className="h-5 w-5 text-[var(--color-brand-green)]" />
+                                            My Properties
+                                        </Link>
+                                        <Link href="/dashboard?tab=payouts" onClick={closeMobile}
+                                            className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
+                                                text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
+                                            <Wallet className="h-5 w-5 text-emerald-600" />
+                                            AfriExchange Payouts
+                                        </Link>
+                                    </>
                                 )}
                                 <Link href="/dashboard" onClick={closeMobile}
                                     className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold

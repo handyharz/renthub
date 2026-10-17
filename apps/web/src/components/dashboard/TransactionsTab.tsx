@@ -16,7 +16,8 @@ import {
     ArrowRight,
     KeyRound,
     Star,
-    X
+    X,
+    Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -190,6 +191,32 @@ export function TransactionsTab() {
 
     return (
         <div className="space-y-4">
+            {/* AfriExchange Escrow Settlement Status Banner */}
+            <div className="bg-gradient-to-r from-emerald-50/60 via-teal-50/40 to-white rounded-2xl p-4 sm:p-5 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-center gap-3.5">
+                    <div className="p-2.5 bg-emerald-600 text-white rounded-xl shrink-0 shadow-xs">
+                        <Wallet className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                            AfriExchange Escrow Settlement
+                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                Instant Payout Route
+                            </span>
+                        </h4>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                            When tenant confirms handover, your released escrow is deposited straight into your verified AfriExchange wallet.
+                        </p>
+                    </div>
+                </div>
+
+                <Link href="/dashboard?tab=payouts">
+                    <Button variant="outline" size="sm" className="bg-white hover:bg-emerald-50 text-emerald-700 border-emerald-300 font-bold text-xs shrink-0 shadow-xs">
+                        Manage Payout Account
+                    </Button>
+                </Link>
+            </div>
+
             <h2 className="text-lg font-bold text-[var(--text-primary)] mb-2 flex items-center gap-2">
                 <Receipt className="h-5 w-5 text-[var(--color-brand-green)]" /> Landlord Escrow Transactions ({transactions.length})
             </h2>
