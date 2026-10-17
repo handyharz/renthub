@@ -116,7 +116,7 @@ export function Navbar() {
                             <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "h-9 w-9" } }}>
                                 <UserButton.MenuItems>
                                     <UserButton.Link
-                                        label="Payout Settings"
+                                        label="Payouts & Settlements"
                                         labelIcon={<Wallet className="h-4 w-4 text-emerald-600" />}
                                         href="/dashboard?tab=payouts"
                                     />

@@ -39,6 +39,7 @@ import { LandlordApplicationsTab } from "@/components/dashboard/LandlordApplicat
 import { TransactionsTab } from "@/components/dashboard/TransactionsTab";
 import { MonetizationModal } from "@/components/landlord/MonetizationModal";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
+import { LandlordPayoutHistory } from "@/components/payouts/LandlordPayoutHistory";
 import { Rocket } from "lucide-react";
 import { toast } from "sonner";
 
@@ -231,7 +232,7 @@ function DashboardContent() {
         { id: "applications", label: "Applications", icon: FileText },
         { id: "tours", label: "Physical Tours", icon: Calendar },
         { id: "transactions", label: "Transactions", icon: Receipt },
-        { id: "payouts", label: "Payout Settings", icon: Wallet },
+        { id: "payouts", label: "Payouts & Settlements", icon: Wallet },
         { id: "messages", label: "Messages", icon: MessageSquare },
     ];
 
@@ -358,6 +359,7 @@ function DashboardContent() {
                         {activeTab === "payouts" && role === "LANDLORD" && (
                             <div className="space-y-6">
                                 <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchDashboardData} />
+                                <LandlordPayoutHistory />
                             </div>
                         )}
                         {activeTab === "messages" && <Inbox initialConversationId={activeConversationId} />}
