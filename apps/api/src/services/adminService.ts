@@ -251,18 +251,46 @@ export class AdminService {
 
     async getEscrowTransactions(status?: string) {
         const where: any = {};
-        if (status && status !== "ALL") {
+        if (status === "DISPUTED") {
+            where.disputed = true;
+        } else if (status && status !== "ALL") {
             where.status = status as TransactionStatus;
         }
 
-        const [transactions, totalEscrowVolume, lockedCount, releasedCount, disputedCount] = await Promise.all([
+        const [
+            transactions,
+            lockedVolumeAgg,
+            releasedVolumeAgg,
+            totalVolumeAgg,
+            lockedCount,
+            releasedCount,
+            pendingCount,
+            disputedCount,
+            refundedCount,
+        ] = await Promise.all([
             prisma.transaction.findMany({
                 where,
                 orderBy: { createdAt: "desc" },
                 take: 50,
                 include: {
                     property: {
-                        select: { id: true, title: true, address: true, city: true },
+                        select: {
+                            id: true,
+                            title: true,
+                            address: true,
+                            city: true,
+                            landlord: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    phone: true,
+                                    afriExchangeAccountEmail: true,
+                                    afriExchangeWalletAddress: true,
+                                },
+                            },
+                        },
                     },
                     tenant: {
                         select: { id: true, firstName: true, lastName: true, email: true, phone: true },
@@ -270,21 +298,58 @@ export class AdminService {
                 },
             }),
             prisma.transaction.aggregate({
-                _sum: { totalAmount: true },
+                _sum: { totalAmount: true, rentAmount: true },
                 where: { status: TransactionStatus.ESCROWED },
+            }),
+            prisma.transaction.aggregate({
+                _sum: { totalAmount: true, rentAmount: true },
+                where: { status: TransactionStatus.RELEASED },
+            }),
+            prisma.transaction.aggregate({
+                _sum: { totalAmount: true, rentAmount: true },
             }),
             prisma.transaction.count({ where: { status: TransactionStatus.ESCROWED } }),
             prisma.transaction.count({ where: { status: TransactionStatus.RELEASED } }),
+            prisma.transaction.count({ where: { status: TransactionStatus.PENDING } }),
             prisma.transaction.count({ where: { disputed: true } }),
+            prisma.transaction.count({ where: { status: TransactionStatus.REFUNDED } }),
         ]);
 
+        // Fetch associated landlord payouts
+        const txIds = transactions.map((t) => t.id);
+        const payouts = await prisma.landlordPayout.findMany({
+            where: { transactionId: { in: txIds } },
+            select: {
+                id: true,
+                transactionId: true,
+                status: true,
+                grossAmount: true,
+                netAmount: true,
+                platformFee: true,
+                failureReason: true,
+                idempotencyKey: true,
+                processedAt: true,
+                createdAt: true,
+            },
+        });
+        const payoutMap = new Map(payouts.map((p) => [p.transactionId, p]));
+
+        const transactionsWithPayout = transactions.map((t) => ({
+            ...t,
+            payout: payoutMap.get(t.id) || null,
+        }));
+
         return {
-            transactions,
+            transactions: transactionsWithPayout,
             stats: {
-                totalLockedAmount: totalEscrowVolume._sum.totalAmount || 0,
+                totalLockedAmount: lockedVolumeAgg._sum.totalAmount || 0,
+                totalReleasedAmount: releasedVolumeAgg._sum.rentAmount || releasedVolumeAgg._sum.totalAmount || 0,
+                totalVolume: totalVolumeAgg._sum.totalAmount || 0,
                 lockedCount,
                 releasedCount,
+                pendingCount,
                 disputedCount,
+                refundedCount,
             },
         };
     }
