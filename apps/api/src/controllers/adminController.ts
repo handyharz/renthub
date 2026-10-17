@@ -67,6 +67,25 @@ export class AdminController {
         }
     }
 
+    async revokeVerification(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const { reason } = req.body;
+            const property = await adminService.revokeVerification(id, req.user!.id, reason);
+            return res.status(200).json({
+                success: true,
+                message: "Property verification badge revoked",
+                data: property,
+            });
+        } catch (error: any) {
+            console.error("Revoke verification error:", error);
+            return res.status(400).json({
+                success: false,
+                message: error.message || "Failed to revoke verification",
+            });
+        }
+    }
+
     async getDisputes(req: Request, res: Response) {
         try {
             const disputes = await adminService.getDisputes();

@@ -109,26 +109,75 @@ export class AdminService {
     }
 
     async getPendingVerifications() {
-        return prisma.property.findMany({
-            where: { status: PropertyStatus.PENDING_REVIEW },
-            include: {
-                landlord: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                        phone: true,
-                        verified: true,
+        const [
+            properties,
+            recentlyVerified,
+            pendingReview,
+            verifiedProps,
+            unverifiedProps,
+            verifiedLandlords,
+        ] = await Promise.all([
+            prisma.property.findMany({
+                where: { status: PropertyStatus.PENDING_REVIEW, deletedAt: null },
+                include: {
+                    landlord: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            phone: true,
+                            verified: true,
+                            afriExchangeAccountEmail: true,
+                            afriExchangeWalletAddress: true,
+                        },
+                    },
+                    images: {
+                        orderBy: { order: "asc" },
+                        take: 3,
                     },
                 },
-                images: {
-                    orderBy: { order: "asc" },
-                    take: 3,
+                orderBy: { updatedAt: "asc" },
+            }),
+            prisma.property.findMany({
+                where: { verified: true, deletedAt: null },
+                take: 15,
+                include: {
+                    landlord: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            phone: true,
+                            verified: true,
+                            afriExchangeAccountEmail: true,
+                            afriExchangeWalletAddress: true,
+                        },
+                    },
+                    images: {
+                        orderBy: { order: "asc" },
+                        take: 1,
+                    },
                 },
+                orderBy: { verifiedAt: "desc" },
+            }),
+            prisma.property.count({ where: { status: PropertyStatus.PENDING_REVIEW, deletedAt: null } }),
+            prisma.property.count({ where: { verified: true, deletedAt: null } }),
+            prisma.property.count({ where: { verified: false, deletedAt: null } }),
+            prisma.user.count({ where: { role: "LANDLORD", verified: true, deletedAt: null } }),
+        ]);
+
+        return {
+            properties,
+            recentlyVerified,
+            stats: {
+                pendingReview,
+                verifiedProps,
+                unverifiedProps,
+                verifiedLandlords,
             },
-            orderBy: { updatedAt: "asc" },
-        });
+        };
     }
 
     async approveVerification(propertyId: string, adminId: string) {
@@ -162,6 +211,19 @@ export class AdminService {
                 verified: false,
                 verifiedBy: reason ? `REJECTED:${adminId}:${reason}` : `REJECTED:${adminId}`,
                 status: PropertyStatus.AVAILABLE,
+            },
+        });
+    }
+
+    async revokeVerification(propertyId: string, adminId: string, reason?: string) {
+        const property = await prisma.property.findUnique({ where: { id: propertyId } });
+        if (!property) throw new Error("Property not found");
+
+        return prisma.property.update({
+            where: { id: propertyId },
+            data: {
+                verified: false,
+                verifiedBy: reason ? `REVOKED:${adminId}:${reason}` : `REVOKED:${adminId}`,
             },
         });
     }
