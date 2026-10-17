@@ -176,10 +176,15 @@ function DashboardContent() {
 
             const dbUserId = fetchedUser.id;
             setDbUser(fetchedUser);
-            setRole(fetchedUser.role);
+            
+            // If the user owns properties, treat them as LANDLORD even if DB role was default TENANT
+            const effectiveRole = (fetchedUser.propertiesOwned && fetchedUser.propertiesOwned.length > 0) || fetchedUser.role === "LANDLORD"
+                ? "LANDLORD"
+                : fetchedUser.role;
+            setRole(effectiveRole);
             setUserVerified(fetchedUser.verified);
 
-            if (fetchedUser.role === "LANDLORD") {
+            if (effectiveRole === "LANDLORD") {
                 const res = await api.get(`/properties?landlordId=${dbUserId}`);
                 const userProperties = res.data.data.properties || [];
                 setProperties(userProperties);
