@@ -43,6 +43,13 @@ model User {
   transactions     Transaction[]
   conversations    Conversation[] @relation("UserConversations")
   serviceTransactions ServiceTransaction[]
+  landlordPayouts  LandlordPayout[]
+
+  // AfriExchange settlement info (landlords only)
+  afriExchangeUserId      String?
+  afriExchangeWalletAddress String?
+  afriExchangeAccountEmail  String?
+  settlementLinkedAt        DateTime?
 
   @@index([clerkId])
   @@index([email])
@@ -206,6 +213,7 @@ model Transaction {
   paymentGateway PaymentGateway
   paystackRef    String?           @unique
   flutterwaveRef String?           @unique
+  afriExchangeRef String?          @unique
   status         TransactionStatus @default(PENDING)
   escrowHeld     Boolean           @default(true)
   escrowReleased Boolean           @default(false)
@@ -446,6 +454,7 @@ enum PaymentMethod {
 enum PaymentGateway {
   PAYSTACK
   FLUTTERWAVE
+  AFRIEXCHANGE
 }
 
 enum TransactionStatus {
@@ -535,3 +544,41 @@ enum ApplicationStatus {
   CANCELLED
 }
 
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+// Tracks every automated landlord payout triggered on escrow release
+model LandlordPayout {
+  id              String       @id @default(cuid())
+  transactionId   String       @unique
+  landlordId      String
+  // Amounts (in kobo/smallest unit)
+  grossAmount     Int          // total rent amount held in escrow
+  platformFee     Int          // 2% retained by RentHub
+  netAmount       Int          // grossAmount - platformFee (paid to landlord)
+  // AfriExchange payout details
+  idempotencyKey  String       @unique
+  afriExchangePayoutId String?
+  afriExchangeRef  String?
+  // Status lifecycle
+  status          PayoutStatus @default(PENDING)
+  failureReason   String?
+  attemptCount    Int          @default(0)
+  lastAttemptAt   DateTime?
+  processedAt     DateTime?
+  // Links
+  landlord        User         @relation(fields: [landlordId], references: [id])
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([landlordId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("landlord_payouts")
+}

@@ -17,6 +17,7 @@ import {
     AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { PaymentMethodModal } from "@/components/payment/PaymentMethodModal";
 
 export default function RentPropertyPage() {
     const { id } = useParams();
@@ -26,6 +27,7 @@ export default function RentPropertyPage() {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
     useEffect(() => {
         if (id) fetchProperty();
@@ -43,18 +45,21 @@ export default function RentPropertyPage() {
         }
     };
 
-    const handlePayment = async () => {
+    const handleOpenPaymentModal = () => {
         if (!user) {
-            alert("Please sign in to continue");
+            router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
             return;
         }
+        setIsPaymentModalOpen(true);
+    };
 
+    const handlePaystackPayment = async () => {
         setProcessing(true);
         setError(null);
 
         try {
-            // Step 1: Create transaction
-            const transactionRes = await api.post(`/transactions?clerkId=${user.id}`, {
+            // Step 1: Create transaction with PAYSTACK
+            const transactionRes = await api.post(`/transactions?clerkId=${user?.id}`, {
                 propertyId: property.id,
                 paymentMethod: "CARD",
                 paymentGateway: "PAYSTACK",
@@ -64,7 +69,7 @@ export default function RentPropertyPage() {
             const transaction = transactionRes.data.data;
 
             // Step 2: Initialize payment with Paystack
-            const paymentRes = await api.post(`/payments/initialize?clerkId=${user.id}`, {
+            const paymentRes = await api.post(`/payments/initialize?clerkId=${user?.id}`, {
                 transactionId: transaction.id,
                 callbackUrl: `${window.location.origin}/payment/verify`,
             });
@@ -73,9 +78,46 @@ export default function RentPropertyPage() {
 
             // Step 3: Redirect to Paystack
             window.location.href = authorization_url;
-        } catch (error: any) {
-            console.error("Payment initialization failed:", error);
-            setError(error.response?.data?.message || "Failed to initialize payment. Please try again.");
+        } catch (err: any) {
+            console.error("Paystack initialization failed:", err);
+            setError(err.response?.data?.message || "Failed to initialize payment. Please try again.");
+            setProcessing(false);
+        }
+    };
+
+    const handleAfriExchangePayment = async ({
+        accountEmail,
+        walletAddress,
+    }: {
+        accountEmail: string;
+        walletAddress?: string;
+    }) => {
+        setProcessing(true);
+        setError(null);
+
+        try {
+            // Step 1: Create transaction with AFRIEXCHANGE
+            const transactionRes = await api.post(`/transactions?clerkId=${user?.id}`, {
+                propertyId: property.id,
+                paymentMethod: "BANK_TRANSFER",
+                paymentGateway: "AFRIEXCHANGE",
+                leaseDuration: 12,
+            });
+
+            const transaction = transactionRes.data.data;
+
+            // Step 2: Pay with AfriExchange
+            await api.post(`/payments/afriexchange/pay?clerkId=${user?.id}`, {
+                transactionId: transaction.id,
+                afriExchangeAccountEmail: accountEmail,
+                afriExchangeWalletAddress: walletAddress,
+            });
+
+            setIsPaymentModalOpen(false);
+            router.push("/dashboard?tab=applications&payment=success");
+        } catch (err: any) {
+            console.error("AfriExchange payment failed:", err);
+            setError(err.response?.data?.message || "Failed to process AfriExchange payment. Please try again.");
             setProcessing(false);
         }
     };
@@ -159,8 +201,8 @@ export default function RentPropertyPage() {
                         )}
 
                         <Button
-                            onClick={handlePayment}
-                            disabled={processing || !user}
+                            onClick={handleOpenPaymentModal}
+                            disabled={processing}
                             className="w-full h-14 text-lg font-bold bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 transform active:scale-[0.99] transition-all rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {processing ? (
@@ -259,6 +301,18 @@ export default function RentPropertyPage() {
                     </div>
                 </div>
             </div>
+
+            {property && (
+                <PaymentMethodModal
+                    isOpen={isPaymentModalOpen}
+                    onClose={() => setIsPaymentModalOpen(false)}
+                    totalAmount={totalUpfront}
+                    propertyTitle={property.title}
+                    defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
+                    onPaystack={handlePaystackPayment}
+                    onAfriExchange={handleAfriExchangePayment}
+                />
+            )}
         </div>
     );
 }

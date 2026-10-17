@@ -42,8 +42,10 @@ router.use("/services", serviceTransactionRoutes);
 router.use("/applications", applicationRoutes);
 import statsRoutes from "./stats";
 import adminRoutes from "./admin";
+import payoutRoutes from "./payouts";
 router.use("/stats", statsRoutes);
 router.use("/admin", adminRoutes);
+router.use("/payouts", payoutRoutes);
 
 // Test route
 router.get("/test", (req, res) => {

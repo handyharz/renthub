@@ -28,6 +28,7 @@ import { toast } from "sonner";
 
 import { EscrowStatusModal } from "./EscrowStatusModal";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { PaymentMethodModal } from "@/components/payment/PaymentMethodModal";
 
 interface RentalApplication {
     id: string;
@@ -45,6 +46,7 @@ interface RentalApplication {
         pricePerYear: number;
         cautionFee?: number;
         legalFee?: number;
+        serviceFee?: number;
         images: { url: string; isPrimary: boolean }[];
     };
     landlord?: {
@@ -93,6 +95,7 @@ export function ApplicationsTab() {
     const [loading, setLoading] = useState(true);
     const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
     const [otpLoading, setOtpLoading] = useState<string | null>(null);
+    const [paymentModalApp, setPaymentModalApp] = useState<RentalApplication | null>(null);
 
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [isEscrowModalOpen, setIsEscrowModalOpen] = useState(false);
@@ -121,16 +124,17 @@ export function ApplicationsTab() {
         }
     };
 
-    const handlePayEscrow = async (app: RentalApplication) => {
+    const handlePaystackPayment = async () => {
+        if (!paymentModalApp) return;
         try {
-            setPaymentLoading(app.id);
+            setPaymentLoading(paymentModalApp.id);
 
             const txRes = await api.post("/transactions", {
-                propertyId: app.propertyId,
+                propertyId: paymentModalApp.propertyId,
                 paymentMethod: "CARD",
                 paymentGateway: "PAYSTACK",
-                leaseDuration: app.leaseDuration,
-                applicationId: app.id
+                leaseDuration: paymentModalApp.leaseDuration,
+                applicationId: paymentModalApp.id
             });
 
             const transaction = txRes.data.data;
@@ -145,8 +149,51 @@ export function ApplicationsTab() {
             toast.loading("Redirecting to Paystack...", { duration: 2000 });
             window.location.href = authorization_url;
         } catch (error: any) {
-            console.error("Escrow payment initialization failed:", error);
-            toast.error(error.response?.data?.message || "Failed to initialize payment");
+            console.error("Paystack escrow payment initialization failed:", error);
+            toast.error(error.response?.data?.message || "Failed to initialize Paystack payment");
+        } finally {
+            setPaymentLoading(null);
+        }
+    };
+
+    const handleAfriExchangePayment = async ({
+        accountEmail,
+        walletAddress
+    }: {
+        accountEmail: string;
+        walletAddress?: string;
+    }) => {
+        if (!paymentModalApp) return;
+        try {
+            setPaymentLoading(paymentModalApp.id);
+
+            // 1. Create transaction with AFRIEXCHANGE gateway
+            const txRes = await api.post("/transactions", {
+                propertyId: paymentModalApp.propertyId,
+                paymentMethod: "BANK_TRANSFER",
+                paymentGateway: "AFRIEXCHANGE",
+                leaseDuration: paymentModalApp.leaseDuration,
+                applicationId: paymentModalApp.id
+            });
+
+            const transaction = txRes.data.data;
+
+            // 2. Execute AfriExchange collection
+            const payRes = await api.post("/payments/afriexchange/pay", {
+                transactionId: transaction.id,
+                afriExchangeAccountEmail: accountEmail,
+                afriExchangeWalletAddress: walletAddress
+            });
+
+            toast.success("Escrow Payment Secured!", {
+                description: payRes.data?.message || "Your rent has been successfully paid into escrow via AfriExchange!"
+            });
+
+            setPaymentModalApp(null);
+            await fetchData();
+        } catch (error: any) {
+            console.error("AfriExchange payment failed:", error);
+            toast.error(error.response?.data?.message || "Failed to process AfriExchange payment");
         } finally {
             setPaymentLoading(null);
         }
@@ -293,10 +340,11 @@ export function ApplicationsTab() {
 
                                             <Button
                                                 disabled={paymentLoading === app.id}
-                                                onClick={() => handlePayEscrow(app)}
-                                                className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs rounded-xl shrink-0 h-10 px-4"
+                                                onClick={() => setPaymentModalApp(app)}
+                                                className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs rounded-xl shrink-0 h-10 px-4 gap-2 shadow-sm"
                                             >
-                                                {paymentLoading === app.id ? "Initializing Paystack..." : "Pay Into Escrow (Paystack)"}
+                                                <ShieldCheck className="h-4 w-4" />
+                                                {paymentLoading === app.id ? "Processing..." : "Pay Into Escrow"}
                                             </Button>
                                         </div>
                                     )}
@@ -484,6 +532,25 @@ export function ApplicationsTab() {
                         }
                         fetchData();
                     }}
+                />
+            )}
+
+            {/* Payment Method Gateway Modal */}
+            {paymentModalApp && (
+                <PaymentMethodModal
+                    isOpen={!!paymentModalApp}
+                    onClose={() => setPaymentModalApp(null)}
+                    totalAmount={
+                        paymentModalApp.property?.pricePerYear +
+                        (paymentModalApp.property?.cautionFee || 0) +
+                        (paymentModalApp.property?.legalFee || 0) +
+                        (paymentModalApp.property?.serviceFee || 0) +
+                        Math.round(paymentModalApp.property?.pricePerYear * 0.02)
+                    }
+                    propertyTitle={paymentModalApp.property?.title}
+                    defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
+                    onPaystack={handlePaystackPayment}
+                    onAfriExchange={handleAfriExchangePayment}
                 />
             )}
         </div>

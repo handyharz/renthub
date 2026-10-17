@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { Transaction, TransactionStatus } from "@prisma/client";
 import { smsService } from "./smsService";
+import { afriExchangePayoutService } from "./afriExchangePayoutService";
 import crypto from "crypto";
 
 export class TransactionService {
@@ -384,6 +385,11 @@ export class TransactionService {
             where: { id: transaction.propertyId },
             data: { status: "RENTED" }
         });
+
+        // 🔥 Trigger automated AfriExchange landlord payout (fire-and-forget)
+        afriExchangePayoutService.disburseLandlordPayout(transactionId).catch((err) =>
+            console.error(`[TransactionService] AfriExchange payout failed for tx=${transactionId}:`, err)
+        );
 
         return released;
     }

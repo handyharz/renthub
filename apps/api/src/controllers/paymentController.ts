@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { paymentService } from "../services/paymentService";
 import { transactionService } from "../services/transactionService";
+import { afriExchangePaymentService } from "../services/afriExchangePaymentService";
 import { prisma } from "../config/database";
 
 export class PaymentController {
@@ -300,6 +301,63 @@ export class PaymentController {
             await prisma.serviceTransaction.update({
                 where: { id: serviceTransaction.id },
                 data: { status: "FAILED" as any },
+            });
+        }
+    }
+
+    /**
+     * Pay rent into escrow with AfriExchange
+     * POST /api/payments/afriexchange/pay
+     */
+    async payWithAfriExchange(req: Request, res: Response) {
+        try {
+            let userId = req.user?.id;
+            const { clerkId } = req.query;
+            const {
+                transactionId,
+                afriExchangeAccountEmail,
+                afriExchangeWalletAddress,
+                afriExchangeUserId,
+            } = req.body;
+
+            if (!userId && clerkId && typeof clerkId === "string") {
+                const u = await prisma.user.findUnique({ where: { clerkId } });
+                userId = u?.id;
+            }
+
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Unauthorized: User identification required",
+                });
+            }
+
+            if (!transactionId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "transactionId is required",
+                });
+            }
+
+            const result = await afriExchangePaymentService.collectRent({
+                transactionId,
+                tenantId: userId,
+                afriExchangeAccountEmail,
+                afriExchangeWalletAddress,
+                afriExchangeUserId,
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Escrow payment secured successfully via AfriExchange!",
+                data: result,
+            });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Failed to process AfriExchange payment";
+            console.error("Error processing AfriExchange payment:", message);
+            return res.status(400).json({
+                success: false,
+                message,
             });
         }
     }

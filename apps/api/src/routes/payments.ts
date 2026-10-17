@@ -5,8 +5,11 @@ import { requireAuth } from "../middleware/auth";
 
 const router: Router = Router();
 
-// Initialize payment
+// Initialize payment with Paystack
 router.post("/initialize", requireAuth, paymentController.initializePayment.bind(paymentController));
+
+// Pay into escrow with AfriExchange
+router.post("/afriexchange/pay", requireAuth, paymentController.payWithAfriExchange.bind(paymentController));
 
 // Verify payment
 router.get("/verify/:reference", paymentController.verifyPayment.bind(paymentController));
