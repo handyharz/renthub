@@ -68,6 +68,12 @@ export function Navbar() {
                                                 text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
                                             Dashboard
                                         </Link>
+                                        <Link href="/dashboard/profile"
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold
+                                                text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
+                                            <User className="h-4 w-4" />
+                                            Profile
+                                        </Link>
                                         {isAdmin && (
                                             <Link href="/admin"
                                                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold
@@ -187,6 +193,12 @@ export function Navbar() {
                                         text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
                                     <LayoutDashboard className="h-5 w-5 text-[var(--text-primary)]" />
                                     Dashboard
+                                </Link>
+                                <Link href="/dashboard/profile" onClick={closeMobile}
+                                    className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
+                                        text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
+                                    <User className="h-5 w-5 text-[var(--color-brand-blue)]" />
+                                    My Profile
                                 </Link>
                                 {isAdmin && (
                                     <Link href="/admin" onClick={closeMobile}

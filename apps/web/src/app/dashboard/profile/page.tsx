@@ -66,12 +66,11 @@ export default function ProfilePage() {
         setSaving(true);
         try {
             await api.patch(`/users/me?clerkId=${user?.id}`, formData);
-            // Re-fetch to get updated verifications status (e.g. if phone changed, verified becomes false)
             await fetchUserProfile();
-            alert("Profile updated successfully!");
+            toast.success("Profile updated successfully!");
         } catch (error) {
             console.error("Failed to update profile:", error);
-            alert("Failed to update profile");
+            toast.error("Failed to update profile");
         } finally {
             setSaving(false);
         }
@@ -79,18 +78,18 @@ export default function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-[var(--color-brand-green)]" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <div className="bg-white border-b border-gray-200">
+        <div className="min-h-screen bg-[var(--bg-primary)] pb-20 transition-colors">
+            <div className="bg-[var(--bg-card)] border-b border-[var(--border-color)]">
                 <div className="container-wide py-8">
-                    <h1 className="text-3xl font-bold text-[var(--color-brand-blue)] mb-2">My Profile</h1>
-                    <p className="text-gray-600">Complete your profile to build trust and unlock features.</p>
+                    <h1 className="text-3xl font-extrabold text-[var(--text-primary)] mb-2">My Profile</h1>
+                    <p className="text-sm text-[var(--text-secondary)]">Complete your profile to build trust and unlock features.</p>
                 </div>
             </div>
 
@@ -98,19 +97,19 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Left Column: Form */}
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white p-6 rounded-xl border border-gray-100">
-                            <h3 className="text-lg font-bold text-gray-900 mb-6">Personal Information</h3>
+                        <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-[var(--shadow-sm)]">
+                            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-6">Personal Information</h3>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">First Name</label>
+                                    <label className="block text-sm font-bold text-[var(--text-primary)] mb-2">First Name</label>
                                     <Input
                                         value={formData.firstName}
                                         onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Last Name</label>
+                                    <label className="block text-sm font-bold text-[var(--text-primary)] mb-2">Last Name</label>
                                     <Input
                                         value={formData.lastName}
                                         onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -119,7 +118,7 @@ export default function ProfilePage() {
                             </div>
 
                             <div className="mb-6">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Phone Number</label>
+                                <label className="block text-sm font-bold text-[var(--text-primary)] mb-2">Phone Number</label>
                                 <div className="flex gap-2">
                                     <Input
                                         value={formData.phone}
@@ -127,15 +126,15 @@ export default function ProfilePage() {
                                         placeholder="080..."
                                         className="flex-1"
                                     />
-                                    {dbUser.phoneVerified ? (
-                                        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-100 font-bold">
+                                    {dbUser?.phoneVerified ? (
+                                        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20 font-bold text-xs">
                                             <CheckCircle2 className="h-4 w-4" />
                                             Verified
                                         </div>
                                     ) : (
                                         <Button
                                             variant="outline"
-                                            className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                                            className="text-orange-600 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/10 font-bold text-xs rounded-xl"
                                             onClick={() => setShowVerifyModal(true)}
                                             disabled={!formData.phone || formData.phone.length < 10}
                                         >
@@ -143,11 +142,11 @@ export default function ProfilePage() {
                                         </Button>
                                     )}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">Required for contacting landlords.</p>
+                                <p className="text-xs text-[var(--text-muted)] mt-2">Required for contacting landlords and tenants.</p>
                             </div>
 
                             <Button
-                                className="w-full md:w-auto bg-[var(--color-brand-blue)] font-bold"
+                                className="w-full md:w-auto bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/90 text-white font-bold rounded-xl"
                                 onClick={handleSave}
                                 disabled={saving}
                             >
@@ -155,23 +154,23 @@ export default function ProfilePage() {
                             </Button>
                         </div>
 
-                        <div className="bg-white p-6 rounded-xl border border-gray-100">
+                        <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-[var(--shadow-sm)]">
                             <div className="flex items-center gap-4 mb-6">
-                                <div className="p-3 bg-blue-50 rounded-full">
-                                    <ShieldCheck className="h-6 w-6 text-blue-600" />
+                                <div className="p-3 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-2xl border border-blue-500/20">
+                                    <ShieldCheck className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900">Identity Verification</h3>
-                                    <p className="text-sm text-gray-600">Upload your government ID to get the Verified Badge.</p>
+                                    <h3 className="font-bold text-[var(--text-primary)]">Identity Verification</h3>
+                                    <p className="text-sm text-[var(--text-secondary)]">Upload your government ID to get the Verified Badge.</p>
                                 </div>
                             </div>
 
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">ID Type</label>
+                                        <label className="block text-sm font-bold text-[var(--text-primary)] mb-2">ID Type</label>
                                         <select
-                                            className="w-full flex h-10 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-gray-900"
+                                            className="w-full flex h-10 rounded-md border border-[var(--border-color)] bg-[var(--select-bg)] px-3 py-2 text-sm text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand-green)]"
                                             value={formData.idType}
                                             onChange={(e) => setFormData({ ...formData, idType: e.target.value })}
                                         >
@@ -183,7 +182,7 @@ export default function ProfilePage() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">ID Number</label>
+                                        <label className="block text-sm font-bold text-[var(--text-primary)] mb-2">ID Number</label>
                                         <Input
                                             value={formData.idNumber}
                                             onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })}
@@ -193,7 +192,7 @@ export default function ProfilePage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">ID Document (Image or PDF)</label>
+                                    <label className="block text-sm font-bold text-[var(--text-primary)] mb-2">ID Document (Image or PDF)</label>
                                     <DocumentUploader
                                         userId={dbUser?.id}
                                         currentUrl={dbUser?.idDocumentUrl}
@@ -213,12 +212,12 @@ export default function ProfilePage() {
                     <div className="space-y-6">
                         <TrustScore user={dbUser} />
 
-                        <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
-                            <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4" />
+                        <div className="bg-blue-500/10 p-6 rounded-2xl border border-blue-500/20">
+                            <h4 className="font-bold text-blue-900 dark:text-blue-200 mb-3 flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                 Why complete your profile?
                             </h4>
-                            <ul className="text-sm text-blue-800 space-y-2 list-disc list-inside">
+                            <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-2 list-disc list-inside">
                                 <li>Landlords trust verified profiles 3x more.</li>
                                 <li>Unlock direct messaging with landlords.</li>
                                 <li>Get priority for property viewings.</li>
@@ -236,7 +235,7 @@ export default function ProfilePage() {
                 phone={formData.phone}
                 onVerified={() => {
                     fetchUserProfile(); // Refresh state
-                    alert("Phone verified successfully!");
+                    toast.success("Phone verified successfully!");
                 }}
             />
         </div>

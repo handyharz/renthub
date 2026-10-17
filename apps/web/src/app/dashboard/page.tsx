@@ -26,6 +26,7 @@ import {
     Wallet,
     AlertCircle,
     AlertTriangle,
+    User,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -266,14 +267,25 @@ function DashboardContent() {
                                 : "Manage your home search, applications, and messages"}
                         </p>
                     </div>
-                    {role === "TENANT" && (
-                        <Link href="/search" className="w-full sm:w-auto">
-                            <Button className="w-full sm:w-auto bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-5 rounded-xl">
-                                <Search className="mr-2 h-4 w-4" />
-                                Find a Home
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <Link href="/dashboard/profile" className="flex-1 sm:flex-initial">
+                            <Button
+                                variant="outline"
+                                className="w-full sm:w-auto border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] font-bold text-xs sm:text-sm h-11 px-4 rounded-xl gap-2 shadow-xs transition-colors"
+                            >
+                                <User className="h-4 w-4 text-[var(--color-brand-blue)]" />
+                                My Profile
                             </Button>
                         </Link>
-                    )}
+                        {role === "TENANT" && (
+                            <Link href="/search" className="flex-1 sm:flex-initial">
+                                <Button className="w-full sm:w-auto bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-5 rounded-xl">
+                                    <Search className="mr-2 h-4 w-4" />
+                                    Find a Home
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
                 </div>
 
                 {/* Landlord Unlinked Settlement Notice Banner */}
