@@ -144,7 +144,7 @@ export class AfriExchangePaymentService {
                 let response;
                 try {
                     response = await axios.post(
-                        `${this.baseUrl}/api/v1/integrations/renthub/collections`,
+                        `${this.baseUrl}/integrations/renthub/collections`,
                         payload,
                         {
                             headers: {
@@ -158,7 +158,7 @@ export class AfriExchangePaymentService {
                     if (axios.isAxiosError(endpointErr) && endpointErr.response?.status === 404) {
                         // Fallback to kaalis collection endpoint if no dedicated RentHub route exists yet
                         response = await axios.post(
-                            `${this.baseUrl}/api/v1/integrations/kaalis/collections`,
+                            `${this.baseUrl}/integrations/kaalis/collections`,
                             payload,
                             {
                                 headers: {
@@ -351,7 +351,7 @@ export class AfriExchangePaymentService {
                 };
 
                 const response = await axios.post(
-                    `${this.baseUrl}/api/v1/integrations/renthub/checkout-session`,
+                    `${this.baseUrl}/integrations/renthub/checkout-session`,
                     payload,
                     {
                         headers: {
@@ -450,7 +450,7 @@ export class AfriExchangePaymentService {
 
         if (this.enabled) {
             const response = await axios.get(
-                `${this.baseUrl}/api/v1/integrations/renthub/verify/${reference}`,
+                `${this.baseUrl}/integrations/renthub/verify/${reference}`,
                 {
                     headers: {
                         "x-renthub-api-key": this.apiKey,

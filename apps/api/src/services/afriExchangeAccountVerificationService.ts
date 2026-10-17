@@ -55,7 +55,7 @@ export class AfriExchangeAccountVerificationService {
         }
 
         const res = await axios.post(
-            `${this.baseUrl}/api/v1/integrations/renthub/verify-account`,
+            `${this.baseUrl}/integrations/renthub/verify-account`,
             {
                 ...params,
                 tokenType: params.tokenType || "NT",
@@ -76,7 +76,7 @@ export class AfriExchangeAccountVerificationService {
 
         try {
             const res = await axios.post(
-                `${this.baseUrl}/api/v1/integrations/renthub/link-verification/request`,
+                `${this.baseUrl}/integrations/renthub/link-verification/request`,
                 {
                     ...params,
                     tokenType: params.tokenType || "NT",
@@ -101,7 +101,7 @@ export class AfriExchangeAccountVerificationService {
 
         try {
             const res = await axios.post(
-                `${this.baseUrl}/api/v1/integrations/renthub/link-verification/confirm`,
+                `${this.baseUrl}/integrations/renthub/link-verification/confirm`,
                 { requestId, code: code.trim() },
                 { headers: this.getHeaders(), timeout: 15000 }
             );

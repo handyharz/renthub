@@ -173,7 +173,7 @@ export class AfriExchangePayoutService {
             };
 
             const response = await axios.post(
-                `${this.baseUrl}/api/v1/integrations/renthub/payouts`,
+                `${this.baseUrl}/integrations/renthub/payouts`,
                 payload,
                 {
                     headers: {
