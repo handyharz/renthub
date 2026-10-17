@@ -101,6 +101,7 @@ export class UserService {
      * Get all users (admin only)
      */
     async getAllUsers(filters?: {
+        search?: string;
         role?: UserRole;
         status?: UserStatus;
         verified?: boolean;
@@ -108,10 +109,11 @@ export class UserService {
         offset?: number;
     }) {
         const {
+            search,
             role,
             status,
             verified,
-            limit = 20,
+            limit = 50,
             offset = 0,
         } = filters || {};
 
@@ -120,9 +122,17 @@ export class UserService {
             ...(role && { role }),
             ...(status && { status }),
             ...(verified !== undefined && { verified }),
+            ...(search && {
+                OR: [
+                    { firstName: { contains: search, mode: "insensitive" } },
+                    { lastName: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } },
+                    { phone: { contains: search, mode: "insensitive" } },
+                ],
+            }),
         };
 
-        const [users, total] = await Promise.all([
+        const [users, total, countsByRole, verifiedCount] = await Promise.all([
             prisma.user.findMany({
                 where,
                 select: {
@@ -136,19 +146,48 @@ export class UserService {
                     role: true,
                     status: true,
                     verified: true,
+                    afriExchangeAccountEmail: true,
+                    afriExchangeWalletAddress: true,
+                    settlementLinkedAt: true,
                     createdAt: true,
                     lastLoginAt: true,
+                    _count: {
+                        select: {
+                            propertiesOwned: true,
+                            transactions: true,
+                        },
+                    },
                 },
                 orderBy: { createdAt: "desc" },
                 take: limit,
                 skip: offset,
             }),
             prisma.user.count({ where }),
+            prisma.user.groupBy({
+                by: ["role"],
+                where: { deletedAt: null },
+                _count: { id: true },
+            }),
+            prisma.user.count({
+                where: { verified: true, deletedAt: null },
+            }),
         ]);
+
+        const roleCounts = countsByRole.reduce((acc, curr) => {
+            acc[curr.role] = curr._count.id;
+            return acc;
+        }, {} as Record<string, number>);
 
         return {
             users,
             total,
+            stats: {
+                totalUsers: total,
+                tenants: roleCounts["TENANT"] || 0,
+                landlords: roleCounts["LANDLORD"] || 0,
+                admins: roleCounts["ADMIN"] || 0,
+                verifiedCount,
+            },
             limit,
             offset,
             hasMore: offset + limit < total,

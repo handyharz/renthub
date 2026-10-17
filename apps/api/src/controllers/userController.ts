@@ -225,13 +225,14 @@ export class UserController {
      */
     async getAllUsers(req: Request, res: Response) {
         try {
-            const { role, status, verified, limit, offset } = req.query;
+            const { role, status, verified, search, limit, offset } = req.query;
 
             const result = await userService.getAllUsers({
+                search: typeof search === "string" ? search : undefined,
                 role: typeof role === "string" ? (role as UserRole) : undefined,
                 status: typeof status === "string" ? (status as UserStatus) : undefined,
                 verified: verified !== undefined ? verified === "true" : undefined,
-                limit: limit && typeof limit === "string" ? parseInt(limit) : 20,
+                limit: limit && typeof limit === "string" ? parseInt(limit) : 50,
                 offset: offset && typeof offset === "string" ? parseInt(offset) : 0,
             });
 
