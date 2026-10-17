@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Prisma, PayoutStatus } from "@prisma/client";
 import { prisma } from "../config/database";
 import { afriExchangePayoutService } from "../services/afriExchangePayoutService";
+import { afriExchangeAccountVerificationService } from "../services/afriExchangeAccountVerificationService";
 
 /** Helper to extract a safe error message from unknown catch values */
 const getErrorMessage = (error: unknown): string =>
@@ -9,13 +10,147 @@ const getErrorMessage = (error: unknown): string =>
 
 /**
  * Controller for:
- * 1. Landlord AfriExchange wallet linking (self-service)
+ * 1. Landlord AfriExchange wallet linking (self-service with 2FA OTP verification)
  * 2. Landlord payout history & summary
  * 3. Admin: all payouts, retry failed, stats
  */
 export class PayoutController {
     // ─────────────────────────────────────────────
-    // LANDLORD: Link AfriExchange Account
+    // LANDLORD: Step 1 - Request 2FA OTP verification code
+    // POST /api/payouts/link-verification/request
+    // ─────────────────────────────────────────────
+    async requestLinkVerification(req: Request, res: Response) {
+        try {
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const { afriExchangeUserId, walletAddress, accountEmail, tokenType = "NT" } = req.body;
+            if (!afriExchangeUserId && !walletAddress && !accountEmail) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Provide an AfriExchange user ID, wallet address, or account email",
+                });
+            }
+
+            const result = await afriExchangeAccountVerificationService.requestLinkVerification({
+                afriExchangeUserId,
+                walletAddress,
+                accountEmail,
+                tokenType,
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "AfriExchange verification code sent successfully",
+                data: result,
+            });
+        } catch (error: any) {
+            return res.status(400).json({
+                success: false,
+                message: error.message || "Failed to request link verification",
+            });
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // LANDLORD: Step 2 - Confirm 6-digit OTP code & link account
+    // POST /api/payouts/link-verification/confirm
+    // ─────────────────────────────────────────────
+    async confirmLinkVerification(req: Request, res: Response) {
+        try {
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const { requestId, code } = req.body;
+            if (!requestId || !code) {
+                return res.status(400).json({
+                    success: false,
+                    message: "requestId and verification code are required",
+                });
+            }
+
+            const result = await afriExchangeAccountVerificationService.confirmLinkVerification(
+                requestId,
+                code
+            );
+
+            const updated = await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    afriExchangeUserId: result.user.id,
+                    afriExchangeAccountEmail: result.user.email,
+                    afriExchangeWalletAddress: result.wallet.blockchain_address,
+                    settlementLinkedAt: new Date(),
+                },
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    afriExchangeUserId: true,
+                    afriExchangeWalletAddress: true,
+                    afriExchangeAccountEmail: true,
+                    settlementLinkedAt: true,
+                },
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "AfriExchange settlement account verified and linked successfully!",
+                data: {
+                    user: updated,
+                    afriExchange: result,
+                },
+            });
+        } catch (error: any) {
+            return res.status(400).json({
+                success: false,
+                message: error.message || "Failed to confirm verification code",
+            });
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // LANDLORD: Unlink AfriExchange Account
+    // DELETE /api/payouts/unlink-afriexchange
+    // ─────────────────────────────────────────────
+    async unlinkAfriExchangeAccount(req: Request, res: Response) {
+        try {
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const updated = await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    afriExchangeUserId: null,
+                    afriExchangeWalletAddress: null,
+                    afriExchangeAccountEmail: null,
+                    settlementLinkedAt: null,
+                },
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "AfriExchange account unlinked successfully",
+                data: updated,
+            });
+        } catch (error: any) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to unlink account",
+                error: getErrorMessage(error),
+            });
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // LANDLORD: Direct link (fallback/admin compatible)
     // PUT /api/payouts/link-afriexchange
     // ─────────────────────────────────────────────
     async linkAfriExchangeAccount(req: Request, res: Response) {

@@ -5,7 +5,28 @@ import { requireAuth, requireRole } from "../middleware/auth";
 const router: Router = Router();
 
 // ─── Landlord self-service routes ───────────────────────────────────────────
-// Link/update AfriExchange wallet for automated payouts
+// 2FA OTP Link Verification Request
+router.post(
+    "/link-verification/request",
+    requireAuth,
+    payoutController.requestLinkVerification.bind(payoutController)
+);
+
+// 2FA OTP Link Verification Confirm
+router.post(
+    "/link-verification/confirm",
+    requireAuth,
+    payoutController.confirmLinkVerification.bind(payoutController)
+);
+
+// Unlink AfriExchange account
+router.delete(
+    "/unlink-afriexchange",
+    requireAuth,
+    payoutController.unlinkAfriExchangeAccount.bind(payoutController)
+);
+
+// Link/update AfriExchange wallet for automated payouts (direct fallback)
 router.put(
     "/link-afriexchange",
     requireAuth,
