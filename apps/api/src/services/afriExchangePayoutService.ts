@@ -120,24 +120,29 @@ export class AfriExchangePayoutService {
             return;
         }
 
-        // 6. Check landlord has AfriExchange account linked (or fallback to landlord primary email)
-        const afriEmail = landlord.afriExchangeAccountEmail || landlord.email;
-        const afriWallet = landlord.afriExchangeWalletAddress;
-        const afriUserId = landlord.afriExchangeUserId;
+        // 6. Strict Security Check: Landlord MUST have explicitly linked & verified their AfriExchange settlement account
+        const isSettlementLinked = Boolean(
+            landlord.settlementLinkedAt &&
+            (landlord.afriExchangeUserId || landlord.afriExchangeWalletAddress || landlord.afriExchangeAccountEmail)
+        );
 
-        if (!afriUserId && !afriWallet && !afriEmail) {
+        if (!isSettlementLinked) {
             await prisma.landlordPayout.update({
                 where: { id: payoutRecord.id },
                 data: {
                     status: "SKIPPED",
-                    failureReason: "Landlord has not linked an AfriExchange wallet and no email was found",
+                    failureReason: "AfriExchange settlement account not linked. Landlord must verify and link their AfriExchange account in the Payouts dashboard to receive released escrow.",
                 },
             });
             console.warn(
-                `[AfriExchangePayoutService] Payout SKIPPED for landlord ${landlord.id} — no AfriExchange account or email found.`
+                `[AfriExchangePayoutService] Strict Security Enforcement: Payout SKIPPED for tx=${transactionId} landlord=${landlord.id}. AfriExchange settlement account not verified or linked.`
             );
             return;
         }
+
+        const afriEmail = landlord.afriExchangeAccountEmail;
+        const afriWallet = landlord.afriExchangeWalletAddress;
+        const afriUserId = landlord.afriExchangeUserId;
 
         // 7. Mark as PROCESSING
         await prisma.landlordPayout.update({

@@ -98,20 +98,21 @@ export class PayoutController {
                 },
             });
 
-            // Auto-queue any previously SKIPPED payouts for this landlord now that wallet is verified
+            // Auto-disburse any previously SKIPPED payouts for this landlord now that wallet is verified
             try {
-                await prisma.landlordPayout.updateMany({
+                const skippedPayouts = await prisma.landlordPayout.findMany({
                     where: {
                         landlordId: userId,
                         status: "SKIPPED",
                     },
-                    data: {
-                        status: "PENDING",
-                        failureReason: null,
-                    },
                 });
+                for (const p of skippedPayouts) {
+                    afriExchangePayoutService.disburseLandlordPayout(p.transactionId).catch((err) =>
+                        console.error(`[payoutController] Auto-disburse failed for tx=${p.transactionId}:`, err)
+                    );
+                }
             } catch (autoQueueErr) {
-                console.warn("[payoutController] Failed to auto-queue skipped payouts after account link:", autoQueueErr);
+                console.warn("[payoutController] Failed to auto-disburse skipped payouts after account link:", autoQueueErr);
             }
 
             return res.status(200).json({
@@ -204,6 +205,23 @@ export class PayoutController {
                 },
             });
 
+            // Auto-disburse any previously SKIPPED payouts for this landlord now that wallet is verified
+            try {
+                const skippedPayouts = await prisma.landlordPayout.findMany({
+                    where: {
+                        landlordId: userId,
+                        status: "SKIPPED",
+                    },
+                });
+                for (const p of skippedPayouts) {
+                    afriExchangePayoutService.disburseLandlordPayout(p.transactionId).catch((err) =>
+                        console.error(`[payoutController] Auto-disburse failed for tx=${p.transactionId}:`, err)
+                    );
+                }
+            } catch (autoQueueErr) {
+                console.warn("[payoutController] Failed to auto-disburse skipped payouts after account link:", autoQueueErr);
+            }
+
             return res.status(200).json({
                 success: true,
                 message: "AfriExchange settlement account linked successfully. Future payouts will be sent automatically.",
@@ -237,9 +255,10 @@ export class PayoutController {
             });
 
             const linked = !!(
-                user?.afriExchangeUserId ||
+                user?.settlementLinkedAt &&
+                (user?.afriExchangeUserId ||
                 user?.afriExchangeWalletAddress ||
-                user?.afriExchangeAccountEmail
+                user?.afriExchangeAccountEmail)
             );
 
             return res.status(200).json({
@@ -435,6 +454,23 @@ export class PayoutController {
                     settlementLinkedAt: true,
                 },
             });
+
+            // Auto-disburse any previously SKIPPED payouts for this landlord now that wallet is verified
+            try {
+                const skippedPayouts = await prisma.landlordPayout.findMany({
+                    where: {
+                        landlordId,
+                        status: "SKIPPED",
+                    },
+                });
+                for (const p of skippedPayouts) {
+                    afriExchangePayoutService.disburseLandlordPayout(p.transactionId).catch((err) =>
+                        console.error(`[payoutController] Auto-disburse failed for tx=${p.transactionId}:`, err)
+                    );
+                }
+            } catch (autoQueueErr) {
+                console.warn("[payoutController] Failed to auto-disburse skipped payouts after admin account link:", autoQueueErr);
+            }
 
             return res.status(200).json({
                 success: true,
