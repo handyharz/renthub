@@ -204,8 +204,10 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* AfriExchange Payout Settlement Setup (Kaalis Style with 2FA) */}
-                        <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchUserProfile} />
+                        {/* AfriExchange Payout Settlement Setup (Landlords Only) */}
+                        {dbUser?.role === "LANDLORD" && (
+                            <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchUserProfile} />
+                        )}
                     </div>
 
                     {/* Right Column: Score & Tips */}
