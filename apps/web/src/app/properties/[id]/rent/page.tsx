@@ -110,14 +110,22 @@ export default function RentPropertyPage() {
 
             const transaction = transactionRes.data.data;
 
-            // Step 2: Pay with AfriExchange
-            await api.post(`/payments/afriexchange/pay?clerkId=${user?.id}`, {
+            // Step 2: Initialize hosted checkout session with AfriExchange
+            const payRes = await api.post(`/payments/afriexchange/pay?clerkId=${user?.id}`, {
                 transactionId: transaction.id,
                 afriExchangeAccountEmail: accountEmail,
                 afriExchangeWalletAddress: walletAddress,
                 tokenType: tokenType || "NT",
                 amountInToken,
+                returnUrl: `${window.location.origin}/dashboard?tab=applications&payment=success&txId=${transaction.id}`,
             });
+
+            const paymentUrl = payRes.data?.data?.paymentUrl;
+            if (paymentUrl) {
+                setIsPaymentModalOpen(false);
+                window.location.href = paymentUrl;
+                return;
+            }
 
             setIsPaymentModalOpen(false);
             router.push("/dashboard?tab=applications&payment=success");

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     FileText,
     Clock,
@@ -90,6 +90,7 @@ interface Transaction {
 export function ApplicationsTab() {
     const { user } = useUser();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [applications, setApplications] = useState<RentalApplication[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
@@ -105,8 +106,28 @@ export function ApplicationsTab() {
     useEffect(() => {
         if (user) {
             fetchData();
+
+            // Auto-verify payment if returning from AfriExchange hosted checkout
+            const paymentStatus = searchParams.get("payment");
+            const ref = searchParams.get("reference") || searchParams.get("ref");
+            if (paymentStatus === "success") {
+                if (ref) {
+                    api.get(`/payments/afriexchange/verify/${encodeURIComponent(ref)}`)
+                        .then(() => {
+                            toast.success("Payment Verified & Escrow Secured!", {
+                                description: "Your rent payment is safely held in escrow.",
+                            });
+                            fetchData();
+                        })
+                        .catch((err) => {
+                            console.warn("Verification check:", err);
+                        });
+                } else {
+                    toast.success("Escrow Payment Successful!");
+                }
+            }
         }
-    }, [user]);
+    }, [user, searchParams]);
 
     const fetchData = async () => {
         try {
@@ -182,14 +203,22 @@ export function ApplicationsTab() {
 
             const transaction = txRes.data.data;
 
-            // 2. Execute AfriExchange collection
+            // 2. Initialize AfriExchange hosted payment checkout session
             const payRes = await api.post("/payments/afriexchange/pay", {
                 transactionId: transaction.id,
                 afriExchangeAccountEmail: accountEmail,
                 afriExchangeWalletAddress: walletAddress,
                 tokenType: tokenType || "NT",
                 amountInToken,
+                returnUrl: `${window.location.origin}/dashboard?tab=applications&payment=success&txId=${transaction.id}`,
             });
+
+            const paymentUrl = payRes.data?.data?.paymentUrl;
+            if (paymentUrl) {
+                toast.loading("Redirecting to AfriExchange Checkout...", { duration: 2500 });
+                window.location.href = paymentUrl;
+                return;
+            }
 
             toast.success("Escrow Payment Secured!", {
                 description: payRes.data?.message || "Your rent has been successfully paid into escrow via AfriExchange!"

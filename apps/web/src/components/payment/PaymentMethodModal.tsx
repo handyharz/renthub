@@ -334,10 +334,21 @@ export function PaymentMethodModal({
                                     </div>
                                 </div>
 
-                                {/* Email input */}
+                                {/* Secure Hosted Checkout Notice */}
+                                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs">
+                                    <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                                    <div>
+                                        <p className="font-bold">Secure Hosted Authorization</p>
+                                        <p className="text-[11px] opacity-90 mt-0.5">
+                                            You will be securely redirected to AfriExchange&apos;s encrypted portal to review and authorize this payment with your account password.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Email input (pre-filled, optional) */}
                                 <div>
                                     <label className="block text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1">
-                                        AfriExchange Account Email *
+                                        AfriExchange Account Email <span className="text-[10px] font-normal lowercase">(optional pre-fill)</span>
                                     </label>
                                     <input
                                         type="email"
@@ -348,20 +359,6 @@ export function PaymentMethodModal({
                                         }}
                                         placeholder="your-email@afriexchange.com"
                                         className="w-full text-xs font-semibold px-3 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-brand-green)] transition-all"
-                                    />
-                                </div>
-
-                                {/* Wallet Address (optional) */}
-                                <div>
-                                    <label className="block text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1">
-                                        Wallet Address <span className="text-[10px] font-normal lowercase">(optional)</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={afriWallet}
-                                        onChange={(e) => setAfriWallet(e.target.value)}
-                                        placeholder="0x..."
-                                        className="w-full text-xs font-mono px-3 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-brand-green)] transition-all"
                                     />
                                 </div>
                             </div>
@@ -413,14 +410,14 @@ export function PaymentMethodModal({
                 {/* Submit button */}
                 <div className="pt-2">
                     <Button
-                        disabled={loading || (selectedMethod === "AFRIEXCHANGE" && !afriEmail.trim())}
+                        disabled={loading}
                         onClick={handleConfirm}
                         className="w-full h-11 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-sm rounded-xl gap-2 shadow-lg transition-all"
                     >
                         {loading ? (
                             <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Processing Payment...
+                                Preparing Checkout...
                             </>
                         ) : selectedMethod === "PAYSTACK" ? (
                             <>
@@ -428,8 +425,8 @@ export function PaymentMethodModal({
                             </>
                         ) : (
                             <>
-                                Pay {TOKEN_RATES[tokenType].formatConverted(convertedTokenAmount)} with AfriExchange{" "}
-                                <Zap className="h-4 w-4" />
+                                Authorize & Pay {TOKEN_RATES[tokenType].formatConverted(convertedTokenAmount)} on AfriExchange{" "}
+                                <ArrowRight className="h-4 w-4" />
                             </>
                         )}
                     </Button>

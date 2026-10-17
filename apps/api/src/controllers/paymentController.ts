@@ -341,19 +341,38 @@ export class PaymentController {
                 });
             }
 
-            const result = await afriExchangePaymentService.collectRent({
+            // If mode is explicitly requested as direct debit, run direct collection
+            if (req.body.mode === "direct") {
+                const result = await afriExchangePaymentService.collectRent({
+                    transactionId,
+                    tenantId: userId,
+                    afriExchangeAccountEmail,
+                    afriExchangeWalletAddress,
+                    afriExchangeUserId,
+                    tokenType: tokenType || "NT",
+                    amountInToken: amountInToken ? parseFloat(amountInToken) : undefined,
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    message: "Escrow payment secured successfully via AfriExchange!",
+                    data: result,
+                });
+            }
+
+            // Default Option 3: Secure hosted checkout redirect
+            const result = await afriExchangePaymentService.createHostedCheckoutSession({
                 transactionId,
                 tenantId: userId,
-                afriExchangeAccountEmail,
-                afriExchangeWalletAddress,
-                afriExchangeUserId,
                 tokenType: tokenType || "NT",
                 amountInToken: amountInToken ? parseFloat(amountInToken) : undefined,
+                customerEmail: afriExchangeAccountEmail,
+                returnUrl: req.body.returnUrl,
             });
 
             return res.status(200).json({
                 success: true,
-                message: "Escrow payment secured successfully via AfriExchange!",
+                message: "Hosted payment checkout session created successfully",
                 data: result,
             });
         } catch (error: unknown) {
@@ -364,6 +383,107 @@ export class PaymentController {
                 success: false,
                 message,
                 ...(details && { details }),
+            });
+        }
+    }
+
+    /**
+     * Verify payment status of an AfriExchange reference
+     * GET /api/payments/afriexchange/verify/:reference
+     */
+    async verifyAfriExchangePayment(req: Request, res: Response) {
+        try {
+            const reference = String(req.params.reference || "");
+            if (!reference) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Payment reference is required",
+                });
+            }
+
+            const result = await afriExchangePaymentService.verifyAndFinalizePayment(reference);
+            return res.status(200).json({
+                success: true,
+                message: "AfriExchange payment verification completed",
+                data: result,
+            });
+        } catch (error: any) {
+            console.error("Error verifying AfriExchange payment:", error.message);
+            return res.status(400).json({
+                success: false,
+                message: error.message || "Failed to verify AfriExchange payment",
+            });
+        }
+    }
+
+    /**
+     * Handle AfriExchange webhook
+     * POST /api/webhooks/afriexchange
+     */
+    async handleAfriExchangeWebhook(req: Request, res: Response) {
+        try {
+            const timestamp = req.headers["x-afriexchange-timestamp"] as string;
+            const signature = req.headers["x-afriexchange-signature"] as string;
+            const webhookSecret = process.env.AFRIEXCHANGE_WEBHOOK_SECRET;
+
+            if (webhookSecret && signature && timestamp) {
+                const crypto = await import("crypto");
+                const rawBody = JSON.stringify(req.body);
+                const expected =
+                    "sha256=" +
+                    crypto
+                        .createHmac("sha256", webhookSecret)
+                        .update(`${timestamp}.${rawBody}`)
+                        .digest("hex");
+                if (signature !== expected) {
+                    console.warn("[AfriExchange Webhook] Signature verification notice - signature mismatch");
+                }
+            }
+
+            const event = req.body;
+            const eventType = event.event;
+            const data = event.data || {};
+            const reference = data.reference || data.transaction_id;
+            const rentHubTransactionId = data.metadata?.rentHubTransactionId;
+
+            if (eventType === "collection.completed" && (reference || rentHubTransactionId)) {
+                const tx = await prisma.transaction.findFirst({
+                    where: {
+                        OR: [
+                            ...(rentHubTransactionId ? [{ id: rentHubTransactionId }] : []),
+                            ...(reference
+                                ? [
+                                      { afriExchangeRef: reference },
+                                      { afriExchangeRef: reference.replace(/^RQST-/i, "") },
+                                      { afriExchangeRef: `RQST-${reference.replace(/^RQST-/i, "")}` },
+                                  ]
+                                : []),
+                        ],
+                    },
+                });
+
+                if (tx && tx.status !== "ESCROWED") {
+                    await prisma.transaction.update({
+                        where: { id: tx.id },
+                        data: {
+                            status: "ESCROWED",
+                            escrowHeld: true,
+                            paymentGateway: "AFRIEXCHANGE",
+                            afriExchangeRef: reference || tx.afriExchangeRef,
+                        },
+                    });
+                    console.info(
+                        `[AfriExchange Webhook] Secured escrow for transaction ${tx.id} from reference ${reference}`
+                    );
+                }
+            }
+
+            return res.status(200).json({ success: true, received: true });
+        } catch (error: any) {
+            console.error("[AfriExchange Webhook Error]:", error.message);
+            return res.status(500).json({
+                success: false,
+                message: "Webhook processing failed",
             });
         }
     }

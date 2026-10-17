@@ -10,6 +10,7 @@ router.post("/initialize", requireAuth, paymentController.initializePayment.bind
 
 // Pay into escrow with AfriExchange
 router.post("/afriexchange/pay", requireAuth, paymentController.payWithAfriExchange.bind(paymentController));
+router.get("/afriexchange/verify/:reference", paymentController.verifyAfriExchangePayment.bind(paymentController));
 
 // Verify payment
 router.get("/verify/:reference", paymentController.verifyPayment.bind(paymentController));
