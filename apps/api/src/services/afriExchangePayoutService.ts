@@ -272,6 +272,14 @@ export class AfriExchangePayoutService {
         });
 
         return {
+            totalPayouts: total,
+            completedPayouts: completed,
+            pendingPayouts: pending,
+            processingPayouts: processing,
+            failedPayouts: failed,
+            skippedPayouts: skipped,
+            totalDisbursedAmount: totalNetPaid._sum.netAmount || 0,
+            totalPlatformFees: totalPlatformFee._sum.platformFee || 0,
             counts: { total, pending, processing, completed, failed, skipped },
             totals: {
                 netPaidToLandlords: totalNetPaid._sum.netAmount || 0,
