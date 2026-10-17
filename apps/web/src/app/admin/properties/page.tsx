@@ -15,6 +15,8 @@ import {
     Wallet,
     X,
     Eye,
+    Bed,
+    Bath,
 } from "lucide-react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatCard } from "@/components/admin/StatCard";
@@ -23,7 +25,6 @@ import { Button } from "@/components/ui/Button";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import { toast } from "sonner";
-import Image from "next/image";
 import Link from "next/link";
 
 interface PropertyItem {
@@ -36,7 +37,7 @@ interface PropertyItem {
     pricePerYear: number;
     bedrooms: number;
     bathrooms: number;
-    status: "AVAILABLE" | "RENTED" | "PENDING_REVIEW" | "SUSPENDED";
+    status: "AVAILABLE" | "RENTED" | "PENDING_REVIEW" | "UNDER_OFFER" | "DRAFT" | "UNAVAILABLE" | "ARCHIVED";
     verified: boolean;
     createdAt: string;
     landlord: {
@@ -47,12 +48,28 @@ interface PropertyItem {
         phone?: string;
         verified: boolean;
         afriExchangeAccountEmail?: string;
+        afriExchangeWalletAddress?: string;
     };
     images: { url: string }[];
 }
 
+interface PropertyStats {
+    total: number;
+    available: number;
+    rented: number;
+    underOffer: number;
+    pendingReview: number;
+}
+
 export default function AdminPropertiesPage() {
     const [properties, setProperties] = useState<PropertyItem[]>([]);
+    const [stats, setStats] = useState<PropertyStats>({
+        total: 0,
+        available: 0,
+        rented: 0,
+        underOffer: 0,
+        pendingReview: 0,
+    });
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [searchQuery, setSearchQuery] = useState("");
@@ -66,7 +83,15 @@ export default function AdminPropertiesPage() {
 
             const res = await api.get("/admin/properties", { params });
             if (res.data?.success) {
-                setProperties(res.data.data || []);
+                const data = res.data.data;
+                if (Array.isArray(data)) {
+                    setProperties(data);
+                } else if (data?.properties) {
+                    setProperties(data.properties);
+                    if (data.stats) {
+                        setStats(data.stats);
+                    }
+                }
             }
         } catch (error) {
             console.error("Failed to load properties:", error);
@@ -80,14 +105,6 @@ export default function AdminPropertiesPage() {
         fetchProperties();
     }, [statusFilter]);
 
-    const stats = useMemo(() => {
-        const total = properties.length;
-        const available = properties.filter((p) => p.status === "AVAILABLE").length;
-        const rented = properties.filter((p) => p.status === "RENTED").length;
-        const pending = properties.filter((p) => p.status === "PENDING_REVIEW").length;
-        return { total, available, rented, pending };
-    }, [properties]);
-
     const filteredProperties = useMemo(() => {
         if (!searchQuery.trim()) return properties;
         const q = searchQuery.toLowerCase();
@@ -96,7 +113,14 @@ export default function AdminPropertiesPage() {
             const city = (p.city || "").toLowerCase();
             const landlord = `${p.landlord?.firstName || ""} ${p.landlord?.lastName || ""}`.toLowerCase();
             const email = (p.landlord?.email || "").toLowerCase();
-            return title.includes(q) || city.includes(q) || landlord.includes(q) || email.includes(q);
+            const id = (p.id || "").toLowerCase();
+            return (
+                title.includes(q) ||
+                city.includes(q) ||
+                landlord.includes(q) ||
+                email.includes(q) ||
+                id.includes(q)
+            );
         });
     }, [properties, searchQuery]);
 
@@ -104,26 +128,36 @@ export default function AdminPropertiesPage() {
         switch (status) {
             case "AVAILABLE":
                 return (
-                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                         <CheckCircle2 className="h-3 w-3" />
                         Available
                     </span>
                 );
             case "RENTED":
                 return (
-                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
                         Rented
+                    </span>
+                );
+            case "UNDER_OFFER":
+                return (
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        Under Offer
                     </span>
                 );
             case "PENDING_REVIEW":
                 return (
-                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
                         <Clock className="h-3 w-3" />
-                        Reviewing
+                        Pending Review
                     </span>
                 );
             default:
-                return <Badge variant="outline">{status}</Badge>;
+                return (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-[var(--bg-muted)] text-[var(--text-secondary)] border border-[var(--border-color)]">
+                        {status}
+                    </span>
+                );
         }
     };
 
@@ -154,28 +188,32 @@ export default function AdminPropertiesPage() {
                         value={stats.total}
                         icon={Building2}
                         accent="blue"
-                        trend="Total recorded listings"
+                        trend="Total recorded platform listings"
                     />
                     <StatCard
-                        label="Available for Rent"
+                        label="Available on Market"
                         value={stats.available}
                         icon={CheckCircle2}
                         accent="green"
-                        trend="Live on marketplace"
+                        trend="Open for tenant applications"
                     />
                     <StatCard
                         label="Active Leases (Rented)"
                         value={stats.rented}
                         icon={Building2}
-                        accent="orange"
-                        trend="Escrow verified & occupied"
+                        accent="blue"
+                        trend="Occupied & escrow settled"
                     />
                     <StatCard
-                        label="Pending Review"
-                        value={stats.pending}
+                        label="Under Offer / Review"
+                        value={stats.underOffer + stats.pendingReview}
                         icon={Clock}
-                        accent="orange"
-                        trend="Awaiting verification"
+                        accent={stats.underOffer + stats.pendingReview > 0 ? "orange" : "green"}
+                        trend={
+                            stats.underOffer + stats.pendingReview > 0
+                                ? `${stats.underOffer} under offer · ${stats.pendingReview} review queue`
+                                : "Zero pending moderation"
+                        }
                     />
                 </div>
 
@@ -192,10 +230,11 @@ export default function AdminPropertiesPage() {
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                     className="w-full appearance-none rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--color-brand-blue)] focus:outline-none"
                                 >
-                                    <option value="ALL">All Statuses</option>
-                                    <option value="AVAILABLE">Available</option>
-                                    <option value="RENTED">Rented</option>
-                                    <option value="PENDING_REVIEW">Pending Review</option>
+                                    <option value="ALL">All Statuses ({stats.total})</option>
+                                    <option value="AVAILABLE">Available ({stats.available})</option>
+                                    <option value="RENTED">Rented ({stats.rented})</option>
+                                    <option value="UNDER_OFFER">Under Offer ({stats.underOffer})</option>
+                                    <option value="PENDING_REVIEW">Pending Review ({stats.pendingReview})</option>
                                 </select>
                                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                             </div>
@@ -211,7 +250,7 @@ export default function AdminPropertiesPage() {
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search by title, city, or landlord name..."
+                                    placeholder="Search by title, city, landlord name, or property ID..."
                                     className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] pl-9 pr-4 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-placeholder)] focus:border-[var(--color-brand-blue)] focus:outline-none"
                                 />
                             </div>
@@ -237,7 +276,7 @@ export default function AdminPropertiesPage() {
                     <div className="border-b border-[var(--border-color)] px-6 py-4">
                         <h2 className="text-sm font-bold text-[var(--text-primary)]">Property Listings</h2>
                         <p className="text-xs text-[var(--text-muted)]">
-                            Showing {filteredProperties.length} properties
+                            Showing {filteredProperties.length} properties • All rental prices denominated in AfriExchange Naira Token (NT)
                         </p>
                     </div>
 
@@ -260,7 +299,7 @@ export default function AdminPropertiesPage() {
                                             Property
                                         </th>
                                         <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                                            Landlord
+                                            Landlord & Settlement
                                         </th>
                                         <th className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                                             Rent / Year
@@ -305,20 +344,25 @@ export default function AdminPropertiesPage() {
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <p className="text-sm font-medium text-[var(--text-primary)]">
+                                                <p className="text-xs font-semibold text-[var(--text-primary)]">
                                                     {prop.landlord?.firstName} {prop.landlord?.lastName}
                                                 </p>
-                                                <p className="text-xs text-[var(--text-muted)]">{prop.landlord?.email}</p>
-                                                {prop.landlord?.afriExchangeAccountEmail && (
-                                                    <span className="inline-flex items-center gap-1 text-[10px] text-[var(--color-brand-green)] font-mono">
-                                                        <Wallet className="h-2.5 w-2.5" />
+                                                <p className="text-[11px] text-[var(--text-muted)]">{prop.landlord?.email}</p>
+                                                {prop.landlord?.afriExchangeAccountEmail ? (
+                                                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-mono mt-0.5">
+                                                        <Wallet className="h-3 w-3" />
                                                         {prop.landlord.afriExchangeAccountEmail}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[11px] text-amber-400/80 mt-0.5 block">
+                                                        Wallet unlinked
                                                     </span>
                                                 )}
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap font-mono text-sm font-bold text-[var(--text-primary)]">
-                                                {formatPrice(prop.pricePerYear)}
+                                                <span>{formatPrice(prop.pricePerYear)}</span>
+                                                <span className="ml-1 text-xs font-semibold text-[var(--color-brand-green)]">NT</span>
                                             </td>
 
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -395,11 +439,26 @@ export default function AdminPropertiesPage() {
                         )}
 
                         <div className="space-y-2">
-                            <h4 className="text-lg font-bold text-[var(--text-primary)]">{selectedProp.title}</h4>
+                            <div className="flex items-center justify-between">
+                                <h4 className="text-lg font-bold text-[var(--text-primary)]">{selectedProp.title}</h4>
+                                {getStatusBadge(selectedProp.status)}
+                            </div>
                             <p className="text-xs text-[var(--text-muted)]">{selectedProp.address}, {selectedProp.city}</p>
                             <p className="text-base font-bold font-mono text-[var(--color-brand-blue)]">
-                                {formatPrice(selectedProp.pricePerYear)} / year
+                                {formatPrice(selectedProp.pricePerYear)} NT / year
                             </p>
+                        </div>
+
+                        {/* Specs */}
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-color)]">
+                                <Bed className="h-4 w-4 text-[var(--text-muted)]" />
+                                <span>{selectedProp.bedrooms} Bedrooms</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-color)]">
+                                <Bath className="h-4 w-4 text-[var(--text-muted)]" />
+                                <span>{selectedProp.bathrooms} Bathrooms</span>
+                            </div>
                         </div>
 
                         {/* Landlord information */}
@@ -412,11 +471,16 @@ export default function AdminPropertiesPage() {
                             </p>
                             <p className="text-xs text-[var(--text-muted)]">Email: {selectedProp.landlord?.email}</p>
                             <p className="text-xs text-[var(--text-muted)]">Phone: {selectedProp.landlord?.phone || "None"}</p>
-                            <div className="pt-2 border-t border-[var(--border-color)]">
-                                <span className="text-xs text-[var(--text-muted)]">AfriExchange Account:</span>
-                                <p className="text-xs font-mono font-semibold text-[var(--color-brand-green)] mt-0.5">
+                            <div className="pt-2 border-t border-[var(--border-color)] space-y-1">
+                                <span className="text-xs text-[var(--text-muted)]">AfriExchange Settlement Account:</span>
+                                <p className="text-xs font-mono font-semibold text-emerald-400">
                                     {selectedProp.landlord?.afriExchangeAccountEmail || "⚠️ Not linked yet"}
                                 </p>
+                                {selectedProp.landlord?.afriExchangeWalletAddress && (
+                                    <p className="text-[10px] font-mono text-[var(--text-muted)] truncate">
+                                        Wallet: {selectedProp.landlord.afriExchangeWalletAddress}
+                                    </p>
+                                )}
                             </div>
                         </div>
 

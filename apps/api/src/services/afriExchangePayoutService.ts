@@ -193,6 +193,7 @@ export class AfriExchangePayoutService {
                     status: "COMPLETED",
                     afriExchangePayoutId: data.payoutId || null,
                     afriExchangeRef: data.reference || null,
+                    failureReason: null,
                     processedAt: new Date(),
                 },
             });

@@ -721,7 +721,7 @@ export default function AdminPayoutsPage() {
                                 </div>
                             )}
 
-                            {selectedPayout.failureReason && (
+                            {selectedPayout.failureReason && selectedPayout.status !== "COMPLETED" && (
                                 <>
                                     {selectedPayout.failureReason.toLowerCase().includes("not linked") ? (
                                         selectedPayout.landlord?.afriExchangeAccountEmail || selectedPayout.landlord?.afriExchangeWalletAddress ? (

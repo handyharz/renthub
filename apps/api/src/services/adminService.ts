@@ -360,28 +360,53 @@ export class AdminService {
             where.status = status as PropertyStatus;
         }
 
-        return prisma.property.findMany({
-            where,
-            orderBy: { createdAt: "desc" },
-            take: 50,
-            include: {
-                landlord: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                        phone: true,
-                        verified: true,
-                        afriExchangeAccountEmail: true,
+        const [properties, statusCounts, totalCount] = await Promise.all([
+            prisma.property.findMany({
+                where,
+                orderBy: { createdAt: "desc" },
+                take: 100,
+                include: {
+                    landlord: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            phone: true,
+                            verified: true,
+                            afriExchangeAccountEmail: true,
+                            afriExchangeWalletAddress: true,
+                        },
+                    },
+                    images: {
+                        orderBy: { order: "asc" },
+                        take: 3,
                     },
                 },
-                images: {
-                    orderBy: { order: "asc" },
-                    take: 1,
-                },
+            }),
+            prisma.property.groupBy({
+                by: ["status"],
+                where: { deletedAt: null },
+                _count: { id: true },
+            }),
+            prisma.property.count({ where: { deletedAt: null } }),
+        ]);
+
+        const countsMap = statusCounts.reduce((acc, curr) => {
+            acc[curr.status] = curr._count.id;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return {
+            properties,
+            stats: {
+                total: totalCount,
+                available: countsMap[PropertyStatus.AVAILABLE] || 0,
+                rented: countsMap[PropertyStatus.RENTED] || 0,
+                underOffer: countsMap[PropertyStatus.UNDER_OFFER] || 0,
+                pendingReview: countsMap[PropertyStatus.PENDING_REVIEW] || 0,
             },
-        });
+        };
     }
 }
 

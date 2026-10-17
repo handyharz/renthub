@@ -568,7 +568,7 @@ export default function AdminEscrowPage() {
                                             {selectedTx.payout.idempotencyKey}
                                         </span>
                                     </div>
-                                    {selectedTx.payout.failureReason && (
+                                    {selectedTx.payout.failureReason && selectedTx.payout.status !== "COMPLETED" && (
                                         <div className="p-2.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs mt-2">
                                             <p className="font-semibold">Notice / Error:</p>
                                             <p className="mt-0.5">{selectedTx.payout.failureReason}</p>
