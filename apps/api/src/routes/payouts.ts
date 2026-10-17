@@ -55,6 +55,13 @@ router.post(
     payoutController.adminRetryPayout.bind(payoutController)
 );
 
+router.put(
+    "/admin/landlord/:landlordId/link-afriexchange",
+    requireAuth,
+    requireRole("ADMIN"),
+    payoutController.adminLinkLandlordAfriExchange.bind(payoutController)
+);
+
 router.post(
     "/admin/disburse/:transactionId",
     requireAuth,

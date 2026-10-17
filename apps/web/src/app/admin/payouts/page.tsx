@@ -96,6 +96,9 @@ export default function AdminPayoutsPage() {
     const [isReconciling, setIsReconciling] = useState(false);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
     const [selectedPayout, setSelectedPayout] = useState<LandlordPayout | null>(null);
+    const [linkInput, setLinkInput] = useState("");
+    const [isLinking, setIsLinking] = useState(false);
+    const [showLinkInput, setShowLinkInput] = useState(false);
 
     // Filters
     const [statusFilter, setStatusFilter] = useState<string>("");
@@ -195,6 +198,44 @@ export default function AdminPayoutsPage() {
             });
         } finally {
             setActionLoadingId(null);
+        }
+    };
+
+    const handleLinkLandlord = async (landlordId: string, value: string) => {
+        if (!value.trim()) {
+            toast.error("Please enter a valid email or wallet address");
+            return;
+        }
+        try {
+            setIsLinking(true);
+            const isWallet = value.trim().startsWith("0x");
+            const payload = isWallet
+                ? { afriExchangeWalletAddress: value.trim() }
+                : { afriExchangeAccountEmail: value.trim().toLowerCase() };
+
+            const res = await api.put(`/payouts/admin/landlord/${landlordId}/link-afriexchange`, payload);
+            if (res.data?.success) {
+                toast.success("Landlord AfriExchange settlement account linked!");
+                if (selectedPayout) {
+                    setSelectedPayout({
+                        ...selectedPayout,
+                        landlord: {
+                            ...selectedPayout.landlord,
+                            ...(isWallet
+                                ? { afriExchangeWalletAddress: value.trim() }
+                                : { afriExchangeAccountEmail: value.trim().toLowerCase() }),
+                        },
+                    });
+                }
+                setShowLinkInput(false);
+                fetchPayouts();
+            }
+        } catch (error: any) {
+            toast.error("Failed to link account", {
+                description: error.response?.data?.message || "Please check details",
+            });
+        } finally {
+            setIsLinking(false);
         }
     };
 
@@ -641,6 +682,70 @@ export default function AdminPayoutsPage() {
                                     <span className="font-mono text-[10px] text-[var(--text-primary)]">
                                         {selectedPayout.landlord.afriExchangeWalletAddress}
                                     </span>
+                                </div>
+                            )}
+
+                            {(!selectedPayout.landlord?.afriExchangeAccountEmail && !selectedPayout.landlord?.afriExchangeWalletAddress) || showLinkInput ? (
+                                <div className="mt-3 p-3 rounded-lg border border-amber-300/80 bg-amber-500/10 space-y-2.5">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                                            <Wallet className="h-3.5 w-3.5" />
+                                            Link AfriExchange Account
+                                        </p>
+                                        {showLinkInput && (
+                                            <button
+                                                onClick={() => setShowLinkInput(false)}
+                                                className="text-[10px] text-[var(--text-muted)] hover:underline"
+                                            >
+                                                Cancel
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-[11px] text-[var(--text-muted)]">
+                                        Enter the landlord's AfriExchange account email or wallet address to enable instant settlement.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={linkInput}
+                                            onChange={(e) => setLinkInput(e.target.value)}
+                                            placeholder="e.g. user@gmail.com or 0x..."
+                                            className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-primary)] focus:outline-none"
+                                        />
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleLinkLandlord(selectedPayout.landlord.id, linkInput)}
+                                            disabled={isLinking || !linkInput.trim()}
+                                            className="text-xs h-[30px] bg-[var(--color-brand-blue)] text-white"
+                                        >
+                                            {isLinking ? <Loader2 className="h-3 w-3 animate-spin" /> : "Link"}
+                                        </Button>
+                                    </div>
+                                    {selectedPayout.landlord?.email && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setLinkInput(selectedPayout.landlord.email);
+                                                handleLinkLandlord(selectedPayout.landlord.id, selectedPayout.landlord.email);
+                                            }}
+                                            className="text-[11px] text-[var(--color-brand-green)] hover:underline font-semibold block text-left"
+                                        >
+                                            👉 Use Landlord Email ({selectedPayout.landlord.email})
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="mt-2 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setLinkInput(selectedPayout.landlord?.afriExchangeAccountEmail || "");
+                                            setShowLinkInput(true);
+                                        }}
+                                        className="text-[11px] text-[var(--color-brand-blue)] hover:underline font-semibold"
+                                    >
+                                        Edit AfriExchange Account
+                                    </button>
                                 </div>
                             )}
                         </div>

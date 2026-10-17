@@ -8,7 +8,7 @@ import { TrustScore } from "@/components/profile/TrustScore";
 import { PhoneVerificationModal } from "@/components/profile/PhoneVerificationModal";
 import { DocumentUploader } from "@/components/profile/DocumentUploader";
 import api from "@/lib/api";
-import { Loader2, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, ShieldCheck, Wallet } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -17,6 +17,9 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showVerifyModal, setShowVerifyModal] = useState(false);
+    const [afriExchangeEmail, setAfriExchangeEmail] = useState("");
+    const [afriExchangeWallet, setAfriExchangeWallet] = useState("");
+    const [savingAfriExchange, setSavingAfriExchange] = useState(false);
 
     // Form Stats
     const [formData, setFormData] = useState({
@@ -39,6 +42,8 @@ export default function ProfilePage() {
             const res = await api.get(`/users/me?clerkId=${user?.id}`);
             const data = res.data.data;
             setDbUser(data);
+            setAfriExchangeEmail(data.afriExchangeAccountEmail || "");
+            setAfriExchangeWallet(data.afriExchangeWalletAddress || "");
             setFormData({
                 firstName: data.firstName || "",
                 lastName: data.lastName || "",
@@ -51,6 +56,26 @@ export default function ProfilePage() {
             console.error("Failed to fetch user:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveAfriExchange = async () => {
+        if (!afriExchangeEmail.trim() && !afriExchangeWallet.trim()) {
+            alert("Please enter an AfriExchange account email or wallet address");
+            return;
+        }
+        setSavingAfriExchange(true);
+        try {
+            await api.put("/payouts/link-afriexchange", {
+                afriExchangeAccountEmail: afriExchangeEmail.trim() || undefined,
+                afriExchangeWalletAddress: afriExchangeWallet.trim() || undefined,
+            });
+            await fetchUserProfile();
+            alert("AfriExchange settlement account saved successfully!");
+        } catch (error: any) {
+            alert(error.response?.data?.message || "Failed to link AfriExchange account");
+        } finally {
+            setSavingAfriExchange(false);
         }
     };
 
@@ -193,6 +218,66 @@ export default function ProfilePage() {
                                             fetchUserProfile();
                                         }}
                                     />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* AfriExchange Payout Settlement Setup (Kaalis Style) */}
+                        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-xs">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="p-3 bg-emerald-50 rounded-full text-emerald-600">
+                                    <Wallet className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900">AfriExchange Rent Payout Setup</h3>
+                                    <p className="text-sm text-gray-600">
+                                        Link your AfriExchange account or wallet to receive released rent escrow directly.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                                        AfriExchange Account Email
+                                    </label>
+                                    <Input
+                                        type="email"
+                                        value={afriExchangeEmail}
+                                        onChange={(e) => setAfriExchangeEmail(e.target.value)}
+                                        placeholder="e.g. your_afrix_email@gmail.com"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        The email associated with your AfriX mobile app account.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                                        AfriExchange Wallet Address (Optional)
+                                    </label>
+                                    <Input
+                                        value={afriExchangeWallet}
+                                        onChange={(e) => setAfriExchangeWallet(e.target.value)}
+                                        placeholder="0x..."
+                                    />
+                                </div>
+
+                                <div className="pt-2 flex items-center justify-between">
+                                    <Button
+                                        className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold"
+                                        onClick={handleSaveAfriExchange}
+                                        disabled={savingAfriExchange}
+                                    >
+                                        {savingAfriExchange ? "Saving..." : "Save Payout Account"}
+                                    </Button>
+
+                                    {dbUser?.settlementLinkedAt && (
+                                        <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+                                            <CheckCircle2 className="h-4 w-4" />
+                                            Linked on {new Date(dbUser.settlementLinkedAt).toLocaleDateString()}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

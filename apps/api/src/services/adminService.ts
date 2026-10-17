@@ -173,6 +173,76 @@ export class AdminService {
 
         return released;
     }
+
+    async getEscrowTransactions(status?: string) {
+        const where: any = {};
+        if (status && status !== "ALL") {
+            where.status = status as TransactionStatus;
+        }
+
+        const [transactions, totalEscrowVolume, lockedCount, releasedCount, disputedCount] = await Promise.all([
+            prisma.transaction.findMany({
+                where,
+                orderBy: { createdAt: "desc" },
+                take: 50,
+                include: {
+                    property: {
+                        select: { id: true, title: true, address: true, city: true },
+                    },
+                    tenant: {
+                        select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+                    },
+                },
+            }),
+            prisma.transaction.aggregate({
+                _sum: { totalAmount: true },
+                where: { status: TransactionStatus.ESCROWED },
+            }),
+            prisma.transaction.count({ where: { status: TransactionStatus.ESCROWED } }),
+            prisma.transaction.count({ where: { status: TransactionStatus.RELEASED } }),
+            prisma.transaction.count({ where: { disputed: true } }),
+        ]);
+
+        return {
+            transactions,
+            stats: {
+                totalLockedAmount: totalEscrowVolume._sum.totalAmount || 0,
+                lockedCount,
+                releasedCount,
+                disputedCount,
+            },
+        };
+    }
+
+    async getAllProperties(status?: string) {
+        const where: any = { deletedAt: null };
+        if (status && status !== "ALL") {
+            where.status = status as PropertyStatus;
+        }
+
+        return prisma.property.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            take: 50,
+            include: {
+                landlord: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
+                        verified: true,
+                        afriExchangeAccountEmail: true,
+                    },
+                },
+                images: {
+                    orderBy: { order: "asc" },
+                    take: 1,
+                },
+            },
+        });
+    }
 }
 
 export const adminService = new AdminService();

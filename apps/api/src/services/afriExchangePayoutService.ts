@@ -120,17 +120,21 @@ export class AfriExchangePayoutService {
             return;
         }
 
-        // 6. Check landlord has AfriExchange account linked
-        if (!landlord.afriExchangeUserId && !landlord.afriExchangeWalletAddress && !landlord.afriExchangeAccountEmail) {
+        // 6. Check landlord has AfriExchange account linked (or fallback to landlord primary email)
+        const afriEmail = landlord.afriExchangeAccountEmail || landlord.email;
+        const afriWallet = landlord.afriExchangeWalletAddress;
+        const afriUserId = landlord.afriExchangeUserId;
+
+        if (!afriUserId && !afriWallet && !afriEmail) {
             await prisma.landlordPayout.update({
                 where: { id: payoutRecord.id },
                 data: {
                     status: "SKIPPED",
-                    failureReason: "Landlord has not linked an AfriExchange wallet",
+                    failureReason: "Landlord has not linked an AfriExchange wallet and no email was found",
                 },
             });
             console.warn(
-                `[AfriExchangePayoutService] Payout SKIPPED for landlord ${landlord.id} — no AfriExchange account linked.`
+                `[AfriExchangePayoutService] Payout SKIPPED for landlord ${landlord.id} — no AfriExchange account or email found.`
             );
             return;
         }
@@ -153,9 +157,9 @@ export class AfriExchangePayoutService {
                 rentHubTransactionId: transactionId,
                 landlordRentHubId: landlord.id,
                 // Landlord's AfriExchange identity (at least one required)
-                landlordAfriExchangeUserId: landlord.afriExchangeUserId || undefined,
-                landlordWalletAddress: landlord.afriExchangeWalletAddress || undefined,
-                landlordAccountEmail: landlord.afriExchangeAccountEmail || undefined,
+                landlordAfriExchangeUserId: afriUserId || undefined,
+                landlordWalletAddress: afriWallet || undefined,
+                landlordAccountEmail: afriEmail || undefined,
                 // Amount in kobo (AfriExchange expects sub-unit amounts)
                 amount: netAmount,
                 currency: "NGN",

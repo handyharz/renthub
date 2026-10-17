@@ -12,5 +12,7 @@ router.post("/verifications/:id/approve", adminController.approveVerification.bi
 router.post("/verifications/:id/reject", adminController.rejectVerification.bind(adminController));
 router.get("/disputes", adminController.getDisputes.bind(adminController));
 router.post("/disputes/:id/resolve", adminController.resolveDispute.bind(adminController));
+router.get("/escrow", adminController.getEscrowTransactions.bind(adminController));
+router.get("/properties", adminController.getAllProperties.bind(adminController));
 
 export default router;

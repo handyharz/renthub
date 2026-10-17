@@ -232,6 +232,45 @@ export class PayoutController {
     }
 
     // ─────────────────────────────────────────────
+    // ADMIN: Link or update landlord's AfriExchange account
+    // PUT /api/payouts/admin/landlord/:landlordId/link-afriexchange
+    // ─────────────────────────────────────────────
+    async adminLinkLandlordAfriExchange(req: Request, res: Response) {
+        try {
+            const landlordId = req.params.landlordId as string;
+            const { afriExchangeUserId, afriExchangeWalletAddress, afriExchangeAccountEmail } = req.body;
+
+            const updated = await prisma.user.update({
+                where: { id: landlordId },
+                data: {
+                    afriExchangeUserId: afriExchangeUserId || undefined,
+                    afriExchangeWalletAddress: afriExchangeWalletAddress || undefined,
+                    afriExchangeAccountEmail: afriExchangeAccountEmail || undefined,
+                    settlementLinkedAt: new Date(),
+                },
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    afriExchangeUserId: true,
+                    afriExchangeWalletAddress: true,
+                    afriExchangeAccountEmail: true,
+                    settlementLinkedAt: true,
+                },
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Landlord AfriExchange settlement account linked successfully",
+                data: updated,
+            });
+        } catch (error: unknown) {
+            return res.status(400).json({ success: false, message: getErrorMessage(error) });
+        }
+    }
+
+    // ─────────────────────────────────────────────
     // ADMIN: Disburse payout for a transaction (manual or OTP released)
     // POST /api/payouts/admin/disburse/:transactionId
     // ─────────────────────────────────────────────

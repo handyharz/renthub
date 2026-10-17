@@ -113,6 +113,36 @@ export class AdminController {
             });
         }
     }
+
+    async getEscrowTransactions(req: Request, res: Response) {
+        try {
+            const { status } = req.query;
+            const data = await adminService.getEscrowTransactions(status as string);
+            return res.status(200).json({ success: true, data });
+        } catch (error: any) {
+            console.error("Admin escrow error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetch escrow transactions",
+                error: error.message,
+            });
+        }
+    }
+
+    async getAllProperties(req: Request, res: Response) {
+        try {
+            const { status } = req.query;
+            const properties = await adminService.getAllProperties(status as string);
+            return res.status(200).json({ success: true, data: properties });
+        } catch (error: any) {
+            console.error("Admin properties error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetch properties",
+                error: error.message,
+            });
+        }
+    }
 }
 
 export const adminController = new AdminController();
