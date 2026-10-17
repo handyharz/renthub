@@ -88,9 +88,11 @@ export default function RentPropertyPage() {
     const handleAfriExchangePayment = async ({
         accountEmail,
         walletAddress,
+        tokenType,
     }: {
         accountEmail: string;
         walletAddress?: string;
+        tokenType: "NT" | "CT" | "USDT";
     }) => {
         setProcessing(true);
         setError(null);
@@ -111,6 +113,7 @@ export default function RentPropertyPage() {
                 transactionId: transaction.id,
                 afriExchangeAccountEmail: accountEmail,
                 afriExchangeWalletAddress: walletAddress,
+                tokenType: tokenType || "NT",
             });
 
             setIsPaymentModalOpen(false);
@@ -119,6 +122,7 @@ export default function RentPropertyPage() {
             console.error("AfriExchange payment failed:", err);
             setError(err.response?.data?.message || "Failed to process AfriExchange payment. Please try again.");
             setProcessing(false);
+            throw err;
         }
     };
 

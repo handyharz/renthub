@@ -318,6 +318,7 @@ export class PaymentController {
                 afriExchangeAccountEmail,
                 afriExchangeWalletAddress,
                 afriExchangeUserId,
+                tokenType,
             } = req.body;
 
             if (!userId && clerkId && typeof clerkId === "string") {
@@ -345,6 +346,7 @@ export class PaymentController {
                 afriExchangeAccountEmail,
                 afriExchangeWalletAddress,
                 afriExchangeUserId,
+                tokenType: tokenType || "NT",
             });
 
             return res.status(200).json({
@@ -354,10 +356,12 @@ export class PaymentController {
             });
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Failed to process AfriExchange payment";
+            const details = (error as any)?.details || null;
             console.error("Error processing AfriExchange payment:", message);
             return res.status(400).json({
                 success: false,
                 message,
+                ...(details && { details }),
             });
         }
     }

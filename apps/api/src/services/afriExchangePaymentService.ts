@@ -34,12 +34,14 @@ export class AfriExchangePaymentService {
         afriExchangeAccountEmail,
         afriExchangeWalletAddress,
         afriExchangeUserId,
+        tokenType = "NT",
     }: {
         transactionId: string;
         tenantId: string;
         afriExchangeAccountEmail?: string;
         afriExchangeWalletAddress?: string;
         afriExchangeUserId?: string;
+        tokenType?: "NT" | "CT" | "USDT";
     }) {
         const transaction = await prisma.transaction.findUnique({
             where: { id: transactionId },
@@ -106,7 +108,7 @@ export class AfriExchangePaymentService {
                     buyerAccountEmail: buyerEmail,
                     amount: transaction.totalAmount, // Sub-unit (kobo/smallest unit)
                     currency: "NGN",
-                    tokenType: "CT",
+                    tokenType: tokenType || "NT",
                     description: `RentHub Escrow Payment — ${transaction.property.title} (tx: ${transactionId})`,
                     metadata: {
                         transactionId,
@@ -181,15 +183,19 @@ export class AfriExchangePaymentService {
                 };
             } catch (err: unknown) {
                 let message = "AfriExchange payment collection failed";
+                let details: any = null;
                 if (axios.isAxiosError(err)) {
                     message =
                         (err.response?.data as { message?: string })?.message ||
                         err.message ||
                         message;
+                    details = (err.response?.data as { details?: any })?.details || null;
                 } else if (err instanceof Error) {
                     message = err.message;
                 }
-                throw new Error(message);
+                const customError = new Error(message);
+                if (details) (customError as any).details = details;
+                throw customError;
             }
         }
 

@@ -158,10 +158,12 @@ export function ApplicationsTab() {
 
     const handleAfriExchangePayment = async ({
         accountEmail,
-        walletAddress
+        walletAddress,
+        tokenType,
     }: {
         accountEmail: string;
         walletAddress?: string;
+        tokenType: "NT" | "CT" | "USDT";
     }) => {
         if (!paymentModalApp) return;
         try {
@@ -182,7 +184,8 @@ export function ApplicationsTab() {
             const payRes = await api.post("/payments/afriexchange/pay", {
                 transactionId: transaction.id,
                 afriExchangeAccountEmail: accountEmail,
-                afriExchangeWalletAddress: walletAddress
+                afriExchangeWalletAddress: walletAddress,
+                tokenType: tokenType || "NT",
             });
 
             toast.success("Escrow Payment Secured!", {
@@ -194,6 +197,7 @@ export function ApplicationsTab() {
         } catch (error: any) {
             console.error("AfriExchange payment failed:", error);
             toast.error(error.response?.data?.message || "Failed to process AfriExchange payment");
+            throw error;
         } finally {
             setPaymentLoading(null);
         }
