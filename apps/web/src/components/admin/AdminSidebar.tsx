@@ -10,6 +10,7 @@ import {
     ShieldCheck,
     AlertTriangle,
     Users,
+    Settings,
     ArrowLeft,
     ChevronLeft,
     ChevronRight,
@@ -26,6 +27,7 @@ const navItems = [
     { href: "/admin/verifications", label: "Verifications", icon: ShieldCheck },
     { href: "/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AdminSidebar() {

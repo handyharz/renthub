@@ -1,7 +1,51 @@
+import axios from "axios";
 import { prisma } from "../config/database";
 import { PropertyStatus, TransactionStatus } from "@prisma/client";
 import { transactionService } from "./transactionService";
 import { afriExchangePayoutService } from "./afriExchangePayoutService";
+
+const getCleanAfriExchangeUrl = () => {
+    let raw = process.env.AFRIEXCHANGE_API_URL || "https://afrix-iqvq.onrender.com/api/v1";
+    if (raw.includes("#")) {
+        raw = raw.split("#")[0].trim();
+    }
+    if (raw.includes("localhost:5001")) {
+        raw = "https://afrix-iqvq.onrender.com/api/v1";
+    }
+    return raw.replace(/\/$/, "");
+};
+
+let platformConfig = {
+    financial: {
+        platformCommissionRateBps: 200, // 2.0% (200 basis points)
+        inspectionFeeAmount: 2000000,   // ₦20,000 in kobo
+        escrowOtpExpiryHours: 48,       // 48 hours
+        disputeFilingWindowDays: 7,     // 7 days
+        autoRefundCancelledTransactions: true,
+    },
+    policies: {
+        enforceLandlordWalletLinking: true,
+        requireInspectionForCertifiedBadge: true,
+        requireTenantPhoneVerification: true,
+        autoDelistRejectedProperties: true,
+    },
+    gateways: {
+        afriExchangeEnabled: true,
+        paystackEnabled: true,
+        flutterwaveEnabled: true,
+        termiiEnabled: true,
+    },
+    support: {
+        supportEmail: "admin@renthub.ng",
+        disputesEmail: "disputes@renthub.ng",
+        emergencyPhone: "+234 (0) 800-RENTHUB",
+        maintenanceMode: false,
+    },
+    afriExchangeSettings: {
+        defaultSettlementToken: "NT" as "NT" | "CT" | "USDT",
+        autoDisburseOnOtp: true,
+    },
+};
 
 export class AdminService {
     async getStats() {
@@ -536,6 +580,146 @@ export class AdminService {
                 pendingReview: countsMap[PropertyStatus.PENDING_REVIEW] || 0,
             },
         };
+    }
+
+    async testAfriExchangeConnection() {
+        const baseUrl = getCleanAfriExchangeUrl();
+        const apiKey = process.env.RENTHUB_AFRIEXCHANGE_API_KEY || "";
+        const start = Date.now();
+        try {
+            const response = await axios.get(`${baseUrl}/integrations/renthub/rates`, {
+                headers: {
+                    "x-api-key": apiKey,
+                },
+                timeout: 5000,
+            });
+            const latencyMs = Date.now() - start;
+            return {
+                status: "OPERATIONAL" as const,
+                latencyMs,
+                timestamp: new Date().toISOString(),
+                endpoint: `${baseUrl}/integrations/renthub/rates`,
+                rates: response.data?.data?.rates || null,
+                merchantName: process.env.AFRIEXCHANGE_LINKED_MERCHANT_NAME || "RentHub",
+                merchantId: process.env.AFRIEXCHANGE_LINKED_MERCHANT_ID || null,
+            };
+        } catch (err: any) {
+            const latencyMs = Date.now() - start;
+            return {
+                status: "DEGRADED" as const,
+                latencyMs,
+                timestamp: new Date().toISOString(),
+                endpoint: `${baseUrl}/integrations/renthub/rates`,
+                error:
+                    (err.response?.data as { message?: string })?.message ||
+                    err.message ||
+                    "Could not ping AfriExchange",
+                rates: {
+                    NT: { token: "NT", name: "Naira Token", ngnPerToken: 1.0, tokensPerNgn: 1.0, desc: "1 NT = ₦1.00 (1:1 NGN)" },
+                    CT: { token: "CT", name: "CFA Token", ngnPerToken: 2.7, tokensPerNgn: 0.37, desc: "1 CT ≈ ₦2.70 NGN" },
+                    USDT: { token: "USDT", name: "Tether USD", ngnPerToken: 1500, tokensPerNgn: 0.00067, desc: "1 USDT ≈ ₦1,500 NGN" },
+                },
+                merchantName: process.env.AFRIEXCHANGE_LINKED_MERCHANT_NAME || "RentHub",
+                merchantId: process.env.AFRIEXCHANGE_LINKED_MERCHANT_ID || null,
+            };
+        }
+    }
+
+    async getSettings() {
+        const afriStatus = await this.testAfriExchangeConnection();
+        const payoutSummary = await afriExchangePayoutService.getPayoutSummary();
+
+        const maskKey = (key?: string) => {
+            if (!key) return "Not configured";
+            if (key.length <= 8) return "••••••••";
+            return `${key.slice(0, 4)}••••••••${key.slice(-4)}`;
+        };
+
+        return {
+            afriExchange: {
+                apiUrl: getCleanAfriExchangeUrl(),
+                merchantId: process.env.AFRIEXCHANGE_LINKED_MERCHANT_ID || "e1fb66f3-fef1-4129-9e8d-4d166be6c357",
+                merchantName: process.env.AFRIEXCHANGE_LINKED_MERCHANT_NAME || "RentHub",
+                hasApiKey: !!process.env.RENTHUB_AFRIEXCHANGE_API_KEY,
+                apiKeyMasked: maskKey(process.env.RENTHUB_AFRIEXCHANGE_API_KEY),
+                webhookUrl: (process.env.AFRIEXCHANGE_WEBHOOK_CALLBACK_URL || "https://renthub-4jhq.onrender.com/api/afriexchange/webhooks").split("#")[0].trim(),
+                hasWebhookSecret: !!process.env.AFRIEXCHANGE_WEBHOOK_SECRET,
+                defaultToken: platformConfig.afriExchangeSettings.defaultSettlementToken,
+                autoDisburseOnOtp: platformConfig.afriExchangeSettings.autoDisburseOnOtp,
+                connectionStatus: afriStatus.status,
+                lastPingLatencyMs: afriStatus.latencyMs,
+                lastPingAt: afriStatus.timestamp,
+                rates: afriStatus.rates,
+                payoutStats: payoutSummary,
+            },
+            financial: { ...platformConfig.financial },
+            gateways: {
+                afriExchange: {
+                    enabled: platformConfig.gateways.afriExchangeEnabled,
+                    name: "AfriExchange Token Escrow",
+                    token: platformConfig.afriExchangeSettings.defaultSettlementToken,
+                    mode: "LIVE_STABLECOIN",
+                },
+                paystack: {
+                    enabled: platformConfig.gateways.paystackEnabled,
+                    publicKeyMasked: maskKey(process.env.PAYSTACK_PUBLIC_KEY),
+                    testMode: (process.env.PAYSTACK_PUBLIC_KEY || "").startsWith("pk_test_"),
+                },
+                flutterwave: {
+                    enabled: platformConfig.gateways.flutterwaveEnabled,
+                    publicKeyMasked: maskKey(process.env.FLUTTERWAVE_PUBLIC_KEY),
+                    testMode: (process.env.FLUTTERWAVE_SECRET_KEY || "").includes("TEST"),
+                },
+                termii: {
+                    enabled: platformConfig.gateways.termiiEnabled,
+                    senderId: process.env.TERMII_SENDER_ID || "RentHub",
+                    hasSecret: !!process.env.TERMII_API_KEY,
+                },
+            },
+            policies: { ...platformConfig.policies },
+            support: { ...platformConfig.support },
+            systemInfo: {
+                environment: process.env.NODE_ENV || "development",
+                serverTime: new Date().toISOString(),
+                nodeVersion: process.version,
+                uptimeSeconds: Math.floor(process.uptime()),
+            },
+        };
+    }
+
+    async updateSettings(updates: any) {
+        if (updates.financial) {
+            platformConfig.financial = {
+                ...platformConfig.financial,
+                ...updates.financial,
+            };
+        }
+        if (updates.policies) {
+            platformConfig.policies = {
+                ...platformConfig.policies,
+                ...updates.policies,
+            };
+        }
+        if (updates.gateways) {
+            platformConfig.gateways = {
+                ...platformConfig.gateways,
+                ...updates.gateways,
+            };
+        }
+        if (updates.support) {
+            platformConfig.support = {
+                ...platformConfig.support,
+                ...updates.support,
+            };
+        }
+        if (updates.afriExchangeSettings) {
+            platformConfig.afriExchangeSettings = {
+                ...platformConfig.afriExchangeSettings,
+                ...updates.afriExchangeSettings,
+            };
+        }
+
+        return this.getSettings();
     }
 }
 

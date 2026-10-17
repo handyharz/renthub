@@ -162,6 +162,52 @@ export class AdminController {
             });
         }
     }
+
+    async getSettings(req: Request, res: Response) {
+        try {
+            const settings = await adminService.getSettings();
+            return res.status(200).json({ success: true, data: settings });
+        } catch (error: any) {
+            console.error("Admin getSettings error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetch platform settings",
+                error: error.message,
+            });
+        }
+    }
+
+    async updateSettings(req: Request, res: Response) {
+        try {
+            const updated = await adminService.updateSettings(req.body);
+            return res.status(200).json({
+                success: true,
+                message: "Platform settings updated successfully",
+                data: updated,
+            });
+        } catch (error: any) {
+            console.error("Admin updateSettings error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to update platform settings",
+                error: error.message,
+            });
+        }
+    }
+
+    async testAfriExchangeConnection(req: Request, res: Response) {
+        try {
+            const result = await adminService.testAfriExchangeConnection();
+            return res.status(200).json({ success: true, data: result });
+        } catch (error: any) {
+            console.error("Admin testAfriExchange error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "AfriExchange health check ping failed",
+                error: error.message,
+            });
+        }
+    }
 }
 
 export const adminController = new AdminController();
