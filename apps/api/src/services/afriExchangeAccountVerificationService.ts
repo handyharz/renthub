@@ -86,7 +86,13 @@ export class AfriExchangeAccountVerificationService {
 
             return res.data?.data;
         } catch (error: any) {
-            const msg = error.response?.data?.message || error.message || "Failed to request link verification";
+            const status = error.response?.status;
+            const body = error.response?.data;
+            console.error(
+                `[AfriExchangeAccountVerificationService] requestLinkVerification failed — ` +
+                `HTTP ${status ?? "N/A"} | body: ${JSON.stringify(body)} | msg: ${error.message}`
+            );
+            const msg = body?.message || error.message || "Failed to request link verification";
             throw new Error(msg);
         }
     }

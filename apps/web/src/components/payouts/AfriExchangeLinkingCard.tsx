@@ -71,19 +71,25 @@ export function AfriExchangeLinkingCard({
             });
 
             if (res.data?.success) {
-                setVerificationRequestId(res.data.verification.requestId);
-                setMaskedEmail(res.data.verification.maskedEmail || email);
+                const verification = res.data.data;
+                setVerificationRequestId(verification.requestId);
+                setMaskedEmail(verification.maskedEmail || email);
                 setVerificationStep("code_sent");
                 toast.success("Security verification code sent!", {
-                    description: `Check your email (${res.data.verification.maskedEmail || email}) for your 6-digit OTP code.`,
+                    description: `Check your email (${verification.maskedEmail || email}) for your 6-digit OTP code.`,
                 });
             } else {
                 toast.error(res.data?.message || "Failed to initiate verification");
             }
         } catch (error: any) {
+            const errMsg = error.response?.data?.message || error.message || "";
             toast.error(
-                error.response?.data?.message ||
-                "Failed to send verification code. Ensure your account exists on AfriExchange."
+                errMsg || "Failed to send verification code",
+                {
+                    description: errMsg
+                        ? "Ensure this email is registered on the AfriExchange (AfriX) mobile app."
+                        : "Please check your AfriExchange email and try again.",
+                }
             );
         } finally {
             setIsRequestingCode(false);
