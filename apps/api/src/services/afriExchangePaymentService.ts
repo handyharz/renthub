@@ -35,6 +35,7 @@ export class AfriExchangePaymentService {
         afriExchangeWalletAddress,
         afriExchangeUserId,
         tokenType = "NT",
+        amountInToken,
     }: {
         transactionId: string;
         tenantId: string;
@@ -42,6 +43,7 @@ export class AfriExchangePaymentService {
         afriExchangeWalletAddress?: string;
         afriExchangeUserId?: string;
         tokenType?: "NT" | "CT" | "USDT";
+        amountInToken?: number;
     }) {
         const transaction = await prisma.transaction.findUnique({
             where: { id: transactionId },
@@ -96,6 +98,21 @@ export class AfriExchangePaymentService {
 
         const idempotencyKey = `RENTHUB-COLLECTION-${transactionId}`;
 
+        // Calculate converted token amount if not provided:
+        // NT: 1 NT = 1 NGN
+        // CT: 1 CT ≈ 2.70 NGN (0.37 CT per 1 NGN)
+        // USDT: 1 USDT ≈ 1,500 NGN (0.00067 USDT per 1 NGN)
+        let resolvedTokenAmount: number;
+        if (amountInToken && amountInToken > 0) {
+            resolvedTokenAmount = amountInToken;
+        } else if (tokenType === "USDT") {
+            resolvedTokenAmount = Math.round((transaction.totalAmount / 1500) * 100) / 100;
+        } else if (tokenType === "CT") {
+            resolvedTokenAmount = Math.round((transaction.totalAmount / 2.7) * 100) / 100;
+        } else {
+            resolvedTokenAmount = transaction.totalAmount;
+        }
+
         // If AfriExchange credentials are configured, execute live collection
         if (this.enabled) {
             try {
@@ -106,7 +123,9 @@ export class AfriExchangePaymentService {
                     buyerAfriExchangeUserId: buyerUserId,
                     buyerWalletAddress: buyerWallet,
                     buyerAccountEmail: buyerEmail,
-                    amount: transaction.totalAmount, // Sub-unit (kobo/smallest unit)
+                    amount: resolvedTokenAmount, // Converted token units to debit
+                    amountInToken: resolvedTokenAmount,
+                    amountInNgn: transaction.totalAmount,
                     currency: "NGN",
                     tokenType: tokenType || "NT",
                     description: `RentHub Escrow Payment — ${transaction.property.title} (tx: ${transactionId})`,
@@ -115,6 +134,9 @@ export class AfriExchangePaymentService {
                         propertyId: transaction.propertyId,
                         propertyTitle: transaction.property.title,
                         tenantEmail: transaction.tenant.email,
+                        amountInNgn: transaction.totalAmount,
+                        amountInToken: resolvedTokenAmount,
+                        tokenType: tokenType || "NT",
                     },
                 };
 

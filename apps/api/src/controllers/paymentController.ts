@@ -319,6 +319,7 @@ export class PaymentController {
                 afriExchangeWalletAddress,
                 afriExchangeUserId,
                 tokenType,
+                amountInToken,
             } = req.body;
 
             if (!userId && clerkId && typeof clerkId === "string") {
@@ -347,6 +348,7 @@ export class PaymentController {
                 afriExchangeWalletAddress,
                 afriExchangeUserId,
                 tokenType: tokenType || "NT",
+                amountInToken: amountInToken ? parseFloat(amountInToken) : undefined,
             });
 
             return res.status(200).json({

@@ -160,10 +160,12 @@ export function ApplicationsTab() {
         accountEmail,
         walletAddress,
         tokenType,
+        amountInToken,
     }: {
         accountEmail: string;
         walletAddress?: string;
         tokenType: "NT" | "CT" | "USDT";
+        amountInToken?: number;
     }) => {
         if (!paymentModalApp) return;
         try {
@@ -186,6 +188,7 @@ export function ApplicationsTab() {
                 afriExchangeAccountEmail: accountEmail,
                 afriExchangeWalletAddress: walletAddress,
                 tokenType: tokenType || "NT",
+                amountInToken,
             });
 
             toast.success("Escrow Payment Secured!", {

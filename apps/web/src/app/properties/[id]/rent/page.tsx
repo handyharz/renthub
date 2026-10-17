@@ -89,10 +89,12 @@ export default function RentPropertyPage() {
         accountEmail,
         walletAddress,
         tokenType,
+        amountInToken,
     }: {
         accountEmail: string;
         walletAddress?: string;
         tokenType: "NT" | "CT" | "USDT";
+        amountInToken?: number;
     }) => {
         setProcessing(true);
         setError(null);
@@ -114,6 +116,7 @@ export default function RentPropertyPage() {
                 afriExchangeAccountEmail: accountEmail,
                 afriExchangeWalletAddress: walletAddress,
                 tokenType: tokenType || "NT",
+                amountInToken,
             });
 
             setIsPaymentModalOpen(false);

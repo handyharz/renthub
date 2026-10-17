@@ -25,6 +25,40 @@ import { formatPrice } from "@/lib/utils";
 
 export type AfriExchangeTokenType = "NT" | "CT" | "USDT";
 
+export const TOKEN_RATES: Record<
+    AfriExchangeTokenType,
+    {
+        name: string;
+        rateDesc: string;
+        badge: string;
+        convert: (ngn: number) => number;
+        formatConverted: (amount: number) => string;
+    }
+> = {
+    NT: {
+        name: "Naira Token",
+        rateDesc: "1 NT = ₦1.00 (1:1 NGN)",
+        badge: "1:1 with Naira",
+        convert: (ngn: number) => ngn,
+        formatConverted: (val: number) => `${val.toLocaleString()} NT`,
+    },
+    CT: {
+        name: "CFA Token",
+        rateDesc: "1 CT ≈ ₦2.70 NGN (0.37 CT per ₦1)",
+        badge: "1 CT ≈ ₦2.70 NGN",
+        convert: (ngn: number) => parseFloat((ngn * 0.37).toFixed(2)),
+        formatConverted: (val: number) => `${val.toLocaleString()} CT`,
+    },
+    USDT: {
+        name: "Tether USD",
+        rateDesc: "1 USDT ≈ ₦1,500 NGN ($1.00 USD)",
+        badge: "1 USDT ≈ ₦1,500 NGN",
+        convert: (ngn: number) => parseFloat((ngn / 1500).toFixed(2)),
+        formatConverted: (val: number) =>
+            `${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`,
+    },
+};
+
 interface PaymentMethodModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -36,6 +70,7 @@ interface PaymentMethodModalProps {
         accountEmail: string;
         walletAddress?: string;
         tokenType: AfriExchangeTokenType;
+        amountInToken: number;
     }) => Promise<void>;
 }
 
@@ -62,6 +97,8 @@ export function PaymentMethodModal({
         wallets?: Array<{ tokenType: string; balance: number }>;
     } | null>(null);
 
+    const convertedTokenAmount = TOKEN_RATES[tokenType].convert(totalAmount);
+
     const handleConfirm = async () => {
         setLoading(true);
         setErrorMessage(null);
@@ -74,6 +111,7 @@ export function PaymentMethodModal({
                     accountEmail: afriEmail.trim(),
                     walletAddress: afriWallet.trim() || undefined,
                     tokenType,
+                    amountInToken: convertedTokenAmount,
                 });
             }
         } catch (err: any) {
@@ -122,13 +160,25 @@ export function PaymentMethodModal({
                         <p className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                             Total Escrow Amount
                         </p>
-                        <p className="text-xs font-bold text-[var(--text-primary)] truncate max-w-[220px]">
+                        <p className="text-xs font-bold text-[var(--text-primary)] truncate max-w-[200px]">
                             {propertyTitle}
                         </p>
+                        {selectedMethod === "AFRIEXCHANGE" && (
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
+                                Rate: {TOKEN_RATES[tokenType].rateDesc}
+                            </p>
+                        )}
                     </div>
-                    <p className="text-xl font-extrabold text-[var(--color-brand-green)] tabular-nums">
-                        {formatPrice(totalAmount)}
-                    </p>
+                    <div className="text-right">
+                        <p className="text-xl font-extrabold text-[var(--color-brand-green)] tabular-nums">
+                            {formatPrice(totalAmount)}
+                        </p>
+                        {selectedMethod === "AFRIEXCHANGE" && (
+                            <p className="text-xs font-mono font-extrabold text-amber-600 dark:text-amber-400">
+                                ≈ {TOKEN_RATES[tokenType].formatConverted(convertedTokenAmount)}
+                            </p>
+                        )}
+                    </div>
                 </div>
 
                 {/* In-Modal Error Banner with Action Buttons */}
@@ -220,11 +270,11 @@ export function PaymentMethodModal({
                                     <div className="flex items-center gap-2">
                                         <p className="font-bold text-sm text-[var(--text-primary)]">AfriExchange</p>
                                         <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-none text-[10px] font-bold py-0.5">
-                                            {tokenType} Token (1:1 NGN)
+                                            {TOKEN_RATES[tokenType].badge}
                                         </Badge>
                                     </div>
                                     <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">
-                                        Pay directly from your linked AfriExchange wallet balance
+                                        Pay {TOKEN_RATES[tokenType].formatConverted(convertedTokenAmount)} from your wallet
                                     </p>
                                 </div>
                             </div>
@@ -245,36 +295,42 @@ export function PaymentMethodModal({
                                 className="mt-4 pt-3 border-t border-[var(--border-color)] space-y-3"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {/* Token Selector */}
+                                {/* Token Selector with live converted prices */}
                                 <div>
                                     <label className="block text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mb-1.5">
-                                        Select Wallet Token
+                                        Select Wallet Token & Rate
                                     </label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {(
                                             [
-                                                { id: "NT", label: "NT (Naira)", desc: "1 NT = ₦1" },
-                                                { id: "CT", label: "CT (CFA)", desc: "XOF Token" },
-                                                { id: "USDT", label: "USDT", desc: "USD Tether" },
+                                                { id: "NT", label: "NT (Naira)", rateText: "1:1 with ₦" },
+                                                { id: "CT", label: "CT (CFA)", rateText: "1 CT ≈ ₦2.70" },
+                                                { id: "USDT", label: "USDT", rateText: "1 USDT ≈ ₦1,500" },
                                             ] as const
-                                        ).map((t) => (
-                                            <button
-                                                key={t.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setTokenType(t.id);
-                                                    setErrorMessage(null);
-                                                }}
-                                                className={`p-2 rounded-xl border text-center transition-all ${
-                                                    tokenType === t.id
-                                                        ? "border-[var(--color-brand-green)] bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] font-bold shadow-xs"
-                                                        : "border-[var(--border-color)] bg-[var(--bg-muted)] hover:border-gray-400 text-[var(--text-secondary)] font-medium"
-                                                }`}
-                                            >
-                                                <p className="text-xs">{t.label}</p>
-                                                <p className="text-[10px] opacity-75">{t.desc}</p>
-                                            </button>
-                                        ))}
+                                        ).map((t) => {
+                                            const converted = TOKEN_RATES[t.id].convert(totalAmount);
+                                            return (
+                                                <button
+                                                    key={t.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTokenType(t.id);
+                                                        setErrorMessage(null);
+                                                    }}
+                                                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                                                        tokenType === t.id
+                                                            ? "border-[var(--color-brand-green)] bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] font-bold shadow-xs"
+                                                            : "border-[var(--border-color)] bg-[var(--bg-muted)] hover:border-gray-400 text-[var(--text-secondary)] font-medium"
+                                                    }`}
+                                                >
+                                                    <p className="text-xs font-bold">{t.label}</p>
+                                                    <p className="text-[10px] opacity-75">{t.rateText}</p>
+                                                    <p className="text-[10px] font-mono font-extrabold text-[var(--color-brand-green)] mt-1">
+                                                        {TOKEN_RATES[t.id].formatConverted(converted)}
+                                                    </p>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -372,7 +428,8 @@ export function PaymentMethodModal({
                             </>
                         ) : (
                             <>
-                                Pay with AfriExchange ({tokenType}) <Zap className="h-4 w-4" />
+                                Pay {TOKEN_RATES[tokenType].formatConverted(convertedTokenAmount)} with AfriExchange{" "}
+                                <Zap className="h-4 w-4" />
                             </>
                         )}
                     </Button>
