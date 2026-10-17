@@ -9,6 +9,7 @@ import {
     Building2,
     Lock,
     ArrowRight,
+    Banknote,
 } from "lucide-react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatCard } from "@/components/admin/StatCard";
@@ -34,6 +35,13 @@ export default function AdminOverviewPage() {
     }, []);
 
     const quickLinks = [
+        {
+            href: "/admin/payouts",
+            label: "Landlord Payouts",
+            desc: "Disburse released escrow via AfriExchange",
+            icon: Banknote,
+            accent: "border-[var(--color-brand-green)]/30 hover:border-[var(--color-brand-green)]/60",
+        },
         {
             href: "/admin/verifications",
             label: "Verification Queue",

@@ -55,4 +55,11 @@ router.post(
     payoutController.adminRetryPayout.bind(payoutController)
 );
 
+router.post(
+    "/admin/disburse/:transactionId",
+    requireAuth,
+    requireRole("ADMIN"),
+    payoutController.adminDisbursePayout.bind(payoutController)
+);
+
 export default router;

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
     LayoutDashboard,
+    Banknote,
+    Lock,
+    Building2,
     ShieldCheck,
     AlertTriangle,
     Users,
@@ -17,6 +20,9 @@ import { useState } from "react";
 
 const navItems = [
     { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
+    { href: "/admin/payouts", label: "Landlord Payouts", icon: Banknote },
+    { href: "/admin/escrow", label: "Escrow & Payments", icon: Lock },
+    { href: "/admin/properties", label: "Properties", icon: Building2 },
     { href: "/admin/verifications", label: "Verifications", icon: ShieldCheck },
     { href: "/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { href: "/admin/users", label: "Users", icon: Users },

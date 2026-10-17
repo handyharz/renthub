@@ -232,6 +232,31 @@ export class PayoutController {
     }
 
     // ─────────────────────────────────────────────
+    // ADMIN: Disburse payout for a transaction (manual or OTP released)
+    // POST /api/payouts/admin/disburse/:transactionId
+    // ─────────────────────────────────────────────
+    async adminDisbursePayout(req: Request, res: Response) {
+        try {
+            const transactionId = req.params.transactionId as string;
+            await afriExchangePayoutService.disburseLandlordPayout(transactionId);
+
+            const idempotencyKey = `RENTHUB-ESCROW-${transactionId}`;
+            const payout = await prisma.landlordPayout.findUnique({
+                where: { idempotencyKey },
+                include: { landlord: true },
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: `Payout disburse processed. Status: ${payout?.status}`,
+                data: payout,
+            });
+        } catch (error: unknown) {
+            return res.status(400).json({ success: false, message: getErrorMessage(error) });
+        }
+    }
+
+    // ─────────────────────────────────────────────
     // ADMIN: Get single payout detail
     // GET /api/payouts/admin/:payoutId
     // ─────────────────────────────────────────────
