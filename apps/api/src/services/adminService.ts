@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { PropertyStatus, TransactionStatus } from "@prisma/client";
 import { transactionService } from "./transactionService";
+import { afriExchangePayoutService } from "./afriExchangePayoutService";
 
 export class AdminService {
     async getStats() {
@@ -229,38 +230,99 @@ export class AdminService {
     }
 
     async getDisputes() {
-        return prisma.transaction.findMany({
-            where: { disputed: true },
-            include: {
-                tenant: {
-                    select: {
-                        id: true,
-                        firstName: true,
-                        lastName: true,
-                        email: true,
-                        phone: true,
+        const [
+            disputes,
+            resolvedHistory,
+            disputedAgg,
+            totalTransactions,
+            resolvedCount,
+        ] = await Promise.all([
+            prisma.transaction.findMany({
+                where: { disputed: true },
+                include: {
+                    tenant: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                            phone: true,
+                        },
                     },
-                },
-                property: {
-                    select: {
-                        id: true,
-                        title: true,
-                        address: true,
-                        city: true,
-                        landlord: {
-                            select: {
-                                id: true,
-                                firstName: true,
-                                lastName: true,
-                                email: true,
-                                phone: true,
+                    property: {
+                        select: {
+                            id: true,
+                            title: true,
+                            address: true,
+                            city: true,
+                            landlord: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    phone: true,
+                                    afriExchangeAccountEmail: true,
+                                    afriExchangeWalletAddress: true,
+                                },
                             },
                         },
                     },
                 },
+                orderBy: { updatedAt: "desc" },
+            }),
+            prisma.transaction.findMany({
+                where: {
+                    OR: [
+                        { releaseReason: { contains: "Dispute resolved" } },
+                        { refundReason: { contains: "Dispute resolved" } },
+                        { refunded: true },
+                    ],
+                },
+                take: 10,
+                include: {
+                    tenant: {
+                        select: { id: true, firstName: true, lastName: true, email: true },
+                    },
+                    property: {
+                        select: { id: true, title: true, address: true, city: true },
+                    },
+                },
+                orderBy: { updatedAt: "desc" },
+            }),
+            prisma.transaction.aggregate({
+                _sum: { totalAmount: true },
+                where: { disputed: true },
+            }),
+            prisma.transaction.count(),
+            prisma.transaction.count({
+                where: {
+                    OR: [
+                        { releaseReason: { contains: "Dispute resolved" } },
+                        { refundReason: { contains: "Dispute resolved" } },
+                        { refunded: true },
+                    ],
+                },
+            }),
+        ]);
+
+        const activeDisputes = disputes.length;
+        const disputedAmount = disputedAgg._sum.totalAmount || 0;
+        const disputeRate = totalTransactions > 0
+            ? `${((activeDisputes / totalTransactions) * 100).toFixed(1)}%`
+            : "0%";
+
+        return {
+            disputes,
+            resolvedHistory,
+            stats: {
+                activeDisputes,
+                disputedAmount,
+                resolvedCount,
+                totalTransactions,
+                disputeRate,
             },
-            orderBy: { updatedAt: "desc" },
-        });
+        };
     }
 
     async resolveDispute(
@@ -306,6 +368,11 @@ export class AdminService {
         await prisma.property.update({
             where: { id: transaction.propertyId },
             data: { status: PropertyStatus.RENTED },
+        });
+
+        // Automatically trigger landlord payout dispatch via AfriExchange
+        afriExchangePayoutService.disburseLandlordPayout(transactionId).catch((err) => {
+            console.error(`[AdminService] Auto-payout dispatch error on dispute release tx=${transactionId}:`, err);
         });
 
         return released;
