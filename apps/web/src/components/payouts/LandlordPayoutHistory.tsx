@@ -68,6 +68,12 @@ export function LandlordPayoutHistory() {
     const [selectedPayout, setSelectedPayout] = useState<LandlordPayoutItem | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [searchQuery, setSearchQuery] = useState("");
+    const [linkStatus, setLinkStatus] = useState<{
+        linked: boolean;
+        afriExchangeUserId?: string;
+        afriExchangeWalletAddress?: string;
+        afriExchangeAccountEmail?: string;
+    } | null>(null);
 
     const fetchPayouts = async () => {
         try {
@@ -84,8 +90,20 @@ export function LandlordPayoutHistory() {
         }
     };
 
+    const fetchLinkStatus = async () => {
+        try {
+            const res = await api.get("/payouts/link-status");
+            if (res.data?.success) {
+                setLinkStatus(res.data.data);
+            }
+        } catch {
+            // Silently ignore
+        }
+    };
+
     useEffect(() => {
         fetchPayouts();
+        fetchLinkStatus();
     }, []);
 
     // Summary calculations
@@ -225,11 +243,16 @@ export function LandlordPayoutHistory() {
                             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                                 Total Settled to Wallet
                             </p>
-                            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                                {formatPrice(stats.totalDisbursed)}
-                            </h3>
+                            <div className="flex items-baseline gap-2 mt-1">
+                                <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                    {formatPrice(stats.totalDisbursed)}
+                                </h3>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                    NT
+                                </span>
+                            </div>
                             <p className="text-xs text-[var(--text-muted)] mt-1">
-                                {stats.completedCount} completed escrow releases
+                                {stats.completedCount} completed escrow releases • Settled in Naira Tokens (NT)
                             </p>
                         </div>
                         <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20">
@@ -245,11 +268,16 @@ export function LandlordPayoutHistory() {
                             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                                 In Escrow / Pending
                             </p>
-                            <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
-                                {formatPrice(stats.pendingInEscrow)}
-                            </h3>
+                            <div className="flex items-baseline gap-2 mt-1">
+                                <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                                    {formatPrice(stats.pendingInEscrow)}
+                                </h3>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                    NT
+                                </span>
+                            </div>
                             <p className="text-xs text-[var(--text-muted)] mt-1">
-                                Released upon key handover verification
+                                Released upon key handover verification • Secured in Naira Tokens (NT)
                             </p>
                         </div>
                         <div className="h-11 w-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20">
@@ -564,9 +592,25 @@ export function LandlordPayoutHistory() {
                             )}
 
                             {selectedPayout.failureReason && (
-                                <div className="pt-2 text-red-600 text-[11px] border-t border-red-200/50">
-                                    <span className="font-bold">Notice:</span> {selectedPayout.failureReason}
-                                </div>
+                                <>
+                                    {selectedPayout.failureReason.toLowerCase().includes("not linked") ? (
+                                        linkStatus?.linked ? (
+                                            <div className="pt-2 text-emerald-600 dark:text-emerald-400 text-[11px] border-t border-emerald-500/20 flex items-center gap-1.5">
+                                                <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
+                                                <span>AfriExchange account linked ({linkStatus.afriExchangeWalletAddress ? `${linkStatus.afriExchangeWalletAddress.slice(0, 8)}...` : linkStatus.afriExchangeAccountEmail}). Payout queued for escrow release.</span>
+                                            </div>
+                                        ) : (
+                                            <div className="pt-2 text-amber-600 text-[11px] border-t border-amber-500/20 flex items-center gap-1.5">
+                                                <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                                                <span>Link your AfriExchange settlement account above to receive this payout.</span>
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div className="pt-2 text-amber-600 text-[11px] border-t border-amber-500/20">
+                                            <span className="font-bold">Settlement Status:</span> {selectedPayout.failureReason}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 

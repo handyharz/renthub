@@ -663,15 +663,6 @@ export default function AdminPayoutsPage() {
                                 </p>
                             )}
 
-                            {selectedPayout.landlord?.afriExchangeAccountEmail && (
-                                <div className="mt-2 flex items-center justify-between text-xs bg-[var(--bg-primary)] p-2 rounded border border-[var(--border-color)]">
-                                    <span className="text-[var(--text-muted)]">AfriX Email:</span>
-                                    <span className="font-mono font-semibold text-[var(--text-primary)]">
-                                        {selectedPayout.landlord.afriExchangeAccountEmail}
-                                    </span>
-                                </div>
-                            )}
-
                             {selectedPayout.landlord?.afriExchangeAccountEmail ? (
                                 <div className="space-y-1.5 mt-2">
                                     <div className="flex items-center justify-between text-xs bg-[var(--bg-primary)] p-2 rounded border border-[var(--border-color)]">
@@ -731,9 +722,24 @@ export default function AdminPayoutsPage() {
                             )}
 
                             {selectedPayout.failureReason && (
-                                <div className="pt-2 text-red-600 border-t border-red-200">
-                                    <span className="font-bold">Failure Log:</span> {selectedPayout.failureReason}
-                                </div>
+                                <>
+                                    {selectedPayout.failureReason.toLowerCase().includes("not linked") ? (
+                                        selectedPayout.landlord?.afriExchangeAccountEmail || selectedPayout.landlord?.afriExchangeWalletAddress ? (
+                                            <div className="pt-2 text-emerald-600 border-t border-emerald-200/60 flex items-center justify-between text-xs">
+                                                <span className="font-bold">Settlement Log:</span>
+                                                <span>Landlord account linked. Ready for payout dispatch retry.</span>
+                                            </div>
+                                        ) : (
+                                            <div className="pt-2 text-amber-600 border-t border-amber-200 text-xs">
+                                                <span className="font-bold">Pending:</span> Landlord has not yet linked an AfriExchange settlement account.
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div className="pt-2 text-red-600 border-t border-red-200">
+                                            <span className="font-bold">Failure Log:</span> {selectedPayout.failureReason}
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 

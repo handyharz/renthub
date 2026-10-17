@@ -98,6 +98,22 @@ export class PayoutController {
                 },
             });
 
+            // Auto-queue any previously SKIPPED payouts for this landlord now that wallet is verified
+            try {
+                await prisma.landlordPayout.updateMany({
+                    where: {
+                        landlordId: userId,
+                        status: "SKIPPED",
+                    },
+                    data: {
+                        status: "PENDING",
+                        failureReason: null,
+                    },
+                });
+            } catch (autoQueueErr) {
+                console.warn("[payoutController] Failed to auto-queue skipped payouts after account link:", autoQueueErr);
+            }
+
             return res.status(200).json({
                 success: true,
                 message: "AfriExchange settlement account verified and linked successfully!",
@@ -244,6 +260,31 @@ export class PayoutController {
             const userId = req.user?.id;
             if (!userId) {
                 return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { afriExchangeWalletAddress: true, afriExchangeAccountEmail: true },
+            });
+            const isLinked = !!(user?.afriExchangeWalletAddress || user?.afriExchangeAccountEmail);
+
+            if (isLinked) {
+                // Clear stale failureReason and reset skipped payouts to PENDING
+                try {
+                    await prisma.landlordPayout.updateMany({
+                        where: {
+                            landlordId: userId,
+                            status: "SKIPPED",
+                            failureReason: { contains: "not linked" },
+                        },
+                        data: {
+                            status: "PENDING",
+                            failureReason: null,
+                        },
+                    });
+                } catch (healErr) {
+                    console.warn("[payoutController] Failed to auto-heal skipped payouts:", healErr);
+                }
             }
 
             const payouts = await prisma.landlordPayout.findMany({
