@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
+import { LandlordPayoutHistory } from "@/components/payouts/LandlordPayoutHistory";
 import { Button } from "@/components/ui/Button";
 import api from "@/lib/api";
 import { ArrowLeft, Loader2, ShieldCheck, Wallet } from "lucide-react";
@@ -90,6 +91,9 @@ export default function LandlordPayoutsPage() {
 
                 {/* AfriExchange Linking Card */}
                 <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchUserProfile} />
+
+                {/* Landlord Escrow Settlements & Payout Records */}
+                <LandlordPayoutHistory />
             </div>
         </div>
     );
