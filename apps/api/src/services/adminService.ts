@@ -9,11 +9,20 @@ export class AdminService {
             activeDisputes,
             totalUsers,
             totalProperties,
-            escrowHeld,
+            escrowHeldCount,
+            escrowHeldVolumeAgg,
+            settledEscrowCount,
+            settledEscrowVolumeAgg,
+            pendingPayoutsCount,
+            completedPayoutsCount,
+            completedPayoutsVolumeAgg,
+            actionablePayoutsCount,
+            propertiesByStatus,
+            usersByRole,
         ] = await Promise.all([
-            prisma.property.count({ where: { status: PropertyStatus.PENDING_REVIEW } }),
+            prisma.property.count({ where: { status: PropertyStatus.PENDING_REVIEW, deletedAt: null } }),
             prisma.transaction.count({ where: { disputed: true } }),
-            prisma.user.count(),
+            prisma.user.count({ where: { deletedAt: null } }),
             prisma.property.count({ where: { deletedAt: null } }),
             prisma.transaction.count({
                 where: {
@@ -22,6 +31,56 @@ export class AdminService {
                     disputed: false,
                 },
             }),
+            prisma.transaction.aggregate({
+                _sum: { totalAmount: true, rentAmount: true },
+                where: {
+                    status: TransactionStatus.ESCROWED,
+                    escrowHeld: true,
+                    disputed: false,
+                },
+            }),
+            prisma.transaction.count({
+                where: {
+                    status: TransactionStatus.RELEASED,
+                },
+            }),
+            prisma.transaction.aggregate({
+                _sum: { totalAmount: true, rentAmount: true },
+                where: {
+                    status: TransactionStatus.RELEASED,
+                },
+            }),
+            prisma.landlordPayout.count({
+                where: {
+                    status: { in: ["PENDING", "PROCESSING"] },
+                },
+            }),
+            prisma.landlordPayout.count({
+                where: {
+                    status: "COMPLETED",
+                },
+            }),
+            prisma.landlordPayout.aggregate({
+                _sum: { netAmount: true },
+                where: {
+                    status: "COMPLETED",
+                },
+            }),
+            prisma.landlordPayout.count({
+                where: {
+                    status: { in: ["FAILED", "SKIPPED", "PENDING"] },
+                },
+            }),
+            prisma.property.groupBy({
+                by: ["status"],
+                where: { deletedAt: null },
+                _count: { id: true },
+            }),
+            prisma.user.groupBy({
+                by: ["role"],
+                where: { deletedAt: null },
+                _count: { id: true },
+            }),
         ]);
 
         return {
@@ -29,7 +88,23 @@ export class AdminService {
             activeDisputes,
             totalUsers,
             totalProperties,
-            escrowHeld,
+            escrowHeld: escrowHeldCount,
+            escrowHeldCount,
+            escrowHeldAmount: escrowHeldVolumeAgg._sum.totalAmount || escrowHeldVolumeAgg._sum.rentAmount || 0,
+            settledEscrowCount,
+            settledEscrowAmount: settledEscrowVolumeAgg._sum.rentAmount || settledEscrowVolumeAgg._sum.totalAmount || 0,
+            pendingPayoutsCount,
+            completedPayoutsCount,
+            completedPayoutsAmount: completedPayoutsVolumeAgg._sum.netAmount || 0,
+            actionablePayoutsCount,
+            propertiesSummary: propertiesByStatus.reduce((acc, curr) => {
+                acc[curr.status] = curr._count.id;
+                return acc;
+            }, {} as Record<string, number>),
+            usersSummary: usersByRole.reduce((acc, curr) => {
+                acc[curr.role] = curr._count.id;
+                return acc;
+            }, {} as Record<string, number>),
         };
     }
 

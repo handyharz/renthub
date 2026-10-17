@@ -230,7 +230,7 @@ export class UserController {
             const result = await userService.getAllUsers({
                 role: typeof role === "string" ? (role as UserRole) : undefined,
                 status: typeof status === "string" ? (status as UserStatus) : undefined,
-                verified: verified === "true",
+                verified: verified !== undefined ? verified === "true" : undefined,
                 limit: limit && typeof limit === "string" ? parseInt(limit) : 20,
                 offset: offset && typeof offset === "string" ? parseInt(offset) : 0,
             });
