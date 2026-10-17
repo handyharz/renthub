@@ -561,21 +561,25 @@ export default function AdminPayoutsPage() {
                                                         </Button>
                                                     )}
 
-                                                    {/* Retry (if failed) */}
-                                                    {payout.status === "FAILED" && (
+                                                    {/* Retry (if failed or skipped) */}
+                                                    {(payout.status === "FAILED" || payout.status === "SKIPPED") && (
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() => handleRetry(payout.id)}
                                                             disabled={actionLoadingId === payout.id}
-                                                            className="h-8 gap-1 text-xs text-red-600 border-red-300 hover:bg-red-50"
+                                                            className={`h-8 gap-1 text-xs ${
+                                                                payout.status === "SKIPPED"
+                                                                    ? "text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                                                                    : "text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-500/10"
+                                                            }`}
                                                         >
                                                             {actionLoadingId === payout.id ? (
                                                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                             ) : (
                                                                 <RotateCw className="h-3.5 w-3.5" />
                                                             )}
-                                                            <span>Retry</span>
+                                                            <span>{payout.status === "SKIPPED" ? "Retry Now" : "Retry"}</span>
                                                         </Button>
                                                     )}
 
@@ -793,16 +797,20 @@ export default function AdminPayoutsPage() {
                                     Disburse Now
                                 </Button>
                             )}
-                            {selectedPayout.status === "FAILED" && (
+                            {(selectedPayout.status === "FAILED" || selectedPayout.status === "SKIPPED") && (
                                 <Button
                                     onClick={() => {
                                         handleRetry(selectedPayout.id);
                                         setSelectedPayout(null);
                                     }}
-                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold gap-2"
+                                    className={`flex-1 font-semibold gap-2 text-white ${
+                                        selectedPayout.status === "SKIPPED"
+                                            ? "bg-amber-600 hover:bg-amber-700"
+                                            : "bg-red-600 hover:bg-red-700"
+                                    }`}
                                 >
                                     <RotateCw className="h-4 w-4" />
-                                    Retry Payout
+                                    {selectedPayout.status === "SKIPPED" ? "Retry Skipped Payout" : "Retry Payout"}
                                 </Button>
                             )}
                             <Button
