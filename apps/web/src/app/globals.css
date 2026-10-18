@@ -116,3 +116,8 @@ html.dark input::placeholder,
 html.dark textarea::placeholder {
   color: var(--text-placeholder);
 }
+
+html.dark select option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}

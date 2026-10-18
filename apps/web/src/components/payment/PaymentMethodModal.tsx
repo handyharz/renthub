@@ -320,7 +320,7 @@ export function PaymentMethodModal({
                                                     className={`p-2.5 rounded-xl border text-center transition-all ${
                                                         tokenType === t.id
                                                             ? "border-[var(--color-brand-green)] bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] font-bold shadow-xs"
-                                                            : "border-[var(--border-color)] bg-[var(--bg-muted)] hover:border-gray-400 text-[var(--text-secondary)] font-medium"
+                                                            : "border-[var(--border-color)] bg-[var(--bg-muted)] hover:border-gray-400 dark:hover:border-gray-500 text-[var(--text-secondary)] font-medium"
                                                     }`}
                                                 >
                                                     <p className="text-xs font-bold">{t.label}</p>
