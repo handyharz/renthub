@@ -35,6 +35,7 @@ import { formatPrice } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
+import { RenewalsSection } from "./RenewalsSection";
 
 interface Application {
     id: string;
@@ -72,11 +73,24 @@ export function LandlordApplicationsTab() {
     const [refreshing, setRefreshing] = useState(false);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+    // Sub-navigation: Applications vs Renewals
+    const [activeSection, setActiveSection] = useState<"applications" | "renewals">("applications");
+
     // Search, filter & pagination state
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 6;
+
+    const properties = useMemo(() => {
+        const map = new Map();
+        applications.forEach((a) => {
+            if (a.property && !map.has(a.property.id)) {
+                map.set(a.property.id, a.property);
+            }
+        });
+        return Array.from(map.values());
+    }, [applications]);
 
     useEffect(() => {
         if (user) {
@@ -218,6 +232,43 @@ export function LandlordApplicationsTab() {
                 </div>
             </div>
 
+            {/* Sub-navigation Switcher: Applications vs Renewals */}
+            <div className="flex border-b border-[var(--border-color)] gap-2">
+                <button
+                    type="button"
+                    onClick={() => setActiveSection("applications")}
+                    className={`pb-3 px-3 text-xs sm:text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
+                        activeSection === "applications"
+                            ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)]"
+                            : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                >
+                    <FileText className="h-4 w-4" />
+                    Incoming Applications
+                    {stats.pending > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-full font-black">
+                            {stats.pending}
+                        </span>
+                    )}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveSection("renewals")}
+                    className={`pb-3 px-3 text-xs sm:text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
+                        activeSection === "renewals"
+                            ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)]"
+                            : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                    }`}
+                >
+                    <Sparkles className="h-4 w-4 text-[var(--color-brand-green)]" />
+                    Lease Renewals & Extensions
+                </button>
+            </div>
+
+            {activeSection === "renewals" ? (
+                <RenewalsSection role="LANDLORD" properties={properties} />
+            ) : (
+                <>
             {/* Metric Overview Strip */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <div
@@ -709,6 +760,8 @@ export function LandlordApplicationsTab() {
                         </div>
                     )}
                 </div>
+            )}
+            </>
             )}
         </div>
     );

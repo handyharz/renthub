@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { EscrowStatusModal } from "./EscrowStatusModal";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { PaymentMethodModal } from "@/components/payment/PaymentMethodModal";
+import { RenewalsSection } from "./RenewalsSection";
 
 interface RentalApplication {
     id: string;
@@ -124,7 +125,7 @@ export function ApplicationsTab() {
     const [reviewedTxIds, setReviewedTxIds] = useState<string[]>([]);
 
     // Tab, Search, Filter & Pagination State
-    const [activeTab, setActiveTab] = useState<"applications" | "escrow">("applications");
+    const [activeTab, setActiveTab] = useState<"applications" | "escrow" | "renewals">("applications");
     const [appSearchQuery, setAppSearchQuery] = useState("");
     const [appStatusFilter, setAppStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
     const [escrowFilter, setEscrowFilter] = useState<"all" | "active" | "completed">("all");
@@ -605,6 +606,20 @@ export function ApplicationsTab() {
                         >
                             {deduplicatedEscrowTxs.length}
                         </span>
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            setActiveTab("renewals");
+                        }}
+                        className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all duration-200 ${
+                            activeTab === "renewals"
+                                ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs border border-[var(--border-color)]"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                    >
+                        <Sparkles className="h-4 w-4 text-[var(--color-brand-green)]" />
+                        <span>Lease Renewals</span>
                     </button>
                 </div>
             </div>
@@ -1346,6 +1361,11 @@ export function ApplicationsTab() {
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* TAB CONTENT 3: LEASE RENEWALS */}
+            {activeTab === "renewals" && (
+                <RenewalsSection role="TENANT" />
             )}
 
             {/* Escrow Modal */}

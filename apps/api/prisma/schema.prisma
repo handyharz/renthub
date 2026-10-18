@@ -44,6 +44,8 @@ model User {
   conversations    Conversation[] @relation("UserConversations")
   serviceTransactions ServiceTransaction[]
   landlordPayouts  LandlordPayout[]
+  renewalsAsTenant LeaseRenewal[] @relation("TenantRenewals")
+  renewalsAsLandlord LeaseRenewal[] @relation("LandlordRenewals")
 
   // AfriExchange settlement info (landlords only)
   afriExchangeUserId      String?
@@ -115,6 +117,7 @@ model Property {
   transactions  Transaction[]
   serviceTransactions ServiceTransaction[]
   videos        Video[]
+  renewals      LeaseRenewal[]
 
   @@index([landlordId])
   @@index([city, state])
@@ -477,6 +480,9 @@ enum NotificationType {
   REVIEW_REQUEST
   VERIFICATION
   LEASE_EXPIRING
+  LEASE_RENEWAL_OFFERED
+  LEASE_RENEWAL_ACCEPTED
+  LEASE_RENEWAL_DECLINED
   SYSTEM
 }
 
@@ -581,4 +587,57 @@ model LandlordPayout {
   @@index([status])
   @@index([createdAt])
   @@map("landlord_payouts")
+}
+
+enum RenewalStatus {
+  OFFERED_BY_LANDLORD
+  PENDING_TENANT_REVIEW
+  COUNTER_OFFERED
+  ACCEPTED
+  PAID_IN_ESCROW
+  COMPLETED
+  DECLINED
+  CANCELLED
+}
+
+// Tracks automated & 1-click lease renewals
+model LeaseRenewal {
+  id                    String        @id @default(cuid())
+  propertyId            String
+  tenantId              String
+  landlordId            String
+  originalTransactionId String?
+
+  currentRent           Int
+  offeredRent           Int
+  leaseDuration         Int           @default(12) // months
+  currentLeaseEndDate   DateTime
+  newLeaseStartDate     DateTime
+  newLeaseEndDate       DateTime
+
+  platformFeeTenant     Int           // 2% from tenant on top of offeredRent
+  platformFeeLandlord   Int           // 2% deducted from landlord rent
+  cautionRolledOver     Boolean       @default(true)
+  cautionAmount         Int           @default(0)
+
+  status                RenewalStatus @default(OFFERED_BY_LANDLORD)
+  landlordNote          String?
+  tenantNote            String?
+
+  paymentReference      String?       @unique
+  paidAt                DateTime?
+  completedAt           DateTime?
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  property              Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant                User          @relation("TenantRenewals", fields: [tenantId], references: [id], onDelete: Cascade)
+  landlord              User          @relation("LandlordRenewals", fields: [landlordId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([landlordId])
+  @@index([status])
+  @@map("lease_renewals")
 }
