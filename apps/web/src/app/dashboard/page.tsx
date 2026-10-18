@@ -51,12 +51,17 @@ import {
     X,
     Filter,
     Heart,
+    Zap,
+    Droplets,
+    ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import api from "@/lib/api";
 import { formatPrice, cn, calculateTrustScore } from "@/lib/utils";
 import { PropertyCard } from "@/components/property/PropertyCard";
+import { ALL_STATES, NIGERIAN_LOCATIONS } from "@/lib/locations";
+import { PROPERTY_CATEGORIES } from "@/lib/constants";
 import { Inbox } from "@/components/messaging/Inbox";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
 import { LandlordApplicationsTab } from "@/components/dashboard/LandlordApplicationsTab";
@@ -301,6 +306,7 @@ function DashboardContent() {
 
     const tenantTabs = [
         { id: "overview", label: "Overview", icon: BarChart3 },
+        { id: "for-rent", label: "For Rent", icon: Search },
         { id: "favorites", label: "Saved Homes", icon: Home },
         { id: "tours", label: "Physical Tours", icon: Calendar },
         { id: "applications", label: "Applications", icon: FileText },
@@ -416,6 +422,7 @@ function DashboardContent() {
                         )}
                         {activeTab === "properties" && role === "LANDLORD" && <PropertiesTab properties={properties} loading={loading} onRefresh={fetchDashboardData} />}
                         {activeTab === "tours" && <ToursTab role={role as "LANDLORD" | "TENANT"} />}
+                        {activeTab === "for-rent" && role === "TENANT" && <DashboardForRentTab />}
                         {activeTab === "favorites" && role === "TENANT" && (
                             <FavoritesTab
                                 favorites={favorites}
@@ -1388,6 +1395,340 @@ function TenantOverviewTab({
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function DashboardForRentTab() {
+    const [properties, setProperties] = useState<Property[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedState, setSelectedState] = useState("");
+    const [selectedCity, setSelectedCity] = useState("");
+    const [selectedType, setSelectedType] = useState("ALL");
+    const [priceRange, setPriceRange] = useState<string>("ALL");
+    const [onlySolar, setOnlySolar] = useState(false);
+    const [onlyServiced, setOnlyServiced] = useState(false);
+    const [onlyVerified, setOnlyVerified] = useState(false);
+    const [sortBy, setSortBy] = useState("newest");
+
+    const POPULAR_HUBS = [
+        { label: "All Nigeria", state: "" },
+        { label: "Lagos", state: "Lagos" },
+        { label: "Abuja (FCT)", state: "FCT" },
+        { label: "Rivers", state: "Rivers" },
+        { label: "Oyo", state: "Oyo" },
+        { label: "Enugu", state: "Enugu" },
+        { label: "Delta", state: "Delta" },
+        { label: "Kano", state: "Kano" },
+        { label: "Ogun", state: "Ogun" },
+    ];
+
+    const PRICE_OPTIONS = [
+        { label: "Any Budget", value: "ALL" },
+        { label: "< ₦500k", value: "UNDER_500K" },
+        { label: "₦500k - ₦1.5M", value: "500K_1_5M" },
+        { label: "₦1.5M - ₦3M", value: "1_5M_3M" },
+        { label: "₦3M - ₦6M", value: "3M_6M" },
+        { label: "₦6M+", value: "OVER_6M" },
+    ];
+
+    useEffect(() => {
+        const fetchProperties = async () => {
+            setLoading(true);
+            try {
+                const params = new URLSearchParams();
+                if (searchQuery.trim()) params.append("q", searchQuery.trim());
+                if (selectedState) params.append("state", selectedState);
+                if (selectedCity) params.append("city", selectedCity);
+                if (selectedType !== "ALL") params.append("propertyType", selectedType);
+
+                if (priceRange === "UNDER_500K") params.append("maxPrice", "500000");
+                else if (priceRange === "500K_1_5M") {
+                    params.append("minPrice", "500000");
+                    params.append("maxPrice", "1500000");
+                } else if (priceRange === "1_5M_3M") {
+                    params.append("minPrice", "1500000");
+                    params.append("maxPrice", "3000000");
+                } else if (priceRange === "3M_6M") {
+                    params.append("minPrice", "3000000");
+                    params.append("maxPrice", "6000000");
+                } else if (priceRange === "OVER_6M") {
+                    params.append("minPrice", "6000000");
+                }
+
+                if (onlySolar) params.append("powerSupply", "GRID_AND_SOLAR");
+                if (onlyServiced) params.append("serviced", "true");
+                if (onlyVerified) params.append("verified", "true");
+                if (sortBy) params.append("sortBy", sortBy);
+
+                const res = await api.get(`/properties?${params.toString()}`);
+                setProperties(res.data?.data?.properties || []);
+            } catch (error) {
+                console.error("Failed to fetch dashboard rental properties:", error);
+                setProperties([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const timer = setTimeout(fetchProperties, 200);
+        return () => clearTimeout(timer);
+    }, [searchQuery, selectedState, selectedCity, selectedType, priceRange, onlySolar, onlyServiced, onlyVerified, sortBy]);
+
+    const citiesInState = selectedState && NIGERIAN_LOCATIONS[selectedState] ? NIGERIAN_LOCATIONS[selectedState] : [];
+
+    return (
+        <div className="space-y-6">
+            {/* Header Banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-muted)]/40 rounded-3xl border border-[var(--border-color)] shadow-xs">
+                <div>
+                    <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                        <div className="p-2 rounded-xl bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)]">
+                            <Home className="h-5 w-5" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)] tracking-tight">
+                            Homes For Rent
+                        </h2>
+                        <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/20">
+                            36 States & FCT
+                        </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
+                        Search and discover verified properties across Nigeria with escrow rent protection and instant physical tour booking.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2.5 shrink-0">
+                    <Link href="/search">
+                        <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold rounded-2xl px-4 sm:px-5 h-10 sm:h-11 shadow-xs gap-2 text-xs sm:text-sm">
+                            <MapPin className="h-4 w-4" />
+                            <span>Interactive Map Search</span>
+                            <ArrowUpRight className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Search and Filters Toolbar */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs space-y-3.5">
+                {/* Search Bar + State Select + Sort */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    {/* Live Search */}
+                    <div className="relative sm:col-span-2">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by title, area, street, or landmark..."
+                            className="w-full h-10 pl-10 pr-9 text-xs sm:text-sm font-medium bg-[var(--bg-muted)]/70 rounded-xl border border-transparent focus:border-[var(--color-brand-green)] focus:bg-[var(--bg-card)] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-hidden transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-0.5"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* 36-State Selector */}
+                    <div className="relative">
+                        <select
+                            value={selectedState}
+                            onChange={(e) => {
+                                setSelectedState(e.target.value);
+                                setSelectedCity("");
+                            }}
+                            className="w-full h-10 px-3 pr-8 text-xs font-bold rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)]/60 text-[var(--text-primary)] focus:border-[var(--color-brand-green)] outline-hidden transition-all cursor-pointer appearance-none"
+                        >
+                            <option value="">All 36 States & FCT</option>
+                            {ALL_STATES.map((state) => (
+                                <option key={state} value={state}>
+                                    {state === "FCT" ? "Abuja (FCT)" : state}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                    </div>
+
+                    {/* City / Area Dropdown (if state selected) or Sort */}
+                    {citiesInState.length > 0 ? (
+                        <div className="relative">
+                            <select
+                                value={selectedCity}
+                                onChange={(e) => setSelectedCity(e.target.value)}
+                                className="w-full h-10 px-3 pr-8 text-xs font-bold rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)]/60 text-[var(--text-primary)] focus:border-[var(--color-brand-green)] outline-hidden transition-all cursor-pointer appearance-none"
+                            >
+                                <option value="">All Areas in {selectedState === "FCT" ? "Abuja" : selectedState}</option>
+                                {citiesInState.map((city) => (
+                                    <option key={city} value={city}>
+                                        {city}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                        </div>
+                    ) : (
+                        <div className="relative">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="w-full h-10 px-3 pr-8 text-xs font-bold rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)]/60 text-[var(--text-primary)] focus:border-[var(--color-brand-green)] outline-hidden transition-all cursor-pointer appearance-none"
+                            >
+                                <option value="newest">Latest Listings</option>
+                                <option value="price_asc">Price: Low to High</option>
+                                <option value="price_desc">Price: High to Low</option>
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                        </div>
+                    )}
+                </div>
+
+                {/* Popular Nigerian States Ribbon */}
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1">
+                    <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+                        <MapPin className="h-3 w-3 text-[var(--color-brand-green)]" /> Hubs:
+                    </span>
+                    {POPULAR_HUBS.map((hub) => {
+                        const isSelected = selectedState === hub.state;
+                        return (
+                            <button
+                                key={hub.label}
+                                onClick={() => {
+                                    setSelectedState(hub.state);
+                                    setSelectedCity("");
+                                }}
+                                className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                                    isSelected
+                                        ? "bg-[var(--color-brand-green)] text-white shadow-2xs"
+                                        : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                }`}
+                            >
+                                {hub.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Second Ribbon: Budget & Utilities */}
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1 border-t border-[var(--border-color)]/60">
+                    {/* Budget Pills */}
+                    {PRICE_OPTIONS.map((opt) => (
+                        <button
+                            key={opt.value}
+                            onClick={() => setPriceRange(opt.value)}
+                            className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                                priceRange === opt.value
+                                    ? "bg-[var(--color-brand-green)] text-white shadow-2xs"
+                                    : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                            }`}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+
+                    <div className="h-4 w-px bg-[var(--border-color)] shrink-0" />
+
+                    {/* Solar Toggle */}
+                    <button
+                        onClick={() => setOnlySolar(!onlySolar)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 flex items-center gap-1 ${
+                            onlySolar
+                                ? "bg-amber-500 text-white shadow-2xs"
+                                : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                    >
+                        <Zap className="h-3 w-3" />
+                        <span>Solar Powered</span>
+                    </button>
+
+                    {/* Serviced Toggle */}
+                    <button
+                        onClick={() => setOnlyServiced(!onlyServiced)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 flex items-center gap-1 ${
+                            onlyServiced
+                                ? "bg-emerald-600 text-white shadow-2xs"
+                                : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                    >
+                        <Building2 className="h-3 w-3" />
+                        <span>Serviced</span>
+                    </button>
+
+                    {/* Verified Toggle */}
+                    <button
+                        onClick={() => setOnlyVerified(!onlyVerified)}
+                        className={`px-2.5 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 flex items-center gap-1 ${
+                            onlyVerified
+                                ? "bg-blue-600 text-white shadow-2xs"
+                                : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                    >
+                        <ShieldCheck className="h-3 w-3" />
+                        <span>Verified Only</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Properties Grid */}
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-[var(--bg-card)] rounded-3xl h-88 animate-pulse border border-[var(--border-color)]" />
+                    ))}
+                </div>
+            ) : properties.length === 0 ? (
+                <div className="p-12 text-center rounded-3xl border border-dashed border-[var(--border-color)] bg-[var(--bg-muted)]/20">
+                    <Search className="h-10 w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-40" />
+                    <h4 className="text-base font-extrabold text-[var(--text-primary)] mb-1">
+                        No properties found matching your selection
+                    </h4>
+                    <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto mb-4 font-medium">
+                        Try resetting your filters or selecting a different state to view verified listings.
+                    </p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setSearchQuery("");
+                            setSelectedState("");
+                            setSelectedCity("");
+                            setSelectedType("ALL");
+                            setPriceRange("ALL");
+                            setOnlySolar(false);
+                            setOnlyServiced(false);
+                            setOnlyVerified(false);
+                        }}
+                        className="rounded-xl border-[var(--border-color)] text-xs font-bold"
+                    >
+                        Reset All Filters
+                    </Button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                    {properties.map((property) => (
+                        <PropertyCard
+                            key={property.id}
+                            property={{
+                                id: property.id,
+                                title: property.title,
+                                address: property.address,
+                                price: property.pricePerYear,
+                                bedrooms: property.bedrooms,
+                                bathrooms: property.bathrooms,
+                                image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80",
+                                verified: property.verified,
+                                featured: property.featured,
+                                landlordVerified: property.landlord?.verified,
+                                type: property.propertyType?.replace(/_/g, " ") || "Apartment",
+                                status: property.status,
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
