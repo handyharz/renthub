@@ -632,16 +632,22 @@ export default function AdminPayoutsPage() {
                                     {formatPrice(selectedPayout.grossAmount)}
                                 </span>
                             </div>
-                            <div className="flex justify-between text-sm py-1 border-b border-[var(--border-color)]/60 text-amber-600">
-                                <span>Platform Commission (2%):</span>
+                            <div className="flex justify-between text-sm py-1 border-b border-[var(--border-color)]/60 text-red-500">
+                                <span>Landlord Escrow Fee (2% from rent):</span>
                                 <span className="font-mono font-medium">
                                     - {formatPrice(selectedPayout.platformFee)}
                                 </span>
                             </div>
                             <div className="flex justify-between text-sm py-1 font-bold text-[var(--text-primary)]">
-                                <span>Net Landlord Payout:</span>
+                                <span>Net Landlord Payout (98%):</span>
                                 <span className="font-mono text-[var(--color-brand-green)]">
                                     {formatPrice(selectedPayout.netAmount)} {selectedPayout.tokenType || "NT"}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-xs py-1.5 border-t border-[var(--border-color)]/40 text-[var(--color-brand-green)] font-semibold mt-1 bg-emerald-500/10 px-2 rounded-lg">
+                                <span>Total Platform Revenue (4%):</span>
+                                <span className="font-mono">
+                                    {formatPrice(selectedPayout.platformFee * 2)} (Tenant 2% + Landlord 2%)
                                 </span>
                             </div>
                         </div>

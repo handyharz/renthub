@@ -168,10 +168,11 @@ export function TransactionsTab() {
         }
     };
 
-    // Financial & Metric Calculations
+    // Financial & Metric Calculations (98% Net Rent Payout Model)
     const stats = useMemo(() => {
         const total = transactions.length;
-        let grossVolume = 0;
+        let totalRentGross = 0;
+        let totalEscrowFees = 0;
         let totalNetPayout = 0;
         let inEscrowAmount = 0;
         let inEscrowCount = 0;
@@ -180,8 +181,12 @@ export function TransactionsTab() {
         let disputedCount = 0;
 
         for (const tx of transactions) {
-            grossVolume += tx.totalAmount || 0;
-            const net = (tx.rentAmount || 0) + (tx.cautionFee || 0) + (tx.legalFee || 0) + (tx.serviceFee || 0);
+            const rent = tx.rentAmount || 0;
+            const fee = tx.platformFee || Math.round(rent * 0.02);
+            const net = Math.max(0, rent - fee); // Landlord receives 98% of rent
+
+            totalRentGross += rent;
+            totalEscrowFees += fee;
             totalNetPayout += net;
 
             if (tx.disputed) {
@@ -197,7 +202,8 @@ export function TransactionsTab() {
 
         return {
             total,
-            grossVolume,
+            totalRentGross,
+            totalEscrowFees,
             totalNetPayout,
             inEscrowAmount,
             inEscrowCount,
@@ -371,18 +377,18 @@ export function TransactionsTab() {
                 >
                     <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                            Total Volume
+                            Total Net Rent Payout (98%)
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-[var(--color-brand-green)] flex items-center justify-center">
                             <Receipt className="h-4 w-4" />
                         </div>
                     </div>
                     <div className="mt-2">
                         <span className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">
-                            {formatPrice(stats.grossVolume)}
+                            {formatPrice(stats.totalNetPayout)}
                         </span>
                         <p className="text-[11px] font-semibold text-[var(--text-muted)] mt-0.5">
-                            {stats.total} total transactions
+                            From {formatPrice(stats.totalRentGross)} gross rent • 2% fee deducted
                         </p>
                     </div>
                 </div>
@@ -575,7 +581,10 @@ export function TransactionsTab() {
                             const primaryImage =
                                 tx.property?.images?.find((img) => img.isPrimary)?.url ||
                                 tx.property?.images?.[0]?.url;
-                            const netPayout = (tx.rentAmount || 0) + (tx.cautionFee || 0) + (tx.legalFee || 0) + (tx.serviceFee || 0);
+                            const rent = tx.rentAmount || 0;
+                            const landlordFee = tx.platformFee || Math.round(rent * 0.02);
+                            const netRentPayout = Math.max(0, rent - landlordFee);
+                            const tenantEscrowTotal = tx.totalAmount || (rent + (tx.cautionFee || 0) + (tx.legalFee || 0) + (tx.serviceFee || 0) + landlordFee);
 
                             return (
                                 <div
@@ -691,27 +700,29 @@ export function TransactionsTab() {
                                         <div className="lg:col-span-2 p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col justify-center space-y-2 text-xs shadow-2xs">
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2 border-b border-[var(--border-color)]">
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Annual Rent</span>
+                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Annual Rent (Gross)</span>
                                                     <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block">
-                                                        {formatPrice(tx.rentAmount)}
+                                                        {formatPrice(rent)}
                                                     </span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Caution Fee</span>
-                                                    <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block">
-                                                        {formatPrice(tx.cautionFee || 0)}
+                                                    <span className="text-[10px] uppercase font-bold text-red-500 block">RentHub Fee (2%)</span>
+                                                    <span className="font-extrabold text-red-500 mt-0.5 block">
+                                                        - {formatPrice(landlordFee)}
                                                     </span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Legal & Service</span>
-                                                    <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block">
-                                                        {formatPrice((tx.legalFee || 0) + (tx.serviceFee || 0))}
+                                                    <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">Your Net Payout (98%)</span>
+                                                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                                                        {formatPrice(netRentPayout)}
                                                     </span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Tenant Escrow Total</span>
-                                                    <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block">
-                                                        {formatPrice(tx.totalAmount)}
+                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block" title="Includes rent, caution deposit, legal fee & 2% tenant escrow fee">
+                                                        Tenant Total in Escrow
+                                                    </span>
+                                                    <span className="font-extrabold text-[var(--text-secondary)] mt-0.5 block">
+                                                        {formatPrice(tenantEscrowTotal)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -719,10 +730,10 @@ export function TransactionsTab() {
                                             <div className="flex items-center justify-between pt-0.5">
                                                 <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
                                                     <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)]" />
-                                                    <span className="font-medium">Total Landlord Net Payout:</span>
+                                                    <span className="font-medium">Net Payout to Your Bank upon OTP Handover:</span>
                                                 </div>
                                                 <span className="text-base sm:text-lg font-black text-[var(--color-brand-green)]">
-                                                    {formatPrice(netPayout)}
+                                                    {formatPrice(netRentPayout)}
                                                 </span>
                                             </div>
                                         </div>

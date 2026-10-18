@@ -507,37 +507,86 @@ export default function AdminEscrowPage() {
                         {/* Financial Breakdown */}
                         <div className="space-y-3 rounded-lg border border-[var(--border-color)] p-4 bg-[var(--bg-primary)]/40">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                                Financial Hold Breakdown (NT Token)
+                                Financial Hold & 4% Revenue Breakdown
                             </h4>
-                            <div className="flex justify-between text-sm py-1 border-b border-[var(--border-color)]/60">
-                                <span className="text-[var(--text-secondary)]">Gross Rent:</span>
-                                <span className="font-mono font-medium text-[var(--text-primary)]">
-                                    {formatPrice(selectedTx.rentAmount)} NT
+
+                            {/* Section 1: Tenant Inflow */}
+                            <div className="space-y-1 pb-3 border-b border-[var(--border-color)]/60 text-xs">
+                                <span className="font-bold uppercase text-[10px] text-blue-500 tracking-wider block">
+                                    1. Tenant Payment (Escrow Inflow)
                                 </span>
+                                <div className="flex justify-between py-0.5">
+                                    <span className="text-[var(--text-secondary)]">Annual Rent:</span>
+                                    <span className="font-mono font-medium text-[var(--text-primary)]">
+                                        {formatPrice(selectedTx.rentAmount)} NT
+                                    </span>
+                                </div>
+                                {selectedTx.cautionDeposit > 0 && (
+                                    <div className="flex justify-between py-0.5">
+                                        <span className="text-[var(--text-secondary)]">Caution Deposit:</span>
+                                        <span className="font-mono font-medium text-[var(--text-primary)]">
+                                            {formatPrice(selectedTx.cautionDeposit)} NT
+                                        </span>
+                                    </div>
+                                )}
+                                {selectedTx.serviceFee > 0 && (
+                                    <div className="flex justify-between py-0.5">
+                                        <span className="text-[var(--text-secondary)]">Service Fee:</span>
+                                        <span className="font-mono font-medium text-[var(--text-primary)]">
+                                            {formatPrice(selectedTx.serviceFee)} NT
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between py-0.5 text-blue-600 dark:text-blue-400 font-semibold">
+                                    <span>Tenant Platform Escrow Fee (2% on top):</span>
+                                    <span className="font-mono">
+                                        + {formatPrice(selectedTx.platformFee || Math.round((selectedTx.rentAmount || 0) * 0.02))} NT
+                                    </span>
+                                </div>
+                                <div className="flex justify-between font-bold text-xs pt-1 border-t border-[var(--border-color)]/40 text-[var(--color-brand-blue)]">
+                                    <span>Total Held in Escrow:</span>
+                                    <span className="font-mono">
+                                        {formatPrice(selectedTx.totalAmount)} NT
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex justify-between text-sm py-1 border-b border-[var(--border-color)]/60">
-                                <span className="text-[var(--text-secondary)]">Caution Deposit:</span>
-                                <span className="font-mono font-medium text-[var(--text-primary)]">
-                                    {formatPrice(selectedTx.cautionDeposit || 0)} NT
+
+                            {/* Section 2: Landlord Settlement */}
+                            <div className="space-y-1 pb-3 border-b border-[var(--border-color)]/60 text-xs">
+                                <span className="font-bold uppercase text-[10px] text-amber-500 tracking-wider block">
+                                    2. Landlord Payout (Escrow Outflow)
                                 </span>
+                                <div className="flex justify-between py-0.5">
+                                    <span className="text-[var(--text-secondary)]">Gross Rent for Landlord:</span>
+                                    <span className="font-mono font-medium text-[var(--text-primary)]">
+                                        {formatPrice(selectedTx.rentAmount)} NT
+                                    </span>
+                                </div>
+                                <div className="flex justify-between py-0.5 text-red-500 font-semibold">
+                                    <span>Landlord Escrow Fee (2% from rent):</span>
+                                    <span className="font-mono">
+                                        - {formatPrice(selectedTx.platformFee || Math.round((selectedTx.rentAmount || 0) * 0.02))} NT
+                                    </span>
+                                </div>
+                                <div className="flex justify-between font-bold text-xs pt-1 border-t border-[var(--border-color)]/40 text-emerald-500">
+                                    <span>Net Landlord Payout (98%):</span>
+                                    <span className="font-mono">
+                                        {formatPrice((selectedTx.rentAmount || 0) - (selectedTx.platformFee || Math.round((selectedTx.rentAmount || 0) * 0.02)))} NT
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex justify-between text-sm py-1 border-b border-[var(--border-color)]/60 text-amber-500">
-                                <span>Platform Commission (2%):</span>
-                                <span className="font-mono font-medium">
-                                    - {formatPrice(selectedTx.platformFee || 0)} NT
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm py-1 font-bold text-[var(--text-primary)] border-t border-[var(--border-color)]">
-                                <span>Total Held in Escrow:</span>
-                                <span className="font-mono text-[var(--color-brand-blue)]">
-                                    {formatPrice(selectedTx.totalAmount)} NT
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-xs py-1 text-emerald-500 font-semibold">
-                                <span>Net Landlord Payout (Rent - 2%):</span>
-                                <span className="font-mono">
-                                    {formatPrice(selectedTx.rentAmount - (selectedTx.platformFee || 0))} NT
-                                </span>
+
+                            {/* Section 3: Total RentHub Revenue */}
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 text-xs">
+                                <div className="flex justify-between items-center text-[var(--color-brand-green)] font-black">
+                                    <span>RentHub Total Revenue (4%):</span>
+                                    <span className="font-mono text-sm">
+                                        {formatPrice((selectedTx.platformFee || Math.round((selectedTx.rentAmount || 0) * 0.02)) * 2)} NT
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-[var(--text-muted)] mt-1 font-medium">
+                                    2% from Tenant ({formatPrice(selectedTx.platformFee || Math.round((selectedTx.rentAmount || 0) * 0.02))} NT) + 2% from Landlord ({formatPrice(selectedTx.platformFee || Math.round((selectedTx.rentAmount || 0) * 0.02))} NT)
+                                </p>
                             </div>
                         </div>
 

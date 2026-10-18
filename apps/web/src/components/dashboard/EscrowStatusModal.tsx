@@ -19,6 +19,8 @@ import { useRouter } from "next/navigation";
 interface Transaction {
     id: string;
     totalAmount: number;
+    rentAmount?: number;
+    cautionDeposit?: number;
     platformFee: number;
     escrowHeld: boolean;
     escrowReleased: boolean;
@@ -101,10 +103,38 @@ export function EscrowStatusModal({
                     <div className="space-y-6 py-4">
                         {/* Status Timeline / Card */}
                         <div className="bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-2xl p-4">
-                            <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-color)]">
-                                <span className="text-sm font-medium text-[var(--text-secondary)]">Amount Held</span>
-                                <span className="text-lg font-extrabold text-[var(--color-brand-green)]">{formatPrice(transaction.totalAmount)}</span>
-                            </div>
+                            {userRole === "LANDLORD" ? (
+                                <div className="space-y-2 mb-4 pb-3 border-b border-[var(--border-color)] text-xs">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-medium text-[var(--text-secondary)]">Annual Rent (Gross):</span>
+                                        <span className="font-mono font-bold text-[var(--text-primary)]">{formatPrice(transaction.rentAmount || 0)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-red-500">
+                                        <span>RentHub Escrow Fee (2%):</span>
+                                        <span className="font-mono font-bold">
+                                            - {formatPrice(transaction.platformFee || Math.round((transaction.rentAmount || 0) * 0.02))}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-1 border-t border-[var(--border-color)]/60 text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+                                        <span>Your Net Payout (98%):</span>
+                                        <span className="font-mono">
+                                            {formatPrice((transaction.rentAmount || 0) - (transaction.platformFee || Math.round((transaction.rentAmount || 0) * 0.02)))}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-0.5">
+                                        <span>Tenant Total Paid in Escrow:</span>
+                                        <span className="font-mono">{formatPrice(transaction.totalAmount)}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-color)]">
+                                    <div>
+                                        <span className="text-sm font-bold text-[var(--text-primary)] block">Total Secured in Escrow</span>
+                                        <span className="text-[10px] text-[var(--text-muted)] font-medium">Includes Rent + 2% Escrow Protection Fee + Caution</span>
+                                    </div>
+                                    <span className="text-lg font-extrabold text-[var(--color-brand-green)]">{formatPrice(transaction.totalAmount)}</span>
+                                </div>
+                            )}
 
                             <div className="relative pl-4 border-l-2 border-[var(--border-color)] space-y-6">
                                 {/* Step 1: Payment Received */}
