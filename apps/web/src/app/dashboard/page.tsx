@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -38,6 +38,9 @@ import {
     Check,
     ExternalLink,
     ChevronRight,
+    ChevronLeft,
+    RefreshCw,
+    Mail,
     Grid,
     List,
     Copy,
@@ -1519,30 +1522,53 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
     const router = useRouter();
     const [tours, setTours] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    // Search, filter & pagination state
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "CONFIRMED" | "CANCELLED">("ALL");
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
 
     useEffect(() => {
         if (user) fetchTours();
     }, [user, role]);
 
-    const fetchTours = async () => {
+    const fetchTours = async (isManualRefresh = false) => {
         try {
-            setLoading(true);
+            if (isManualRefresh) setRefreshing(true);
+            else setLoading(true);
+
             const res = await api.get(`/tours?clerkId=${user?.id}&role=${role}`);
-            setTours(res.data.data);
+            setTours(res.data.data || []);
+            if (isManualRefresh) {
+                toast.success("Tour bookings updated");
+            }
         } catch (error) {
             console.error("Failed to fetch tours:", error);
+            toast.error("Failed to load tour bookings");
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
     const handleStatusUpdate = async (tourId: string, status: string) => {
         try {
+            setActionLoading(tourId);
             await api.patch(`/tours/${tourId}/status`, { status });
+            toast.success(
+                status === "CONFIRMED"
+                    ? "Tour Confirmed! The attendee has been notified."
+                    : "Tour Request Cancelled"
+            );
             fetchTours();
         } catch (error) {
             console.error("Failed to update tour status:", error);
-            alert("Failed to update status");
+            toast.error("Failed to update tour status");
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -1556,181 +1582,621 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
             router.push(`/dashboard?tab=messages&convId=${convId}`);
         } catch (error) {
             console.error("Failed to initiate conversation:", error);
-            alert("Failed to open conversation");
+            toast.error("Failed to open conversation");
         }
     };
 
+    // Metric Calculations
+    const stats = useMemo(() => {
+        const total = tours.length;
+        const confirmed = tours.filter((t) => t.status === "CONFIRMED").length;
+        const pending = tours.filter((t) => t.status === "PENDING").length;
+        const cancelled = tours.filter((t) => t.status === "CANCELLED").length;
+        return { total, confirmed, pending, cancelled };
+    }, [tours]);
+
+    // Search and filter
+    const filteredTours = useMemo(() => {
+        return tours.filter((tour) => {
+            const matchesStatus = statusFilter === "ALL" || tour.status === statusFilter;
+            const q = searchQuery.toLowerCase().trim();
+            if (!q) return matchesStatus;
+
+            const title = (tour.property?.title || "").toLowerCase();
+            const city = (tour.property?.city || "").toLowerCase();
+            const address = (tour.property?.address || "").toLowerCase();
+            const displayUser = role === "LANDLORD" ? tour.tenant : tour.landlord;
+            const userName = `${displayUser?.firstName || ""} ${displayUser?.lastName || ""}`.toLowerCase();
+            const phone = (displayUser?.phone || "").toLowerCase();
+
+            const matchesSearch =
+                title.includes(q) ||
+                city.includes(q) ||
+                address.includes(q) ||
+                userName.includes(q) ||
+                phone.includes(q);
+
+            return matchesStatus && matchesSearch;
+        });
+    }, [tours, statusFilter, searchQuery, role]);
+
+    // Pagination
+    const totalPages = Math.ceil(filteredTours.length / ITEMS_PER_PAGE) || 1;
+    const paginatedTours = useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTours.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTours, currentPage]);
+
     if (loading) {
         return (
-            <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-32 bg-[var(--bg-muted)] animate-pulse rounded-2xl border border-[var(--border-color)]" />
-                ))}
-            </div>
-        );
-    }
-
-    if (tours.length === 0) {
-        return (
-            <div className="text-center py-12 sm:py-16 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-[var(--shadow-sm)] p-6">
-                <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-[var(--text-muted)] opacity-60 mb-4" />
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-1">
-                    {role === "LANDLORD" ? "No tour requests yet" : "No tours scheduled"}
-                </h3>
-                <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-md mx-auto">
-                    {role === "LANDLORD"
-                        ? "When tenants request to see your properties, they will appear here."
-                        : "Browse properties and request a physical tour to see them in person."}
-                </p>
-                {role === "TENANT" && (
-                    <Link href="/search">
-                        <Button className="mt-6 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold rounded-xl px-6">Browse Properties</Button>
-                    </Link>
-                )}
+            <div className="flex flex-col items-center justify-center py-20 text-[var(--text-secondary)]">
+                <div className="relative">
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--color-brand-blue)]/10 flex items-center justify-center animate-pulse">
+                        <Calendar className="h-6 w-6 text-[var(--color-brand-blue)]" />
+                    </div>
+                    <Clock className="h-5 w-5 animate-spin text-[var(--color-brand-blue)] absolute -bottom-1 -right-1" />
+                </div>
+                <p className="font-bold text-sm text-[var(--text-primary)] mt-4">Loading physical tours...</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Retrieving scheduled walkthroughs, attendees, and property inspection requests</p>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
-            <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">
-                {role === "LANDLORD" ? "Tour Requests Received" : "My Scheduled Tours"} ({tours.length})
-            </h3>
-            <div className="grid gap-4">
-                {tours.map((tour) => {
-                    const displayUser = role === "LANDLORD" ? tour.tenant : tour.landlord;
-                    const userLabel = role === "LANDLORD" ? "Requested By" : "Property Owner";
-
-                    return (
-                        <div key={tour.id} className="bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)] shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition-all">
-                            <div className="flex flex-col md:flex-row gap-4 sm:gap-6">
-                                {/* Property Info */}
-                                <div className="flex gap-3 sm:gap-4 flex-1 min-w-0">
-                                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl bg-[var(--bg-muted)] flex-shrink-0 relative overflow-hidden">
-                                        <img
-                                            src={tour.property?.images?.[0]?.url || "https://images.unsplash.com/photo-1600585154340-be6191da96a0?auto=format&fit=crop&w=400&q=80"}
-                                            className="object-cover w-full h-full"
-                                            alt={tour.property?.title}
-                                        />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <h4 className="font-bold text-sm sm:text-base text-[var(--text-primary)] truncate">{tour.property?.title}</h4>
-                                        <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-1 truncate">
-                                            <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--color-brand-orange)]" /> {tour.property?.city}, {tour.property?.state}
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <Badge className={cn(
-                                                "font-bold border-none text-xs px-2.5 py-0.5",
-                                                tour.status === "CONFIRMED" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" :
-                                                    tour.status === "PENDING" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
-                                                        tour.status === "CANCELLED" ? "bg-red-500/15 text-red-600 dark:text-red-400" :
-                                                            "bg-[var(--bg-muted)] text-[var(--text-secondary)]"
-                                            )}>
-                                                {tour.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Participants & Schedule */}
-                                <div className="flex flex-wrap sm:flex-nowrap gap-4 sm:gap-6 flex-shrink-0 md:border-l md:pl-6 border-[var(--border-color)]">
-                                    <div className="min-w-[120px]">
-                                        <p className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest mb-1.5">{userLabel}</p>
-                                        <div className="flex items-center gap-2">
-                                            {displayUser?.avatar ? (
-                                                <img src={displayUser.avatar} className="h-7 w-7 sm:h-8 sm:w-8 rounded-full object-cover" />
-                                            ) : (
-                                                <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-[var(--color-brand-green)]/15 flex items-center justify-center text-xs font-bold text-[var(--color-brand-green)]">
-                                                    {displayUser?.firstName?.[0]}{displayUser?.lastName?.[0]}
-                                                </div>
-                                            )}
-                                            <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">{displayUser?.firstName} {displayUser?.lastName}</p>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest mb-1.5">Schedule</p>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-[var(--text-primary)] font-bold">
-                                                <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                                                {new Date(tour.preferredDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-xs sm:text-sm text-[var(--text-primary)] font-bold">
-                                                <Clock className="h-3.5 w-3.5 text-amber-500" />
-                                                {tour.preferredTime}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex flex-row md:flex-col justify-center gap-2 min-w-[140px] pt-2 md:pt-0 border-t md:border-t-0 border-[var(--border-color)]">
-                                    {role === "LANDLORD" && tour.status === "PENDING" && (
-                                        <>
-                                            <Button
-                                                size="sm"
-                                                className="flex-1 md:flex-initial bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold rounded-xl"
-                                                onClick={() => handleStatusUpdate(tour.id, "CONFIRMED")}
-                                            >
-                                                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                                                Confirm
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="flex-1 md:flex-initial text-red-500 dark:text-red-400 hover:bg-red-500/10 border-red-500/30 font-bold rounded-xl"
-                                                onClick={() => handleStatusUpdate(tour.id, "CANCELLED")}
-                                            >
-                                                <XCircle className="h-4 w-4 mr-1.5" />
-                                                Decline
-                                            </Button>
-                                        </>
-                                    )}
-                                    {role === "TENANT" && tour.status === "PENDING" && (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="w-full text-red-500 dark:text-red-400 hover:bg-red-500/10 border-red-500/30 font-bold rounded-xl"
-                                            onClick={() => handleStatusUpdate(tour.id, "CANCELLED")}
-                                        >
-                                            <Trash2 className="h-4 w-4 mr-1.5" />
-                                            Cancel Request
-                                        </Button>
-                                    )}
-                                    {tour.status === "CONFIRMED" && (
-                                        <div className="flex flex-col gap-2 w-full">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="w-full font-bold gap-1.5 rounded-xl border-[var(--border-color)] text-[var(--color-brand-orange)] hover:bg-[var(--bg-muted)]"
-                                                onClick={() => handleMessageClick(displayUser?.id, tour.propertyId)}
-                                            >
-                                                <MessageSquare className="h-4 w-4" />
-                                                Message {role === "LANDLORD" ? "Tenant" : "Owner"}
-                                            </Button>
-
-                                            {displayUser?.phone && (
-                                                <a
-                                                    href={`tel:${displayUser.phone}`}
-                                                    className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 px-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                                                >
-                                                    <Phone className="h-3.5 w-3.5" />
-                                                    Call {displayUser.phone}
-                                                </a>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            {tour.message && (
-                                <div className="mt-4 p-3.5 bg-[var(--bg-muted)] rounded-xl text-xs sm:text-sm text-[var(--text-secondary)] border border-[var(--border-color)] font-medium">
-                                    <span className="font-bold text-[var(--text-primary)] mr-2 text-xs uppercase tracking-tight">Tenant Message:</span>
-                                    {tour.message}
-                                </div>
-                            )}
+            {/* Header with Title & Refresh */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs">
+                            <Calendar className="h-4 w-4" />
                         </div>
-                    );
-                })}
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
+                            {role === "LANDLORD" ? "Physical Tour Requests" : "My Scheduled Physical Tours"}
+                        </h2>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1">
+                        {role === "LANDLORD"
+                            ? "Review, schedule, and confirm on-site property walkthroughs with prospective renters"
+                            : "Manage in-person property viewings, coordinate with landlords, and prepare for inspection"}
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchTours(true)}
+                        disabled={refreshing}
+                        className="h-9 px-3.5 rounded-xl border-[var(--border-color)] text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] gap-1.5 shadow-xs"
+                    >
+                        <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-[var(--color-brand-blue)]" : ""}`} />
+                        <span>Refresh</span>
+                    </Button>
+                </div>
             </div>
+
+            {/* Metric Overview Strip */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div
+                    onClick={() => { setStatusFilter("ALL"); setCurrentPage(1); }}
+                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                        statusFilter === "ALL"
+                            ? "border-[var(--color-brand-blue)] ring-2 ring-[var(--color-brand-blue)]/15"
+                            : "border-[var(--border-color)] hover:border-[var(--color-brand-blue)]/40"
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                            Total Tours
+                        </span>
+                        <div className="w-8 h-8 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 flex items-center justify-center">
+                            <Calendar className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-[var(--text-primary)]">{stats.total}</span>
+                        <span className="text-[11px] font-semibold text-[var(--text-muted)]">bookings</span>
+                    </div>
+                </div>
+
+                <div
+                    onClick={() => { setStatusFilter("CONFIRMED"); setCurrentPage(1); }}
+                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                        statusFilter === "CONFIRMED"
+                            ? "border-emerald-500 ring-2 ring-emerald-500/15"
+                            : "border-[var(--border-color)] hover:border-emerald-500/40"
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                            Confirmed & Upcoming
+                        </span>
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                            <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{stats.confirmed}</span>
+                        <span className="text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80">ready</span>
+                    </div>
+                </div>
+
+                <div
+                    onClick={() => { setStatusFilter("PENDING"); setCurrentPage(1); }}
+                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                        statusFilter === "PENDING"
+                            ? "border-amber-500 ring-2 ring-amber-500/15"
+                            : "border-[var(--border-color)] hover:border-amber-500/40"
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                            Pending Approval
+                        </span>
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                            <Clock className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{stats.pending}</span>
+                        <span className="text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80">awaiting</span>
+                    </div>
+                </div>
+
+                <div
+                    onClick={() => { setStatusFilter("CANCELLED"); setCurrentPage(1); }}
+                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                        statusFilter === "CANCELLED"
+                            ? "border-red-500 ring-2 ring-red-500/15"
+                            : "border-[var(--border-color)] hover:border-red-500/40"
+                    }`}
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                            Cancelled / Past
+                        </span>
+                        <div className="w-8 h-8 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 flex items-center justify-center">
+                            <XCircle className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-red-600 dark:text-red-400">{stats.cancelled}</span>
+                        <span className="text-[11px] font-semibold text-red-600/80 dark:text-red-400/80">closed</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-2 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xs">
+                {/* Search input */}
+                <div className="relative flex-1">
+                    <Search className="h-4 w-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        placeholder={
+                            role === "LANDLORD"
+                                ? "Search by tenant name, property title, city, phone..."
+                                : "Search by property title, owner name, city, address..."
+                        }
+                        className="w-full h-10 pl-10 pr-4 text-xs font-medium bg-[var(--bg-muted)] rounded-xl border border-transparent focus:border-[var(--color-brand-blue)] focus:bg-[var(--bg-card)] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-hidden transition-all"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] font-bold p-1"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Status Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                    {(
+                        [
+                            { id: "ALL", label: "All Tours", count: stats.total },
+                            { id: "CONFIRMED", label: "Confirmed", count: stats.confirmed },
+                            { id: "PENDING", label: "Pending", count: stats.pending },
+                            { id: "CANCELLED", label: "Cancelled", count: stats.cancelled }
+                        ] as const
+                    ).map((filter) => {
+                        const isActive = statusFilter === filter.id;
+                        return (
+                            <button
+                                key={filter.id}
+                                onClick={() => {
+                                    setStatusFilter(filter.id);
+                                    setCurrentPage(1);
+                                }}
+                                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 ${
+                                    isActive
+                                        ? "bg-[var(--color-brand-blue)] text-white shadow-xs"
+                                        : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-[var(--border-color)]"
+                                }`}
+                            >
+                                <span>{filter.label}</span>
+                                <span
+                                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                                        isActive
+                                            ? "bg-white/20 text-white"
+                                            : "bg-[var(--bg-card)] text-[var(--text-muted)]"
+                                    }`}
+                                >
+                                    {filter.count}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Tours List */}
+            {tours.length === 0 ? (
+                <div className="text-center py-16 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
+                    <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-4 border border-blue-500/20 shadow-xs">
+                        <Calendar className="h-8 w-8" />
+                    </div>
+                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">
+                        {role === "LANDLORD" ? "No Physical Tour Requests Yet" : "No Tours Scheduled Yet"}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-md mx-auto leading-relaxed">
+                        {role === "LANDLORD"
+                            ? "When prospective tenants schedule in-person walkthroughs for your properties, they will appear here with requested dates and attendee profiles."
+                            : "Browse verified properties across Nigeria and schedule an in-person walkthrough before making any rental decisions."}
+                    </p>
+                    {role === "TENANT" && (
+                        <Link href="/search" className="inline-block mt-6">
+                            <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold rounded-xl h-10 px-6 shadow-xs gap-1.5">
+                                <Search className="h-3.5 w-3.5" />
+                                Browse Properties to Tour
+                            </Button>
+                        </Link>
+                    )}
+                </div>
+            ) : filteredTours.length === 0 ? (
+                <div className="text-center py-14 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
+                    <Search className="h-10 w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-60" />
+                    <h3 className="text-base font-bold text-[var(--text-primary)]">No Matching Tours</h3>
+                    <p className="text-xs text-[var(--text-secondary)] font-medium max-w-sm mx-auto mt-1">
+                        We couldn't find any tour bookings matching your search query or active filter.
+                    </p>
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            setSearchQuery("");
+                            setStatusFilter("ALL");
+                            setCurrentPage(1);
+                        }}
+                        className="mt-4 h-9 px-4 rounded-xl text-xs font-bold border-[var(--border-color)]"
+                    >
+                        Clear All Filters
+                    </Button>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    <div className="grid gap-4">
+                        {paginatedTours.map((tour: any) => {
+                            const displayUser = role === "LANDLORD" ? tour.tenant : tour.landlord;
+                            const userLabel = role === "LANDLORD" ? "Prospective Renter" : "Property Owner";
+                            const primaryImage =
+                                tour.property?.images?.find((img: any) => img.isPrimary)?.url ||
+                                tour.property?.images?.[0]?.url ||
+                                "https://images.unsplash.com/photo-1600585154340-be6191da96a0?auto=format&fit=crop&w=400&q=80";
+
+                            const tourDate = new Date(tour.preferredDate);
+                            const monthShort = tourDate.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+                            const dayNum = tourDate.toLocaleDateString("en-US", { day: "numeric" });
+                            const weekday = tourDate.toLocaleDateString("en-US", { weekday: "short" });
+
+                            return (
+                                <div
+                                    key={tour.id}
+                                    className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-xs hover:border-[var(--color-brand-blue)]/40 transition-all duration-200 space-y-4"
+                                >
+                                    {/* Top Bar: Property Thumbnail, Title, Address & Status */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className="h-14 w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
+                                                <Image
+                                                    src={primaryImage}
+                                                    alt={tour.property?.title || "Property"}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-extrabold text-[var(--text-primary)] text-sm sm:text-base leading-snug truncate">
+                                                        {tour.property?.title}
+                                                    </h3>
+                                                    {tour.propertyId && (
+                                                        <Link
+                                                            href={`/properties/${tour.propertyId}`}
+                                                            target="_blank"
+                                                            className="text-[var(--text-muted)] hover:text-[var(--color-brand-blue)] transition-colors shrink-0"
+                                                            title="View property details"
+                                                        >
+                                                            <ExternalLink className="h-3.5 w-3.5" />
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-0.5 truncate">
+                                                    <MapPin className="h-3 w-3 shrink-0 text-[var(--color-brand-orange)]" />
+                                                    {tour.property?.address ? `${tour.property.address}, ` : ""}
+                                                    {tour.property?.city}, {tour.property?.state}
+                                                </p>
+                                                {tour.property?.pricePerYear && (
+                                                    <div className="text-xs font-black text-[var(--color-brand-green)] mt-1">
+                                                        {formatPrice(tour.property.pricePerYear)}{" "}
+                                                        <span className="text-[11px] font-semibold text-[var(--text-muted)]">/ year</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="shrink-0 self-start sm:self-center">
+                                            {tour.status === "CONFIRMED" && (
+                                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
+                                                    <CheckCircle2 className="h-3.5 w-3.5" /> Confirmed Walkthrough
+                                                </Badge>
+                                            )}
+                                            {tour.status === "PENDING" && (
+                                                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
+                                                    <Clock className="h-3.5 w-3.5 animate-pulse" /> Pending Approval
+                                                </Badge>
+                                            )}
+                                            {tour.status === "CANCELLED" && (
+                                                <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
+                                                    <XCircle className="h-3.5 w-3.5" /> Cancelled
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Middle: Schedule Box & Participant Card */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+                                        {/* Schedule Date & Time Card */}
+                                        <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] flex items-center gap-3.5">
+                                            <div className="w-13 h-14 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col items-center justify-center shrink-0 shadow-2xs">
+                                                <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider">
+                                                    {monthShort}
+                                                </span>
+                                                <span className="text-lg font-black text-[var(--text-primary)] leading-none mt-0.5">
+                                                    {dayNum}
+                                                </span>
+                                                <span className="text-[9px] font-bold text-[var(--text-muted)]">
+                                                    {weekday}
+                                                </span>
+                                            </div>
+
+                                            <div className="min-w-0 space-y-1">
+                                                <p className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
+                                                    Scheduled Inspection Slot
+                                                </p>
+                                                <div className="flex items-center gap-1.5 text-xs font-extrabold text-[var(--text-primary)]">
+                                                    <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                                    <span>{tour.preferredTime}</span>
+                                                </div>
+                                                <p className="text-[11px] text-[var(--text-secondary)] font-medium">
+                                                    Physical In-Person Walkthrough
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Participant Profile Card */}
+                                        <div className="lg:col-span-2 p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                {displayUser?.avatar ? (
+                                                    <img
+                                                        src={displayUser.avatar}
+                                                        alt={displayUser.firstName}
+                                                        className="h-11 w-11 rounded-2xl object-cover shrink-0 border border-[var(--border-color)] shadow-2xs"
+                                                    />
+                                                ) : (
+                                                    <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 text-blue-600 dark:text-blue-400 flex items-center justify-center font-black text-sm shrink-0 border border-blue-500/30 shadow-2xs">
+                                                        {displayUser?.firstName?.[0]}
+                                                        {displayUser?.lastName?.[0]}
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-extrabold text-[var(--text-primary)] text-sm truncate">
+                                                            {displayUser?.firstName} {displayUser?.lastName}
+                                                        </span>
+                                                        <Badge className="bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 text-[10px] px-1.5 py-0.2 font-bold">
+                                                            {userLabel}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)] font-medium mt-1 flex-wrap">
+                                                        {displayUser?.phone && (
+                                                            <a
+                                                                href={`tel:${displayUser.phone}`}
+                                                                className="flex items-center gap-1 hover:text-[var(--color-brand-green)] transition-colors"
+                                                                title="Call"
+                                                            >
+                                                                <Phone className="h-3 w-3 text-[var(--color-brand-green)]" />
+                                                                {displayUser.phone}
+                                                            </a>
+                                                        )}
+                                                        {displayUser?.email && (
+                                                            <span className="flex items-center gap-1 text-[var(--text-muted)] truncate max-w-[180px]">
+                                                                <Mail className="h-3 w-3" />
+                                                                {displayUser.email}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                                {displayUser?.phone && (
+                                                    <a
+                                                        href={`tel:${displayUser.phone}`}
+                                                        className="h-8 px-2.5 rounded-xl bg-[var(--bg-muted)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--color-brand-green)] hover:border-[var(--color-brand-green)]/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
+                                                    >
+                                                        <Phone className="h-3 w-3" /> Call
+                                                    </a>
+                                                )}
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleMessageClick(displayUser?.id, tour.propertyId)}
+                                                    className="h-8 px-2.5 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 text-[var(--color-brand-orange)] hover:bg-[var(--bg-muted)] shadow-2xs"
+                                                >
+                                                    <MessageSquare className="h-3 w-3" /> Chat
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Tenant Message */}
+                                    {tour.message && (
+                                        <div className="p-3.5 bg-blue-500/10 rounded-2xl text-xs text-[var(--text-secondary)] border border-blue-500/20 font-medium flex items-start gap-2.5">
+                                            <MessageSquare className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                                            <div>
+                                                <span className="font-bold text-[var(--text-primary)] block mb-0.5">
+                                                    Special Request / Note:
+                                                </span>
+                                                <span className="italic leading-relaxed">"{tour.message}"</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Bottom Decision / Action Bar */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--border-color)]">
+                                        <div className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
+                                            <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)]" />
+                                            <span>
+                                                {tour.status === "CONFIRMED"
+                                                    ? "Confirmed walkthrough: Please arrive on time and verify keys on-site."
+                                                    : tour.status === "PENDING"
+                                                    ? "Pending approval: Coordinate details or confirm to lock slot on calendar."
+                                                    : "This tour request was cancelled."}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                                            {/* Landlord Pending Actions */}
+                                            {role === "LANDLORD" && tour.status === "PENDING" && (
+                                                <>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={actionLoading === tour.id}
+                                                        onClick={() => handleStatusUpdate(tour.id, "CANCELLED")}
+                                                        className="h-9 px-4 rounded-xl text-red-500 border-red-500/30 hover:bg-red-500/10 text-xs font-bold gap-1.5 shadow-xs"
+                                                    >
+                                                        <XCircle className="h-3.5 w-3.5" />
+                                                        Decline
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        disabled={actionLoading === tour.id}
+                                                        onClick={() => handleStatusUpdate(tour.id, "CONFIRMED")}
+                                                        className="h-9 px-5 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs shadow-xs gap-1.5"
+                                                    >
+                                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                                        Confirm Tour
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {/* Tenant Pending Actions */}
+                                            {role === "TENANT" && tour.status === "PENDING" && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={actionLoading === tour.id}
+                                                    onClick={() => handleStatusUpdate(tour.id, "CANCELLED")}
+                                                    className="h-9 px-4 rounded-xl text-red-500 border-red-500/30 hover:bg-red-500/10 text-xs font-bold gap-1.5 shadow-xs"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    Cancel Request
+                                                </Button>
+                                            )}
+
+                                            {/* Confirmed Shortcuts */}
+                                            {tour.status === "CONFIRMED" && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleMessageClick(displayUser?.id, tour.propertyId)}
+                                                    className="h-9 px-4 rounded-xl bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/90 text-white text-xs font-bold gap-1.5 shadow-xs"
+                                                >
+                                                    <MessageSquare className="h-3.5 w-3.5" />
+                                                    Direct Message
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Pagination Strip */}
+                    {filteredTours.length > ITEMS_PER_PAGE && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)]">
+                            <p className="text-xs text-[var(--text-secondary)] font-medium">
+                                Showing{" "}
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                                </span>{" "}
+                                to{" "}
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {Math.min(currentPage * ITEMS_PER_PAGE, filteredTours.length)}
+                                </span>{" "}
+                                of{" "}
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {filteredTours.length}
+                                </span>{" "}
+                                tours
+                            </p>
+
+                            <div className="flex items-center gap-1.5">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)]"
+                                >
+                                    <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                                </Button>
+
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${
+                                            currentPage === page
+                                                ? "bg-[var(--color-brand-blue)] text-white shadow-xs"
+                                                : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                        }`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)]"
+                                >
+                                    Next <ChevronRight className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
