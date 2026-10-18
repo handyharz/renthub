@@ -3,6 +3,8 @@
 RentHub is a mission-driven rental marketplace designed to eliminate the **"Agent Tax"** in the Nigerian housing market. By directly connecting verified landlords with tenants through a secure, transparent, multi-stage trust infrastructure, we aim to save Nigerians billions of naira in unnecessary fees.
 
 > **Our Mission:** To save Nigerians ₦10 Billion in agent fees over the next 5 years, starting with Abuja.
+>
+> 🚀 **Read the full Pitch & Traction Deck:** [PITCH.md](./PITCH.md)
 
 ---
 
