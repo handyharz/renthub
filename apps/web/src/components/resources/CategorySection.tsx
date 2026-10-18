@@ -5,13 +5,19 @@ interface CategorySectionProps {
     description: string;
     children: ReactNode;
     id?: string;
+    badge?: string;
 }
 
-export function CategorySection({ title, description, children, id }: CategorySectionProps) {
+export function CategorySection({ title, description, children, id, badge }: CategorySectionProps) {
     return (
-        <section id={id} className="py-10 border-b border-[var(--border-color)] last:border-0 scroll-mt-24">
-            <div className="mb-8">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-2 tracking-tight">
+        <section id={id} className="py-12 border-b border-[var(--border-color)] last:border-0 scroll-mt-28">
+            <div className="mb-8 space-y-2">
+                {badge && (
+                    <span className="inline-block text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/20">
+                        {badge}
+                    </span>
+                )}
+                <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight">
                     {title}
                 </h2>
                 <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-2xl leading-relaxed">

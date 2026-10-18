@@ -54,6 +54,10 @@ import {
     Zap,
     Droplets,
     ChevronDown,
+    BookOpen,
+    Download,
+    ListChecks,
+    Scale,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -302,6 +306,7 @@ function DashboardContent() {
         { id: "transactions", label: "Transactions", icon: Receipt },
         { id: "payouts", label: "Payouts & Settlements", icon: Wallet },
         { id: "messages", label: "Messages", icon: MessageSquare },
+        { id: "resources", label: "Resources", icon: BookOpen },
     ];
 
     const tenantTabs = [
@@ -311,6 +316,7 @@ function DashboardContent() {
         { id: "tours", label: "Physical Tours", icon: Calendar },
         { id: "applications", label: "Applications", icon: FileText },
         { id: "messages", label: "Messages", icon: MessageSquare },
+        { id: "resources", label: "Resources", icon: BookOpen },
     ];
 
     const tabs = role === "LANDLORD" ? landlordTabs : tenantTabs;
@@ -441,6 +447,7 @@ function DashboardContent() {
                             </div>
                         )}
                         {activeTab === "messages" && <Inbox initialConversationId={activeConversationId} />}
+                        {activeTab === "resources" && <DashboardResourcesTab role={role as "LANDLORD" | "TENANT"} />}
                     </div>
                 </div>
             </div>
@@ -739,7 +746,7 @@ function OverviewTab({
                                         <div className="flex items-center gap-3.5 min-w-0">
                                             <div className="relative h-16 w-16 sm:h-18 sm:w-18 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-color)]">
                                                 <Image
-                                                    src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=400&q=80"}
+                                                    src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80"}
                                                     alt={property.title}
                                                     fill
                                                     className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -1214,7 +1221,7 @@ function TenantOverviewTab({
                                         <div className="flex items-center gap-3.5 min-w-0">
                                             <div className="relative h-16 w-16 sm:h-18 sm:w-18 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-color)]">
                                                 <Image
-                                                    src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=400&q=80"}
+                                                    src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80"}
                                                     alt={property.title}
                                                     fill
                                                     className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -1718,7 +1725,7 @@ function DashboardForRentTab() {
                                 price: property.pricePerYear,
                                 bedrooms: property.bedrooms,
                                 bathrooms: property.bathrooms,
-                                image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80",
+                                image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
                                 verified: property.verified,
                                 featured: property.featured,
                                 landlordVerified: property.landlord?.verified,
@@ -1729,6 +1736,368 @@ function DashboardForRentTab() {
                     ))}
                 </div>
             )}
+        </div>
+    );
+}
+
+function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" }) {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState<"ALL" | "LEGAL" | "TENANTS" | "LANDLORDS" | "ESCROW">("ALL");
+
+    const DASHBOARD_RESOURCES = [
+        {
+            title: "Standard Residential Tenancy Agreement",
+            desc: "Customizable 1-year tenancy contract vetted by Nigerian real estate barristers. Clean covenants, caution deposit clauses, and maintenance terms.",
+            type: "LEGAL" as const,
+            tag: "Contract",
+            badge: "DOCX & PDF",
+            href: "/resources/landlords/legal-templates",
+            category: "LEGAL" as const,
+            roleTarget: "ALL",
+        },
+        {
+            title: "Official Rent Payment Receipt Form",
+            desc: "Statutory proof of rent payment complying with Nigerian state tax and legal tenancy regulations with itemized caution deposit ledger.",
+            type: "LEGAL" as const,
+            tag: "Receipt",
+            badge: "DOCX & PDF",
+            href: "/resources/landlords/legal-templates",
+            category: "LEGAL" as const,
+            roleTarget: "LANDLORD",
+        },
+        {
+            title: "Pre-Move-In 40-Point Inspection Checklist",
+            desc: "Critical walkthrough checklist covering borehole pumps, prepaid meter debt clearance, plumbing pressure, and ceiling dampness before payment.",
+            type: "TEMPLATE" as const,
+            tag: "Checklist",
+            badge: "Interactive PDF",
+            href: "/resources/tenants/inspection-checklist",
+            category: "TENANTS" as const,
+            roleTarget: "TENANT",
+        },
+        {
+            title: "Statutory 6-Month Notice to Quit Form",
+            desc: "Legally compliant notice template adhering to the Lagos Tenancy Law 2011 and Abuja Recovery of Premises Act. Prevents unlawful eviction disputes.",
+            type: "LEGAL" as const,
+            tag: "Legal Notice",
+            badge: "DOCX Form",
+            href: "/resources/landlords/legal-templates",
+            category: "LEGAL" as const,
+            roleTarget: "LANDLORD",
+        },
+        {
+            title: "The RentHub Escrow Protocol & OTP Payout",
+            desc: "Comprehensive guide on how rent funds are safeguarded in bank escrow and only disbursed when the 6-digit Handover OTP is entered in person.",
+            type: "GUIDE" as const,
+            tag: "Safety",
+            badge: "5 Min Guide",
+            href: "/resources/trust-and-safety/escrow",
+            category: "ESCROW" as const,
+            roleTarget: "ALL",
+        },
+        {
+            title: "Nigerian Tenant Rights 101",
+            desc: "Your statutory legal protections: unlawful lockouts, unreasonable rent hikes, privacy rights, and caution deposit refund timelines in Nigeria.",
+            type: "GUIDE" as const,
+            tag: "Rights",
+            badge: "Legal Guide",
+            href: "/resources/tenants/rights-101",
+            category: "TENANTS" as const,
+            roleTarget: "TENANT",
+        },
+        {
+            title: "Direct Tenant Vetting & Screening Guide",
+            desc: "How Nigerian landlords screen applicants using NIN verification, proof of employment, and bank statements without third-party agent markups.",
+            type: "GUIDE" as const,
+            tag: "Vetting",
+            badge: "Screening",
+            href: "/resources/landlords/vetting-guide",
+            category: "LANDLORDS" as const,
+            roleTarget: "LANDLORD",
+        },
+        {
+            title: "Real Estate Photography Masterclass",
+            desc: "How to capture bright, wide-angle property photos on your smartphone to lease apartments up to 3x faster with zero professional photography fees.",
+            type: "ARTICLE" as const,
+            tag: "Listing Tips",
+            badge: "Photo Guide",
+            href: "/resources/landlords/photography-class",
+            category: "LANDLORDS" as const,
+            roleTarget: "LANDLORD",
+        },
+        {
+            title: "Common Nigerian Rental Scams to Avoid",
+            desc: "Identify roadside agent tricks: 'showing fees', duplicate leases, phantom landlords, and pressure tactics. Protect your hard-earned savings.",
+            type: "ARTICLE" as const,
+            tag: "Security",
+            badge: "Scam Alert",
+            href: "/resources/trust-and-safety/common-scams",
+            category: "ESCROW" as const,
+            roleTarget: "ALL",
+        },
+    ];
+
+    const filtered = DASHBOARD_RESOURCES.filter((res) => {
+        const matchesCategory =
+            categoryFilter === "ALL" || res.category === categoryFilter;
+        const matchesQuery =
+            !searchQuery ||
+            res.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            res.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            res.tag.toLowerCase().includes(searchQuery.toLowerCase());
+
+        return matchesCategory && matchesQuery;
+    });
+
+    return (
+        <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Header Banner */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[var(--bg-muted)] border border-[var(--border-color)] p-6 sm:p-8 shadow-xs">
+                <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                <ShieldCheck className="h-3.5 w-3.5" /> Verified Legal Intelligence
+                            </Badge>
+                            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                <BookOpen className="h-3.5 w-3.5" /> {role === "LANDLORD" ? "Landlord Toolkit" : "Tenant Toolkit"}
+                            </Badge>
+                        </div>
+                        <h2 className="text-xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight">
+                            Legal Contracts, Tenancy Rights & Knowledge Base
+                        </h2>
+                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-2xl leading-relaxed">
+                            Download legally vetted Nigerian tenancy agreements, access statutory tenant/landlord protections, and review escrow safety guides tailored for {role === "LANDLORD" ? "property owners" : "tenants"}.
+                        </p>
+                    </div>
+
+                    <Link
+                        href="/resources"
+                        className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-black text-xs sm:text-sm shadow-md hover:scale-105 transition-all self-start md:self-auto shrink-0"
+                    >
+                        <span>Full Knowledge Portal</span>
+                        <ArrowUpRight className="w-4 h-4" />
+                    </Link>
+                </div>
+            </div>
+
+            {/* Quick Downloadable Legal Toolkit */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-base sm:text-lg font-black text-[var(--text-primary)]">
+                            Essential Tenancy Contracts & Forms
+                        </h3>
+                        <p className="text-xs text-[var(--text-secondary)] font-medium">
+                            Free, customizable legal templates drafted by Nigerian real estate barristers.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Link
+                        href="/resources/landlords/legal-templates"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                    >
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                    <FileText className="w-5 h-5" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-md">
+                                    DOCX & PDF
+                                </span>
+                            </div>
+                            <h4 className="text-sm font-black text-[var(--text-primary)] group-hover:text-[var(--color-brand-green)] transition-colors">
+                                Residential Tenancy Agreement
+                            </h4>
+                            <p className="text-xs text-[var(--text-secondary)] font-medium line-clamp-2">
+                                Standard 1-year contract covering rent, caution deposits, repairs, and covenants.
+                            </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-[var(--border-color)] flex items-center justify-between text-xs font-black text-[var(--color-brand-green)]">
+                            <span>Get Template</span>
+                            <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </Link>
+
+                    <Link
+                        href="/resources/landlords/legal-templates"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                    >
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                    <Receipt className="w-5 h-5" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 bg-blue-500/15 px-2 py-0.5 rounded-md">
+                                    DOCX Form
+                                </span>
+                            </div>
+                            <h4 className="text-sm font-black text-[var(--text-primary)] group-hover:text-[var(--color-brand-green)] transition-colors">
+                                Official Rent Payment Receipt
+                            </h4>
+                            <p className="text-xs text-[var(--text-secondary)] font-medium line-clamp-2">
+                                Statutory rent receipt template with caution deposit and advance rent tracking.
+                            </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-[var(--border-color)] flex items-center justify-between text-xs font-black text-[var(--color-brand-green)]">
+                            <span>Get Template</span>
+                            <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </Link>
+
+                    <Link
+                        href="/resources/tenants/inspection-checklist"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                    >
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                                    <ListChecks className="w-5 h-5" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-purple-600 dark:text-purple-400 bg-purple-500/15 px-2 py-0.5 rounded-md">
+                                    PDF Checklist
+                                </span>
+                            </div>
+                            <h4 className="text-sm font-black text-[var(--text-primary)] group-hover:text-[var(--color-brand-green)] transition-colors">
+                                Move-In Condition Report
+                            </h4>
+                            <p className="text-xs text-[var(--text-secondary)] font-medium line-clamp-2">
+                                40-point physical walkthrough audit before key exchange or caution release.
+                            </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-[var(--border-color)] flex items-center justify-between text-xs font-black text-[var(--color-brand-green)]">
+                            <span>Get Template</span>
+                            <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </Link>
+
+                    <Link
+                        href="/resources/landlords/legal-templates"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                    >
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                    <Scale className="w-5 h-5" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-md">
+                                    Statutory Notice
+                                </span>
+                            </div>
+                            <h4 className="text-sm font-black text-[var(--text-primary)] group-hover:text-[var(--color-brand-green)] transition-colors">
+                                Notice to Quit Template
+                            </h4>
+                            <p className="text-xs text-[var(--text-secondary)] font-medium line-clamp-2">
+                                Statutory 6-month & 3-month legal notice forms complying with state recovery laws.
+                            </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-[var(--border-color)] flex items-center justify-between text-xs font-black text-[var(--color-brand-green)]">
+                            <span>Get Template</span>
+                            <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Interactive Search & Category Filter Bar */}
+            <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                        <input
+                            type="text"
+                            placeholder="Filter articles, guides, checklists..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] text-xs sm:text-sm font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--color-brand-green)]"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                        {[
+                            { id: "ALL", label: "All Items" },
+                            { id: "LEGAL", label: "Legal Contracts" },
+                            { id: "TENANTS", label: "Tenants" },
+                            { id: "LANDLORDS", label: "Landlords" },
+                            { id: "ESCROW", label: "Escrow & Safety" },
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setCategoryFilter(tab.id as any)}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                                    categoryFilter === tab.id
+                                        ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                        : "bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-color)]"
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {filtered.map((item, idx) => (
+                        <Link
+                            key={idx}
+                            href={item.href}
+                            className="p-5 sm:p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-lg transition-all group flex flex-col justify-between"
+                        >
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-[var(--bg-muted)] border border-[var(--border-color)] text-[var(--text-secondary)]">
+                                        {item.tag}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-[var(--color-brand-green)]">
+                                        {item.badge}
+                                    </span>
+                                </div>
+                                <h4 className="text-base font-black text-[var(--text-primary)] group-hover:text-[var(--color-brand-green)] transition-colors leading-snug">
+                                    {item.title}
+                                </h4>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed line-clamp-3">
+                                    {item.desc}
+                                </p>
+                            </div>
+
+                            <div className="mt-5 pt-3 border-t border-[var(--border-color)] flex items-center justify-between text-xs font-black text-[var(--color-brand-green)]">
+                                <span>Read Full Resource</span>
+                                <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </div>
+
+            {/* Escrow Protection Reminder Banner */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-start gap-3.5">
+                    <div className="p-2.5 rounded-2xl bg-emerald-600 dark:bg-emerald-500 text-white shrink-0 mt-0.5 shadow-xs">
+                        <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm sm:text-base font-black text-emerald-950 dark:text-emerald-100">
+                            100% Escrow Fraud Protection Guarantee
+                        </h4>
+                        <p className="text-xs text-emerald-950 dark:text-emerald-200 font-semibold mt-0.5 max-w-2xl leading-relaxed">
+                            RentHub locks payments in regulated bank escrow. Landlords are only paid after the tenant completes physical key inspection and inputs the 6-digit Handover OTP.
+                        </p>
+                    </div>
+                </div>
+
+                <Link
+                    href="/resources/trust-and-safety/escrow"
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shrink-0 transition-all"
+                >
+                    Learn About Escrow
+                </Link>
+            </div>
         </div>
     );
 }
@@ -2152,7 +2521,7 @@ function FavoritesTab({
                         const isRented = property.status === "RENTED" || property.status === "UNAVAILABLE";
                         const primaryImg =
                             property.images?.[0]?.url ||
-                            "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80";
+                            "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80";
 
                         return (
                             <div
@@ -2311,7 +2680,7 @@ function FavoritesTab({
                         const isRented = property.status === "RENTED" || property.status === "UNAVAILABLE";
                         const primaryImg =
                             property.images?.[0]?.url ||
-                            "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80";
+                            "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80";
 
                         return (
                             <div
@@ -3669,7 +4038,7 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                                             <div className="flex items-center gap-3">
                                                 <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-[var(--bg-muted)] shrink-0 border border-[var(--border-color)]">
                                                     <Image
-                                                        src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=200&q=80"}
+                                                        src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=200&q=80"}
                                                         alt={property.title}
                                                         fill
                                                         className="object-cover"

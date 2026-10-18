@@ -1011,7 +1011,7 @@ function SearchContent() {
                                             price: property.pricePerYear,
                                             bedrooms: property.bedrooms,
                                             bathrooms: property.bathrooms,
-                                            image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80",
+                                            image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
                                             verified: property.verified,
                                             featured: property.featured,
                                             landlordVerified: property.landlord?.verified,

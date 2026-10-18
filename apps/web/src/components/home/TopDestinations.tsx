@@ -41,7 +41,7 @@ const DESTINATIONS = [
         name: "Enugu State",
         subtitle: "Coal City & Regional Cultural Hub",
         popularDistricts: "Independence Layout • New Haven • GRA",
-        image: "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80",
+        image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
         href: "/search?state=Enugu",
         featuredCount: "210+ Homes",
     },
