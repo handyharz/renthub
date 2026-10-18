@@ -44,7 +44,34 @@ export class TransactionController {
                 });
             }
 
-            // Create transaction
+            // Idempotency guard: Return existing active transaction for this application/property+tenant
+            // Prevents duplicate transactions when the Pay button is clicked multiple times
+            const existingTransaction = await prisma.transaction.findFirst({
+                where: {
+                    tenantId,
+                    propertyId: property.id,
+                    ...(applicationId ? { applicationId } : {}),
+                    status: {
+                        in: ["PENDING", "ESCROWED", "SUCCESSFUL"],
+                    },
+                    escrowReleased: false,
+                },
+                orderBy: { createdAt: "desc" },
+                include: {
+                    tenant: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+                    property: { select: { id: true, title: true, address: true, city: true, landlordId: true } },
+                },
+            });
+
+            if (existingTransaction) {
+                console.info(`[TransactionController] Returning existing transaction ${existingTransaction.id} for tenant=${tenantId} property=${property.id}`);
+                return res.status(200).json({
+                    success: true,
+                    data: existingTransaction,
+                });
+            }
+
+            // Create new transaction
             const transaction = await transactionService.createTransaction({
                 tenantId,
                 propertyId: property.id,

@@ -311,7 +311,10 @@ export function ApplicationsTab() {
                             );
 
                             const isHandoverCompleted = txForApp && (txForApp.status === "RELEASED" || txForApp.escrowReleased);
-                            const isPaidInEscrow = txForApp && (txForApp.status === "ESCROWED" || txForApp.status === "SUCCESSFUL");
+                            // Only consider ESCROWED/SUCCESSFUL as truly paid — PENDING means payment not confirmed yet
+                            const isPaidInEscrow = txForApp && (txForApp.status === "ESCROWED" || txForApp.status === "SUCCESSFUL") && !txForApp.escrowReleased;
+                            // There's already an active (including PENDING) transaction — block duplicate payment
+                            const hasActiveTransaction = txForApp && !txForApp.escrowReleased;
 
                             return (
                                 <div key={app.id} className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-[var(--shadow-sm)] space-y-4">
@@ -363,7 +366,7 @@ export function ApplicationsTab() {
                                     </div>
 
                                     {/* Action Cards */}
-                                    {app.status === "APPROVED" && !isPaidInEscrow && !isHandoverCompleted && (
+                                    {app.status === "APPROVED" && !hasActiveTransaction && !isHandoverCompleted && (
                                         <div className="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                             <div className="space-y-1">
                                                 <div className="font-bold text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-1.5">
@@ -382,6 +385,19 @@ export function ApplicationsTab() {
                                                 <ShieldCheck className="h-4 w-4" />
                                                 {paymentLoading === app.id ? "Processing..." : "Pay Into Escrow"}
                                             </Button>
+                                        </div>
+                                    )}
+
+                                    {app.status === "APPROVED" && txForApp && txForApp.status === "PENDING" && !isHandoverCompleted && (
+                                        <div className="bg-amber-500/10 rounded-xl p-4 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                            <div className="space-y-1">
+                                                <div className="font-bold text-amber-600 dark:text-amber-400 text-sm flex items-center gap-1.5">
+                                                    <AlertTriangle className="h-4 w-4" /> Payment Initiated — Awaiting Confirmation
+                                                </div>
+                                                <p className="text-xs text-[var(--text-secondary)] font-medium">
+                                                    Your payment is being processed. Do not click Pay again. If it takes more than 10 minutes, contact support.
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
 
@@ -432,19 +448,24 @@ export function ApplicationsTab() {
                 )}
             </div>
 
-            {/* SECTION 2: PAID ESCROW & KEY HANDOVER */}
-            <div>
+            {/* SECTION 2: PAID ESCROW & KEY HANDOVER — Only active ESCROWED/RELEASED transactions */}
+            {(() => {
+                const activeEscrowTxs = transactions.filter(
+                    (tx) => tx.status === "ESCROWED" || tx.status === "SUCCESSFUL" || tx.status === "RELEASED" || tx.escrowReleased
+                );
+                return (
+                <div>
                 <h2 className="text-lg font-bold text-[var(--text-primary)] mb-3 flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-[var(--color-brand-green)]" /> Active Escrow & Key Handover ({transactions.length})
+                    <ShieldCheck className="h-5 w-5 text-[var(--color-brand-green)]" /> Active Escrow & Key Handover ({activeEscrowTxs.length})
                 </h2>
 
-                {transactions.length === 0 ? (
+                {activeEscrowTxs.length === 0 ? (
                     <div className="text-center py-8 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] p-6 shadow-[var(--shadow-sm)] text-xs text-[var(--text-secondary)] font-medium">
                         No active escrow payments yet. Completed rentals and handover OTPs will display here.
                     </div>
                 ) : (
                     <div className="grid gap-4">
-                        {transactions.map((tx) => (
+                        {activeEscrowTxs.map((tx) => (
                             <div key={tx.id} className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-[var(--shadow-sm)] space-y-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-3">
                                     <div>
@@ -545,6 +566,8 @@ export function ApplicationsTab() {
                     </div>
                 )}
             </div>
+                );
+            })()}
 
             {/* Escrow Modal */}
             {selectedTransaction && isEscrowModalOpen && (
