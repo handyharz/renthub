@@ -22,10 +22,11 @@ Every year, millions of working Nigerians—bankers in Victoria Island, tech pro
 | **Annual Rent** | ₦2,000,000 | ₦2,000,000 | Same Fair Value |
 | **Inspection / Showing Fee** | ₦10,000 – ₦25,000 (accumulated) | **₦0 (Free)** | **+₦25,000 saved** |
 | **Agent Commission (10-20%)** | ₦200,000 – ₦400,000 | **₦0 (0% Agent Fee)** | **+₦400,000 saved** |
+| **Tenant Escrow Protection Fee** | ❌ None (No protection) | **2% on top (₦40,000)** | **Saves up to ₦360,000 vs Agent Fee** |
 | **Legal / Agreement Fee** | ₦200,000 (arbitrary) | **Compliant Model Template** | **+₦150,000 saved** |
 | **Escrow Security & Guarantee** | ❌ None (Cash / Direct Transfer) | **✅ 100% Escrow Protected** | **Priceless Peace of Mind** |
 | **Key Handover Safety** | ❌ Trust in luck | **✅ 6-Digit Handover OTP** | **Zero Fraud Risk** |
-| **Total Upfront Cash Required** | **₦2,500,000+** | **₦2,040,000** | **Save up to ₦460,000+ upfront!** |
+| **Total Tenant Upfront Cash** | **₦2,500,000+** | **₦2,040,000** | **Save up to ₦460,000+ upfront!** |
 
 ---
 
@@ -37,19 +38,34 @@ RentHub connects verified landlords directly with verified tenants. No gatekeepe
 graph TD
     A[Verified Discovery] -->|Direct Landlord Chat| B[Free Physical Tour]
     B -->|Zero Inspection Fee| C[Transparent Application]
-    C -->|Verified ID & Terms| D[RentHub Escrow Payment]
-    D -->|Funds Locked Safely| E[Physical Key Inspection]
-    E -->|Tenant Releases 6-Digit OTP| F[Instant Landlord Payout 98%]
-    F -->|48-Hour Dispute Window| G[Digital Legal Receipt & Tenancy Agreement]
+    C -->|Tenant Pays: Rent + 2% Escrow Fee| D[RentHub 100% Escrow Account]
+    D -->|Funds Locked Safely| E[Physical Key Inspection Walkthrough]
+    E -->|Tenant Hands Over 6-Digit OTP| F[Landlord Enters OTP on Dashboard]
+    F -->|Instant Payout: 98% Net Rent to Landlord| G[Landlord Bank Account (Rent - 2%)]
+    F -->|Platform Revenue: 2% Tenant + 2% Landlord| H[RentHub Platform (4% Total Revenue)]
+    F -->|48-Hour Dispute Window| I[Digital Legal Receipt & Tenancy Agreement]
 ```
 
 ### The 5 Iron-Clad Pillars of RentHub
 
 #### 1. 0% Agent Commission
-Tenants never pay agent fees. Ever. A tenant renting an apartment for ₦1,500,000 pays for the apartment and a tiny 2% platform escrow protection fee. The ₦150,000–₦300,000 agent fee stays in their pocket where it belongs.
+Tenants never pay agent fees. Ever. In the traditional Nigerian market, an agent demands 10% to 20% (₦150,000–₦300,000 on a ₦1.5M/yr home). On RentHub, that entire agent markup is completely eliminated.
 
-#### 2. The 100% Escrow Guarantee
-When a tenant pays their rent on RentHub via Paystack, **the money does NOT go to the landlord immediately**. The funds are secured in an audited, bank-grade escrow account. The landlord cannot touch the money until the tenant physically walks through the door.
+#### 2. The 100% Escrow Guarantee: The Shared 2% + 2% Fee Model
+When a tenant pays their rent on RentHub via Paystack, **the money does NOT go to the landlord immediately**. Funds remain secured in an audited, bank-grade escrow account until the tenant physically walks through the doors and inspects the premises.
+
+##### ⚖️ Who Pays the Escrow Fee?
+We have settled on a fair, balanced, 2-sided marketplace model where both parties contribute a small fraction compared to predatory street fees:
+
+1. **The Tenant Pays 2% On Top of Rent**:
+   * Instead of paying a 10%–20% (₦200,000–₦400,000) agent commission, the tenant pays a modest **2% escrow protection fee on top of their annual rent** (e.g., ₦40,000 on a ₦2,000,000 property).
+   * **What this gives the tenant**: Guaranteed 100% escrow fraud protection, verified property inspection, a 48-hour dispute resolution guarantee, and immunity from double-letting scams.
+2. **The Landlord Pays 2% Deducted From Rent**:
+   * Instead of paying 10% management or marketing agent commissions, the landlord pays **2% deducted directly from the annual rent** upon successful key handover and OTP redemption.
+   * **What this gives the landlord**: Instant verified payout of **98% net rent** (e.g., ₦1,960,000 on a ₦2,000,000 rent) within minutes of entering the tenant's OTP, verified tenant identity screening, and zero risk of bad-faith payment reversals.
+3. **Therefore: RentHub Receives 4% Total Platform Revenue**:
+   * **2% from Tenant + 2% from Landlord = 4% Total Revenue per transaction** (₦80,000 total on a ₦2,000,000 lease).
+   * Aligned incentives: RentHub only profits when both the tenant and the landlord are safely housed, physically satisfied, and fully protected.
 
 #### 3. The 6-Digit Key Handover OTP Protocol
 Never hand over keys without the OTP. Never release money without the keys:
@@ -57,7 +73,7 @@ Never hand over keys without the OTP. Never release money without the keys:
 2. Both parties meet physically at the property for final walkthrough inspection.
 3. The tenant verifies the running water, power meters, windows, and physical locks.
 4. If satisfied, the tenant hands over the 6-digit OTP to the landlord in exchange for physical keys.
-5. The landlord enters the OTP on their RentHub dashboard, triggering an instant 98% bank payout.
+5. The landlord enters the OTP on their RentHub dashboard, triggering an instant 98% bank payout (Rent minus 2% platform fee).
 
 #### 4. Physical Property & Title Verification
 Every "Verified" property on RentHub undergoes a rigorous audit:
@@ -90,6 +106,7 @@ Nigeria is Africa's largest economy with a population surpassing 220 million peo
 * **Automated Tenancy History**: Build an authenticated rental track record that makes renting future apartments effortless.
 
 ### For Landlords: Better Yields, Zero Stress
+* **Keep 98% of Your Rental Value**: Only a 2% platform fee deducted upon successful OTP key handover—saving you the typical 10% lost to traditional caretakers and middlemen.
 * **100% Free Property Listings**: Reach thousands of high-earning, verified tenants directly across Nigeria and the Diaspora.
 * **Guaranteed Solvency**: You know the rent is already sitting safely in escrow before you hand over physical keys.
 * **Fast Vacancy Fill**: Properties listed on RentHub receive 3.8x faster tour requests than properties hidden behind multiple layers of street agents.
