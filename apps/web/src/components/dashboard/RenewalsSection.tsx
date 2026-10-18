@@ -345,7 +345,7 @@ export function RenewalsSection({ role, properties = [] }: RenewalsSectionProps)
             )}
 
             {/* Offer Renewal Modal for Landlords */}
-            {selectedPropertyForRenewal && (
+            {isOfferModalOpen && (
                 <OfferRenewalModal
                     isOpen={isOfferModalOpen}
                     onClose={() => {
@@ -353,6 +353,7 @@ export function RenewalsSection({ role, properties = [] }: RenewalsSectionProps)
                         setSelectedPropertyForRenewal(null);
                     }}
                     property={selectedPropertyForRenewal}
+                    properties={properties}
                     onSuccess={() => {
                         fetchRenewals();
                     }}
