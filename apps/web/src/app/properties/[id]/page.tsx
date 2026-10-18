@@ -166,7 +166,8 @@ export default function PropertyDetailsPage() {
         const legal = property.legalFee || 0;
         const agent = property.agentFee || 0;
         const service = property.serviceFee || 0;
-        const total = rent + caution + legal + agent + service;
+        const platformFee = Math.round(rent * 0.02); // 2% escrow protection fee
+        const total = rent + caution + legal + agent + service + platformFee;
         const monthlyEq = Math.round(rent / 12);
 
         return {
@@ -175,6 +176,7 @@ export default function PropertyDetailsPage() {
             legal,
             agent,
             service,
+            platformFee,
             total,
             monthlyEq,
         };
@@ -580,6 +582,16 @@ export default function PropertyDetailsPage() {
                                         </div>
                                         <p className={`font-black text-base ${feeCalculation.agent === 0 ? "text-emerald-500" : "text-[var(--text-primary)]"}`}>
                                             {feeCalculation.agent === 0 ? "₦0 (Free)" : formatPrice(feeCalculation.agent)}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 flex items-center justify-between text-sm bg-emerald-500/5">
+                                        <div>
+                                            <p className="font-extrabold text-[var(--color-brand-green)]">RentHub Escrow Protection (2%)</p>
+                                            <p className="text-xs text-[var(--text-secondary)]">100% fraud immunity • Key handover OTP protection</p>
+                                        </div>
+                                        <p className="font-black text-base text-[var(--color-brand-green)]">
+                                            {formatPrice(feeCalculation.platformFee)}
                                         </p>
                                     </div>
 

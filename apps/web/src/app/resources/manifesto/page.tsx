@@ -144,7 +144,7 @@ export default function ManifestoPage() {
                             },
                             {
                                 title: "Fair Economics",
-                                text: "Our 2% fee is transparent and reinvested into making the platform safer for everyone.",
+                                text: "A balanced 2% escrow fee model replaces the predatory 10-20% street agent commission, protecting both tenant and landlord.",
                                 icon: TrendingUp,
                                 color: "text-[var(--color-brand-green)]"
                             }

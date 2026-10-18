@@ -42,6 +42,7 @@ RentHub isn't just a listing site; it's a trust infrastructure engineered specif
 - **Tenant Application Vetting**: Review tenant identity profiles and rental terms before accepting applications.
 - **Property Verification Service**: Request physical field verification visits to earn the "Verified Property" badge.
 - **Featured Listing Boosts**: Promote listings to top search positions for maximum visibility.
+- **98% Net Rent Payout**: Receive 98% net rent directly to your bank account upon key handover OTP input (only 2% escrow fee vs 10% traditional agent deductions).
 - **Escrow Guarantee**: Know funds are secured in escrow before handing over keys.
 
 ---
