@@ -116,9 +116,9 @@ export default function PropertyDetailsPage() {
         try {
             const queryParam = city ? `city=${encodeURIComponent(city)}` : state ? `state=${encodeURIComponent(state)}` : "";
             const res = await api.get(`/properties?${queryParam}&limit=4`);
-            const items = res.data?.data || res.data?.properties || [];
+            const rawItems = res.data?.data?.properties || (Array.isArray(res.data?.data) ? res.data.data : res.data?.properties) || [];
             // Filter out current property
-            const filtered = items.filter((p: any) => p.id !== currentId).slice(0, 3);
+            const filtered = rawItems.filter((p: any) => p.id !== currentId).slice(0, 3);
             setSimilarProperties(filtered);
         } catch (err) {
             console.error("Failed to fetch similar listings:", err);

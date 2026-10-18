@@ -5,12 +5,14 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
-export function formatPrice(price: number): string {
+export function formatPrice(price?: number | null): string {
+    const numericPrice = Number(price);
+    const safePrice = !isNaN(numericPrice) && isFinite(numericPrice) ? numericPrice : 0;
     return new Intl.NumberFormat("en-NG", {
         style: "currency",
         currency: "NGN",
         minimumFractionDigits: 0,
-    }).format(price); // Price is in Naira
+    }).format(safePrice); // Price is in Naira
 }
 
 export function calculateTrustScore(user: {
