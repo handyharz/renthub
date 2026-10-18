@@ -38,6 +38,15 @@ import {
     Check,
     ExternalLink,
     ChevronRight,
+    Grid,
+    List,
+    Copy,
+    Bed,
+    Bath,
+    SlidersHorizontal,
+    Share2,
+    X,
+    Filter,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -1729,6 +1738,12 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
 function PropertiesTab({ properties, loading, onRefresh }: { properties: Property[]; loading: boolean; onRefresh: () => void }) {
     const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
     const [isMonetizationOpen, setIsMonetizationOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<"ALL" | "AVAILABLE" | "RENTED" | "FEATURED">("ALL");
+    const [sortBy, setSortBy] = useState<"NEWEST" | "VIEWS" | "PRICE_ASC" | "PRICE_DESC">("NEWEST");
+    const [viewMode, setViewMode] = useState<"GRID" | "TABLE">("GRID");
+    const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleBoostClick = (id: string) => {
         setSelectedPropertyId(id);
@@ -1739,110 +1754,439 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
         onRefresh();
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this property?")) return;
-        try {
-            await api.delete(`/properties/${id}`);
-            onRefresh();
-        } catch (error) {
-            console.error("Failed to delete property:", error);
-            alert("Failed to delete property");
+    const handleCopyLink = (id: string) => {
+        if (typeof window !== "undefined") {
+            const url = `${window.location.origin}/properties/${id}`;
+            navigator.clipboard.writeText(url);
+            toast.success("Listing link copied to clipboard!");
         }
     };
 
+    const confirmDelete = async () => {
+        if (!propertyToDelete) return;
+        try {
+            setIsDeleting(true);
+            await api.delete(`/properties/${propertyToDelete.id}`);
+            toast.success("Property deleted successfully");
+            setPropertyToDelete(null);
+            onRefresh();
+        } catch (error) {
+            console.error("Failed to delete property:", error);
+            toast.error("Failed to delete property");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const availableCount = properties.filter((p) => p.status === "AVAILABLE").length;
+    const rentedCount = properties.filter((p) => p.status === "RENTED").length;
+    const featuredCount = properties.filter((p) => p.featured).length;
+    const totalViews = properties.reduce((sum, p) => sum + (p.viewCount || 0), 0);
+
+    const filteredProperties = properties
+        .filter((p) => {
+            const matchesSearch =
+                searchQuery.trim() === "" ||
+                p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.city.toLowerCase().includes(searchQuery.toLowerCase());
+
+            if (!matchesSearch) return false;
+
+            if (statusFilter === "AVAILABLE") return p.status === "AVAILABLE";
+            if (statusFilter === "RENTED") return p.status === "RENTED";
+            if (statusFilter === "FEATURED") return p.featured;
+
+            return true;
+        })
+        .sort((a, b) => {
+            if (sortBy === "PRICE_ASC") return a.pricePerYear - b.pricePerYear;
+            if (sortBy === "PRICE_DESC") return b.pricePerYear - a.pricePerYear;
+            if (sortBy === "VIEWS") return (b.viewCount || 0) - (a.viewCount || 0);
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Your Properties ({properties.length})</h3>
-                <Link href="/properties/new" className="w-full sm:w-auto">
-                    <Button className="w-full sm:w-auto bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold gap-2 rounded-xl">
-                        <Plus className="h-4 w-4" />
-                        Add Property
-                    </Button>
-                </Link>
+        <div className="space-y-6 sm:space-y-8">
+            {/* Portfolio Header & Stats Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[var(--border-color)]">
+                <div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
+                            My Properties Portfolio
+                        </h2>
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--bg-muted)] text-[var(--text-secondary)] border border-[var(--border-color)]">
+                            {properties.length} Total Units
+                        </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1">
+                        Manage listing status, edit rates, boost visibility, and monitor real-time renter interest.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                    <Link href="/properties/new">
+                        <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-5 rounded-xl shadow-xs gap-2">
+                            <Plus className="h-4 w-4" />
+                            List New Property
+                        </Button>
+                    </Link>
+                </div>
             </div>
+
+            {/* Metric Overview Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold">Total Portfolio</span>
+                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                            <Building2 className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <p className="text-2xl font-extrabold text-[var(--text-primary)]">{loading ? "..." : properties.length}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Properties listed</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold">Available Now</span>
+                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+                            <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{loading ? "..." : availableCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Live on marketplace</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold">Total Views</span>
+                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500">
+                            <Eye className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <p className="text-2xl font-extrabold text-[var(--text-primary)]">{loading ? "..." : totalViews.toLocaleString()}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Tenant impressions</p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold">Featured Listings</span>
+                        <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
+                            <Rocket className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <p className="text-2xl font-extrabold text-[var(--color-brand-orange)]">{loading ? "..." : featuredCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Priority visibility</p>
+                </div>
+            </div>
+
+            {/* Filter, Search & View Controls Ribbon */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[220px]">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
+                    <input
+                        type="text"
+                        placeholder="Search by title, address, or city..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-10 pl-10 pr-9 rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] text-xs sm:text-sm font-medium text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--color-brand-green)]"
+                    />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-0.5"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                    {(
+                        [
+                            { id: "ALL", label: `All (${properties.length})` },
+                            { id: "AVAILABLE", label: `Available (${availableCount})` },
+                            { id: "RENTED", label: `Rented (${rentedCount})` },
+                            { id: "FEATURED", label: `Featured (${featuredCount})` },
+                        ] as const
+                    ).map((filter) => (
+                        <button
+                            key={filter.id}
+                            type="button"
+                            onClick={() => setStatusFilter(filter.id)}
+                            className={cn(
+                                "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border",
+                                statusFilter === filter.id
+                                    ? "bg-[var(--color-brand-green)] text-white border-[var(--color-brand-green)] shadow-xs"
+                                    : "bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border-color)] hover:bg-[var(--border-color)]/50"
+                            )}
+                        >
+                            {filter.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Sort & View Mode Switcher */}
+                <div className="flex items-center gap-2 shrink-0">
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="h-10 px-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-brand-green)] cursor-pointer"
+                    >
+                        <option value="NEWEST">Newest First</option>
+                        <option value="VIEWS">Most Viewed</option>
+                        <option value="PRICE_ASC">Price: Low to High</option>
+                        <option value="PRICE_DESC">Price: High to Low</option>
+                    </select>
+
+                    <div className="flex items-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] p-0.5">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode("GRID")}
+                            className={cn(
+                                "p-2 rounded-lg transition-all",
+                                viewMode === "GRID"
+                                    ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs"
+                                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                            )}
+                            title="Grid View"
+                        >
+                            <Grid className="h-4 w-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode("TABLE")}
+                            className={cn(
+                                "p-2 rounded-lg transition-all",
+                                viewMode === "TABLE"
+                                    ? "bg-[var(--bg-card)] text-[var(--text-primary)] shadow-xs"
+                                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                            )}
+                            title="Table View"
+                        >
+                            <List className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Properties Display */}
             {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {[1, 2, 3].map((i) => (<div key={i} className="bg-[var(--bg-card)] rounded-2xl h-80 animate-pulse border border-[var(--border-color)]" />))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-[var(--bg-card)] rounded-3xl h-88 animate-pulse border border-[var(--border-color)]" />
+                    ))}
                 </div>
             ) : properties.length === 0 ? (
-                <div className="bg-[var(--bg-card)] p-8 sm:p-12 rounded-2xl border border-[var(--border-color)] text-center">
+                <div className="bg-[var(--bg-card)] p-8 sm:p-14 rounded-3xl border border-[var(--border-color)] text-center shadow-xs">
                     <div className="max-w-md mx-auto">
-                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-[var(--bg-muted)] flex items-center justify-center mx-auto mb-4">
-                            <Home className="h-8 w-8 sm:h-10 sm:w-10 text-[var(--text-muted)] opacity-60" />
+                        <div className="h-18 w-18 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto mb-4">
+                            <Home className="h-9 w-9" />
                         </div>
-                        <h3 className="text-lg sm:text-xl font-bold text-[var(--text-primary)] mb-2">No properties yet</h3>
-                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-6 font-medium">Start listing your properties to reach thousands of potential tenants</p>
+                        <h3 className="text-lg sm:text-xl font-extrabold text-[var(--text-primary)] mb-2">
+                            No properties listed yet
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-6 font-medium leading-relaxed">
+                            Start listing your apartments, duplexes, or commercial spaces directly to vetted renters with 0% broker commission and 100% escrow protection.
+                        </p>
                         <Link href="/properties/new">
-                            <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold gap-2 rounded-xl">
+                            <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-6 rounded-xl gap-2 shadow-xs">
                                 <Plus className="h-4 w-4" />
                                 List Your First Property
                             </Button>
                         </Link>
                     </div>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {properties.map((property) => (
-                        <div key={property.id} className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden hover:shadow-[var(--shadow-md)] transition-all flex flex-col">
-                            <div className="relative aspect-[16/9] bg-[var(--bg-muted)]">
+            ) : filteredProperties.length === 0 ? (
+                <div className="bg-[var(--bg-card)] p-8 sm:p-12 rounded-3xl border border-[var(--border-color)] text-center">
+                    <div className="max-w-sm mx-auto">
+                        <div className="h-14 w-14 rounded-2xl bg-[var(--bg-muted)] text-[var(--text-muted)] flex items-center justify-center mx-auto mb-3">
+                            <Search className="h-6 w-6 opacity-60" />
+                        </div>
+                        <h3 className="text-base font-bold text-[var(--text-primary)] mb-1">No matching properties found</h3>
+                        <p className="text-xs text-[var(--text-secondary)] font-medium mb-4">
+                            No listings match your search for "{searchQuery}" or selected status filter.
+                        </p>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setSearchQuery("");
+                                setStatusFilter("ALL");
+                            }}
+                            className="text-xs font-bold rounded-xl border-[var(--border-color)]"
+                        >
+                            Reset All Filters
+                        </Button>
+                    </div>
+                </div>
+            ) : viewMode === "GRID" ? (
+                /* Grid View */
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                    {filteredProperties.map((property) => (
+                        <div
+                            key={property.id}
+                            className="bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] overflow-hidden hover:shadow-[var(--shadow-md)] hover:border-[var(--color-brand-green)]/40 transition-all flex flex-col group"
+                        >
+                            {/* Photo Banner with Overlays */}
+                            <div className="relative aspect-[16/10] bg-[var(--bg-muted)] overflow-hidden">
                                 {property.images?.[0]?.url ? (
-                                    <Image src={property.images[0].url} alt={property.title} fill className="object-cover" />
+                                    <Image
+                                        src={property.images[0].url}
+                                        alt={property.title}
+                                        fill
+                                        className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                    />
                                 ) : (
                                     <div className="bg-[var(--bg-muted)] w-full h-full flex items-center justify-center">
                                         <Home className="h-10 w-10 text-[var(--text-muted)] opacity-40" />
                                     </div>
                                 )}
+
+                                {/* Top Left Badges */}
                                 <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+                                    <Badge
+                                        className={cn(
+                                            "border-none shadow-md font-bold text-[10px] px-2.5 py-0.5 rounded-full backdrop-blur-md",
+                                            property.status === "AVAILABLE"
+                                                ? "bg-emerald-500 text-white"
+                                                : property.status === "RENTED"
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-gray-700 text-white"
+                                        )}
+                                    >
+                                        {property.status}
+                                    </Badge>
+
                                     {property.featured && (
                                         <div className="flex flex-col gap-0.5">
-                                            <Badge className="bg-[var(--color-brand-orange)] text-white border-none shadow-md font-bold text-[10px]">
-                                                Featured
+                                            <Badge className="bg-[var(--color-brand-orange)] text-white border-none shadow-md font-bold text-[10px] flex items-center gap-1 rounded-full px-2.5 py-0.5">
+                                                <Rocket className="h-3 w-3" /> Featured
                                             </Badge>
                                             {property.featuredExpiresAt && (
-                                                <span className="text-[8px] bg-black/70 text-white px-1.5 py-0.5 rounded backdrop-blur-sm font-bold">
-                                                    Exp: {new Date(property.featuredExpiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                <span className="text-[8px] bg-black/75 text-white px-2 py-0.5 rounded-full backdrop-blur-md font-bold">
+                                                    Exp: {new Date(property.featuredExpiresAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                                                 </span>
                                             )}
                                         </div>
                                     )}
+
                                     {property.verified && (
-                                        <Badge className="bg-[var(--color-brand-green)] text-white border-none shadow-md font-bold text-[10px]">
-                                            Verified
+                                        <Badge className="bg-emerald-600 text-white border-none shadow-md font-bold text-[10px] flex items-center gap-1 rounded-full px-2.5 py-0.5">
+                                            <ShieldCheck className="h-3 w-3" /> Verified
                                         </Badge>
                                     )}
                                 </div>
-                                <div className="absolute top-3 right-3 font-bold">
-                                    <Badge className={`${property.status === "AVAILABLE" ? "bg-[var(--color-brand-green)] text-white" : property.status === "RENTED" ? "bg-blue-600 text-white" : "bg-gray-600 text-white"} border-none shadow-sm text-xs`}>
-                                        {property.status}
-                                    </Badge>
+
+                                {/* Top Right View Counter */}
+                                <div className="absolute top-3 right-3 z-10">
+                                    <span className="bg-black/60 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                                        <Eye className="h-3 w-3 text-emerald-400" />
+                                        {property.viewCount || 0}
+                                    </span>
+                                </div>
+
+                                {/* Bottom Left Property Type */}
+                                <div className="absolute bottom-3 left-3 z-10">
+                                    <span className="bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize">
+                                        {property.propertyType?.replace(/_/g, " ") || "Residential"}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between font-bold">
+
+                            {/* Card Body */}
+                            <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
                                 <div>
-                                    <h3 className="font-bold text-base sm:text-lg text-[var(--text-primary)] mb-1 truncate">{property.title}</h3>
-                                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-3 flex items-center gap-1 font-medium truncate"><MapPin className="h-3.5 w-3.5 shrink-0" /> {property.city}</p>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <p className="text-lg sm:text-xl font-bold text-[var(--color-brand-green)]">{formatPrice(property.pricePerYear)}/yr</p>
-                                        <div className="flex items-center gap-1.5 text-xs sm:text-sm text-[var(--text-secondary)] font-semibold"><Eye className="h-4 w-4" /> {property.viewCount || 0}</div>
+                                    <Link href={`/properties/${property.id}`} className="block group-hover:text-[var(--color-brand-green)] transition-colors">
+                                        <h3 className="font-extrabold text-base sm:text-lg text-[var(--text-primary)] truncate" title={property.title}>
+                                            {property.title}
+                                        </h3>
+                                    </Link>
+                                    <p className="text-xs text-[var(--text-secondary)] mt-1 flex items-center gap-1 font-medium truncate">
+                                        <MapPin className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+                                        {property.address}, {property.city}
+                                    </p>
+
+                                    {/* Specs Pills */}
+                                    <div className="flex items-center gap-3 mt-3 text-xs text-[var(--text-secondary)] font-semibold">
+                                        <span className="flex items-center gap-1">
+                                            <Bed className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                                            {property.bedrooms} Beds
+                                        </span>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1">
+                                            <Bath className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                                            {property.bathrooms} Baths
+                                        </span>
+                                    </div>
+
+                                    {/* Price Section */}
+                                    <div className="mt-3.5 pt-3 border-t border-[var(--border-color)]">
+                                        <p className="text-lg sm:text-xl font-extrabold text-[var(--color-brand-green)]">
+                                            {formatPrice(property.pricePerYear)}
+                                            <span className="text-xs font-semibold text-[var(--text-muted)] ml-1">/ year</span>
+                                        </p>
+                                        <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">
+                                            ~{formatPrice(Math.round(property.pricePerYear / 12))}/mo
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2 pt-2 border-t border-[var(--border-color)]">
+
+                                {/* Action Buttons Footer */}
+                                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-[var(--border-color)]">
                                     <Link href={`/properties/${property.id}/edit`} className="flex-1">
-                                        <Button variant="outline" className="w-full gap-1.5 text-[var(--text-primary)] hover:bg-[var(--bg-muted)] border-[var(--border-color)] font-bold text-xs" size="sm">
-                                            <Edit className="h-3.5 w-3.5" /> Edit
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full h-9 rounded-xl border-[var(--border-color)] text-xs font-bold text-[var(--text-primary)] hover:bg-[var(--bg-muted)] gap-1.5"
+                                        >
+                                            <Edit className="h-3.5 w-3.5" />
+                                            Edit
                                         </Button>
                                     </Link>
+
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleBoostClick(property.id)}
-                                        className="text-purple-500 dark:text-purple-400 hover:bg-purple-500/10 border-purple-500/30 font-bold text-xs"
-                                        title="Boost Property"
+                                        className="h-9 px-3 rounded-xl border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 text-xs font-bold gap-1"
+                                        title="Boost & Feature"
                                     >
                                         <Rocket className="h-3.5 w-3.5" />
+                                        Boost
                                     </Button>
-                                    <Button variant="outline" size="sm" onClick={() => handleDelete(property.id)} className="text-red-500 dark:text-red-400 hover:bg-red-500/10 border-red-500/30 font-bold text-xs">
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleCopyLink(property.id)}
+                                        className="h-9 px-2.5 rounded-xl border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)] text-xs"
+                                        title="Copy Listing Link"
+                                    >
+                                        <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+
+                                    <Link href={`/properties/${property.id}`}>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9 px-2.5 rounded-xl border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)] text-xs"
+                                            title="View Live Listing"
+                                        >
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </Link>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPropertyToDelete(property)}
+                                        className="h-9 px-2.5 rounded-xl border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold"
+                                        title="Delete Listing"
+                                    >
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </Button>
                                 </div>
@@ -1850,17 +2194,203 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                         </div>
                     ))}
                 </div>
+            ) : (
+                /* Table / Dense List View */
+                <div className="bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] overflow-hidden shadow-xs">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs sm:text-sm">
+                            <thead className="bg-[var(--bg-muted)]/60 text-[var(--text-secondary)] font-bold border-b border-[var(--border-color)]">
+                                <tr>
+                                    <th className="py-3.5 px-4 sm:px-6">Property</th>
+                                    <th className="py-3.5 px-4">Status</th>
+                                    <th className="py-3.5 px-4">Specs</th>
+                                    <th className="py-3.5 px-4">Annual Rent</th>
+                                    <th className="py-3.5 px-4">Views</th>
+                                    <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[var(--border-color)]">
+                                {filteredProperties.map((property) => (
+                                    <tr key={property.id} className="hover:bg-[var(--bg-muted)]/30 transition-colors group">
+                                        <td className="py-3.5 px-4 sm:px-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-[var(--bg-muted)] shrink-0 border border-[var(--border-color)]">
+                                                    <Image
+                                                        src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=200&q=80"}
+                                                        alt={property.title}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                                <div className="min-w-0 max-w-xs sm:max-w-md">
+                                                    <Link href={`/properties/${property.id}`} className="font-bold text-[var(--text-primary)] hover:text-[var(--color-brand-green)] truncate block">
+                                                        {property.title}
+                                                    </Link>
+                                                    <p className="text-[11px] text-[var(--text-muted)] truncate flex items-center gap-1 font-medium mt-0.5">
+                                                        <MapPin className="h-3 w-3 shrink-0" />
+                                                        {property.address}, {property.city}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 px-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <Badge
+                                                    className={cn(
+                                                        "text-[10px] font-bold px-2 py-0.5 rounded-full border-none",
+                                                        property.status === "AVAILABLE"
+                                                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                                            : property.status === "RENTED"
+                                                            ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                                                            : "bg-gray-500/15 text-gray-600 dark:text-gray-400"
+                                                    )}
+                                                >
+                                                    {property.status}
+                                                </Badge>
+                                                {property.featured && (
+                                                    <Badge className="bg-orange-500/15 text-orange-600 dark:text-orange-400 text-[9px] font-bold px-1.5 py-0.2 rounded-full border-none">
+                                                        Boosted
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="py-3.5 px-4 text-xs text-[var(--text-secondary)] font-medium whitespace-nowrap">
+                                            {property.bedrooms} Bed · {property.bathrooms} Bath
+                                        </td>
+                                        <td className="py-3.5 px-4 whitespace-nowrap">
+                                            <p className="font-extrabold text-sm text-[var(--text-primary)]">{formatPrice(property.pricePerYear)}</p>
+                                            <p className="text-[10px] text-[var(--text-muted)] font-medium">/ year</p>
+                                        </td>
+                                        <td className="py-3.5 px-4 whitespace-nowrap">
+                                            <span className="text-xs font-bold text-[var(--text-secondary)] flex items-center gap-1">
+                                                <Eye className="h-3.5 w-3.5 text-emerald-500" />
+                                                {property.viewCount || 0}
+                                            </span>
+                                        </td>
+                                        <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <Link href={`/properties/${property.id}/edit`}>
+                                                    <Button size="sm" variant="outline" className="h-8 px-2.5 rounded-lg border-[var(--border-color)] text-xs font-bold">
+                                                        <Edit className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleBoostClick(property.id)}
+                                                    className="h-8 px-2.5 rounded-lg border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 text-xs font-bold"
+                                                    title="Boost"
+                                                >
+                                                    <Rocket className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleCopyLink(property.id)}
+                                                    className="h-8 px-2.5 rounded-lg border-[var(--border-color)] text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs"
+                                                    title="Copy link"
+                                                >
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Link href={`/properties/${property.id}`}>
+                                                    <Button size="sm" variant="outline" className="h-8 px-2.5 rounded-lg border-[var(--border-color)] text-xs font-bold">
+                                                        <ExternalLink className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setPropertyToDelete(property)}
+                                                    className="h-8 px-2.5 rounded-lg border-red-500/30 text-red-500 hover:bg-red-500/10 text-xs font-bold"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             )}
 
+            {/* Monetization Boost Modal */}
             {selectedPropertyId && (
                 <MonetizationModal
                     propertyId={selectedPropertyId}
                     isOpen={isMonetizationOpen}
-                    isVerified={properties.find(p => p.id === selectedPropertyId)?.verified}
-                    isFeatured={properties.find(p => p.id === selectedPropertyId)?.featured}
+                    isVerified={properties.find((p) => p.id === selectedPropertyId)?.verified}
+                    isFeatured={properties.find((p) => p.id === selectedPropertyId)?.featured}
                     onClose={() => setIsMonetizationOpen(false)}
                     onSuccess={handleMonetizationSuccess}
                 />
+            )}
+
+            {/* Modern Delete Confirmation Dialog */}
+            {propertyToDelete && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4">
+                        <div className="flex items-center gap-3.5">
+                            <div className="h-12 w-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+                                <Trash2 className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">
+                                    Delete Property Listing?
+                                </h3>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">
+                                    This action cannot be undone.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)]">
+                            <p className="font-bold text-xs sm:text-sm text-[var(--text-primary)] truncate">
+                                {propertyToDelete.title}
+                            </p>
+                            <p className="text-[11px] text-[var(--text-muted)] font-medium truncate mt-0.5">
+                                {propertyToDelete.address}, {propertyToDelete.city}
+                            </p>
+                            <p className="text-xs font-bold text-[var(--color-brand-green)] mt-1.5">
+                                {formatPrice(propertyToDelete.pricePerYear)} / year
+                            </p>
+                        </div>
+
+                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-medium">
+                            Deleting this property will permanently remove it from the RentHub marketplace, cancel all scheduled visits, and delete its view history.
+                        </p>
+
+                        <div className="flex items-center justify-end gap-2.5 pt-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setPropertyToDelete(null)}
+                                disabled={isDeleting}
+                                className="h-10 px-4 rounded-xl border-[var(--border-color)] text-xs font-bold"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={confirmDelete}
+                                disabled={isDeleting}
+                                className="h-10 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-xs gap-1.5"
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <Clock className="h-3.5 w-3.5 animate-spin" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Yes, Delete Property
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
