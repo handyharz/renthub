@@ -451,7 +451,7 @@ export function Inbox({ initialConversationId }: { initialConversationId?: strin
 
             {/* CHAT PANE: Active Conversation View */}
             <div
-                className={`flex-1 flex flex-col bg-[var(--bg-muted)]/20 ${
+                className={`flex-1 min-w-0 flex flex-col bg-[var(--bg-muted)]/20 overflow-hidden ${
                     mobileShowChat ? "flex" : "hidden md:flex"
                 }`}
             >
@@ -464,12 +464,12 @@ export function Inbox({ initialConversationId }: { initialConversationId?: strin
                                 activeConversation.participants[0];
 
                             return (
-                                <div className="p-3.5 sm:p-4 bg-[var(--bg-card)] border-b border-[var(--border-color)] flex items-center justify-between gap-3 shadow-2xs">
+                                <div className="p-3.5 sm:p-4 bg-[var(--bg-card)] border-b border-[var(--border-color)] flex items-center justify-between gap-3 shadow-2xs shrink-0 w-full min-w-0">
                                     <div className="flex items-center gap-3 min-w-0">
                                         {/* Mobile Back Button */}
                                         <button
                                             onClick={() => setMobileShowChat(false)}
-                                            className="md:hidden p-1.5 rounded-xl border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                            className="md:hidden p-1.5 rounded-xl border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0"
                                             title="Back to conversations"
                                         >
                                             <ChevronLeft className="h-4 w-4" />
@@ -546,12 +546,21 @@ export function Inbox({ initialConversationId }: { initialConversationId?: strin
                         {/* Messages Stream */}
                         <div
                             ref={scrollRef}
-                            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 scrollbar-thin"
+                            className={`flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 ${
+                                messages.length === 0
+                                    ? "flex flex-col items-center justify-center"
+                                    : "space-y-3.5"
+                            } scrollbar-thin`}
                         >
                             {messages.length === 0 ? (
-                                <div className="h-full flex flex-col items-center justify-center text-center p-6 text-[var(--text-muted)]">
-                                    <MessageSquare className="h-10 w-10 mb-2 opacity-40" />
-                                    <p className="text-xs font-medium">No messages yet. Send a greeting to start the conversation!</p>
+                                <div className="flex flex-col items-center justify-center text-center p-6 text-[var(--text-muted)] max-w-sm m-auto">
+                                    <div className="h-12 w-12 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex items-center justify-center mb-3 shadow-2xs">
+                                        <MessageSquare className="h-6 w-6 text-[var(--color-brand-green)]" />
+                                    </div>
+                                    <p className="text-sm font-extrabold text-[var(--text-primary)] mb-1">No messages yet</p>
+                                    <p className="text-xs font-medium text-[var(--text-secondary)]">
+                                        Send a greeting to start the conversation!
+                                    </p>
                                 </div>
                             ) : (
                                 messages.map((msg, index) => {
@@ -565,13 +574,13 @@ export function Inbox({ initialConversationId }: { initialConversationId?: strin
                                     return (
                                         <div
                                             key={msg.id || index}
-                                            className={`flex ${isMine ? "justify-end" : "justify-start"} animate-in fade-in duration-150`}
+                                            className={`flex ${isMine ? "justify-end" : "justify-start"} w-full animate-in fade-in duration-150`}
                                         >
                                             <div
-                                                className={`max-w-[85%] sm:max-w-[70%] p-3.5 rounded-2xl text-xs sm:text-sm shadow-xs ${
+                                                className={`max-w-[85%] sm:max-w-[75%] p-3.5 rounded-2xl text-xs sm:text-sm shadow-xs break-words ${
                                                     isMine
-                                                        ? "bg-[var(--color-brand-green)] text-white rounded-br-xs font-medium"
-                                                        : "bg-[var(--bg-card)] text-[var(--text-primary)] rounded-bl-xs border border-[var(--border-color)] font-medium"
+                                                        ? "bg-[var(--color-brand-green)] text-white rounded-br-xs font-medium mr-0.5"
+                                                        : "bg-[var(--bg-card)] text-[var(--text-primary)] rounded-bl-xs border border-[var(--border-color)] font-medium ml-0.5"
                                                 }`}
                                             >
                                                 <p className="leading-relaxed whitespace-pre-wrap select-text break-words">
@@ -595,7 +604,7 @@ export function Inbox({ initialConversationId }: { initialConversationId?: strin
                         </div>
 
                         {/* Quick Reply Template Chips */}
-                        <div className="px-4 py-2 border-t border-[var(--border-color)] bg-[var(--bg-card)]/60 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                        <div className="px-4 py-2 border-t border-[var(--border-color)] bg-[var(--bg-card)]/60 flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0 w-full min-w-0">
                             <span className="text-[10px] font-bold uppercase text-[var(--text-muted)] tracking-wider shrink-0 flex items-center gap-1">
                                 <Sparkles className="h-3 w-3 text-amber-500" /> Quick Replies:
                             </span>
@@ -611,10 +620,10 @@ export function Inbox({ initialConversationId }: { initialConversationId?: strin
                         </div>
 
                         {/* Input Composer */}
-                        <div className="p-3.5 bg-[var(--bg-card)] border-t border-[var(--border-color)]">
+                        <div className="p-3 sm:p-3.5 bg-[var(--bg-card)] border-t border-[var(--border-color)] shrink-0 w-full min-w-0">
                             <form
                                 onSubmit={handleSendMessage}
-                                className="flex items-end gap-2 bg-[var(--bg-muted)]/70 rounded-2xl border border-[var(--border-color)] p-1.5 focus-within:border-[var(--color-brand-green)] focus-within:bg-[var(--bg-card)] transition-all shadow-2xs"
+                                className="flex items-end gap-2 bg-[var(--bg-muted)]/70 rounded-2xl border border-[var(--border-color)] p-1.5 focus-within:border-[var(--color-brand-green)] focus-within:bg-[var(--bg-card)] transition-all shadow-2xs w-full min-w-0"
                             >
                                 <textarea
                                     ref={textareaRef}
@@ -623,13 +632,13 @@ export function Inbox({ initialConversationId }: { initialConversationId?: strin
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     onKeyDown={handleKeyDown}
                                     placeholder="Type your message... (Enter to send, Shift+Enter for newline)"
-                                    className="flex-1 bg-transparent px-3 py-2 text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-hidden resize-none max-h-32 min-h-[40px] font-medium"
+                                    className="flex-1 min-w-0 bg-transparent px-3 py-2 text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-hidden resize-none max-h-32 min-h-[40px] font-medium"
                                 />
 
                                 <Button
                                     type="submit"
                                     disabled={sending || !newMessage.trim()}
-                                    className="h-10 px-4 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs shadow-xs gap-1.5 shrink-0"
+                                    className="h-10 px-3.5 sm:px-4 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs shadow-xs gap-1.5 shrink-0"
                                 >
                                     {sending ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />

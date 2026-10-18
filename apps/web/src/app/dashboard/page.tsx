@@ -50,6 +50,7 @@ import {
     Share2,
     X,
     Filter,
+    Heart,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -415,7 +416,15 @@ function DashboardContent() {
                         )}
                         {activeTab === "properties" && role === "LANDLORD" && <PropertiesTab properties={properties} loading={loading} onRefresh={fetchDashboardData} />}
                         {activeTab === "tours" && <ToursTab role={role as "LANDLORD" | "TENANT"} />}
-                        {activeTab === "favorites" && role === "TENANT" && <FavoritesTab favorites={favorites} loading={loading} />}
+                        {activeTab === "favorites" && role === "TENANT" && (
+                            <FavoritesTab
+                                favorites={favorites}
+                                loading={loading}
+                                onRemoveFavorite={(id) => {
+                                    setFavorites((prev) => prev.filter((p) => p.id !== id));
+                                }}
+                            />
+                        )}
                         {activeTab === "applications" && (role === "LANDLORD" ? <LandlordApplicationsTab /> : <ApplicationsTab />)}
                         {activeTab === "transactions" && role === "LANDLORD" && <TransactionsTab />}
                         {activeTab === "payouts" && role === "LANDLORD" && (
@@ -1383,32 +1392,184 @@ function TenantOverviewTab({
     );
 }
 
-function FavoritesTab({ favorites, loading }: { favorites: Property[]; loading: boolean }) {
+function FavoritesTab({
+    favorites: initialFavorites,
+    loading,
+    onRemoveFavorite,
+}: {
+    favorites: Property[];
+    loading: boolean;
+    onRemoveFavorite?: (id: string) => void;
+}) {
+    const { user } = useUser();
+    const [localFavorites, setLocalFavorites] = useState<Property[]>(initialFavorites || []);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedType, setSelectedType] = useState<string>("ALL");
+    const [availabilityFilter, setAvailabilityFilter] = useState<"ALL" | "AVAILABLE" | "RENTED">("ALL");
+    const [sortBy, setSortBy] = useState<"NEWEST" | "PRICE_ASC" | "PRICE_DESC" | "BEDS_DESC">("NEWEST");
+    const [viewMode, setViewMode] = useState<"GRID" | "LIST">("GRID");
+    const [removingId, setRemovingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        setLocalFavorites(initialFavorites || []);
+    }, [initialFavorites]);
+
+    const handleRemoveFavorite = async (e: React.MouseEvent, propertyId: string, title: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (removingId) return;
+        setRemovingId(propertyId);
+
+        const previous = [...localFavorites];
+        // Optimistic UI update
+        setLocalFavorites((prev) => prev.filter((p) => p.id !== propertyId));
+        if (onRemoveFavorite) {
+            onRemoveFavorite(propertyId);
+        }
+
+        try {
+            if (user?.id) {
+                await api.post(`/favorites/${propertyId}?clerkId=${user.id}`);
+            }
+            toast.success("Removed from saved homes", {
+                description: title,
+            });
+        } catch (error) {
+            console.error("Failed to remove favorite:", error);
+            setLocalFavorites(previous);
+            toast.error("Could not remove property. Please try again.");
+        } finally {
+            setRemovingId(null);
+        }
+    };
+
+    const handleShare = (e: React.MouseEvent, propertyId: string, title: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window !== "undefined" && navigator.clipboard) {
+            const url = `${window.location.origin}/properties/${propertyId}`;
+            navigator.clipboard.writeText(url);
+            toast.success("Property link copied to clipboard!", { description: title });
+        }
+    };
+
+    // Metrics
+    const totalCount = localFavorites.length;
+    const availableCount = localFavorites.filter(
+        (p) => p.status !== "RENTED" && p.status !== "UNAVAILABLE"
+    ).length;
+    const rentedCount = totalCount - availableCount;
+
+    const prices = localFavorites.map((p) => p.pricePerYear || 0).filter((p) => p > 0);
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+    const distinctCities = Array.from(new Set(localFavorites.map((p) => p.city).filter(Boolean)));
+
+    // Available property types
+    const propertyTypes = useMemo(() => {
+        const set = new Set<string>();
+        localFavorites.forEach((p) => {
+            if (p.propertyType) set.add(p.propertyType);
+        });
+        return Array.from(set);
+    }, [localFavorites]);
+
+    // Filtered and Sorted list
+    const filteredFavorites = useMemo(() => {
+        return localFavorites
+            .filter((p) => {
+                const query = searchQuery.toLowerCase().trim();
+                const matchesSearch =
+                    !query ||
+                    p.title?.toLowerCase().includes(query) ||
+                    p.address?.toLowerCase().includes(query) ||
+                    p.city?.toLowerCase().includes(query);
+
+                const matchesType = selectedType === "ALL" || p.propertyType === selectedType;
+
+                const isRented = p.status === "RENTED" || p.status === "UNAVAILABLE";
+                const matchesAvailability =
+                    availabilityFilter === "ALL" ||
+                    (availabilityFilter === "AVAILABLE" && !isRented) ||
+                    (availabilityFilter === "RENTED" && isRented);
+
+                return matchesSearch && matchesType && matchesAvailability;
+            })
+            .sort((a, b) => {
+                if (sortBy === "PRICE_ASC") return (a.pricePerYear || 0) - (b.pricePerYear || 0);
+                if (sortBy === "PRICE_DESC") return (b.pricePerYear || 0) - (a.pricePerYear || 0);
+                if (sortBy === "BEDS_DESC") return (b.bedrooms || 0) - (a.bedrooms || 0);
+                return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            });
+    }, [localFavorites, searchQuery, selectedType, availabilityFilter, sortBy]);
+
     if (loading) {
         return (
             <div className="space-y-6">
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Saved Properties</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {[1, 2, 3].map((i) => (<div key={i} className="bg-[var(--bg-card)] rounded-2xl h-80 animate-pulse border border-[var(--border-color)]" />))}
+                <div className="h-24 bg-[var(--bg-muted)]/50 rounded-3xl animate-pulse" />
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-24 bg-[var(--bg-card)] rounded-2xl animate-pulse border border-[var(--border-color)]" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="bg-[var(--bg-card)] rounded-3xl h-96 animate-pulse border border-[var(--border-color)]" />
+                    ))}
                 </div>
             </div>
         );
     }
 
-    if (favorites.length === 0) {
+    if (totalCount === 0) {
         return (
             <div className="space-y-6">
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Saved Properties</h3>
-                <div className="bg-[var(--bg-card)] p-8 sm:p-12 rounded-2xl border border-[var(--border-color)] text-center">
-                    <div className="max-w-md mx-auto">
-                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-[var(--bg-muted)] flex items-center justify-center mx-auto mb-4">
-                            <Home className="h-8 w-8 sm:h-10 sm:w-10 text-[var(--text-muted)] opacity-60" />
+                {/* Header Strip */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-8 bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-muted)]/40 rounded-3xl border border-[var(--border-color)] shadow-xs">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
+                                <Heart className="h-5 w-5 fill-rose-500/20" />
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">
+                                Saved Homes
+                            </h2>
+                            <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 text-xs font-bold px-2.5 py-0.5">
+                                0 Saved
+                            </Badge>
                         </div>
-                        <h3 className="text-lg sm:text-xl font-bold text-[var(--text-primary)] mb-2">No saved homes yet</h3>
-                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-6 font-medium">Properties you favorite while browsing will appear here for easy access</p>
-                        <Link href="/search">
-                            <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold rounded-xl px-6">Start Browsing</Button>
-                        </Link>
+                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
+                            Keep track of verified properties you want to tour, compare, or submit direct applications for.
+                        </p>
+                    </div>
+                    <Link href="/search">
+                        <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold rounded-2xl px-5 h-11 shadow-xs gap-2 shrink-0">
+                            <Search className="h-4 w-4" />
+                            <span>Browse Available Homes</span>
+                        </Button>
+                    </Link>
+                </div>
+
+                {/* Empty State Banner */}
+                <div className="bg-[var(--bg-card)] p-10 sm:p-16 rounded-3xl border border-[var(--border-color)] text-center shadow-xs">
+                    <div className="max-w-md mx-auto space-y-4">
+                        <div className="h-20 w-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-500 shadow-inner">
+                            <Heart className="h-10 w-10 fill-rose-500/20" />
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)]">
+                            No saved homes yet
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed font-medium">
+                            Whenever you see a property you like, tap the heart button to save it here. You can easily compare rates, book physical tours, and chat with verified landlords.
+                        </p>
+                        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <Link href="/search" className="w-full sm:w-auto">
+                                <Button className="w-full sm:w-auto bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold rounded-2xl px-6 h-11 shadow-xs">
+                                    Start Exploring Properties
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1417,27 +1578,512 @@ function FavoritesTab({ favorites, loading }: { favorites: Property[]; loading: 
 
     return (
         <div className="space-y-6">
-            <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Saved Properties ({favorites.length})</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {favorites.map((property) => (
-                    <PropertyCard
-                        key={property.id}
-                        property={{
-                            id: property.id,
-                            title: property.title,
-                            address: property.address,
-                            price: property.pricePerYear,
-                            bedrooms: property.bedrooms,
-                            bathrooms: property.bathrooms,
-                            image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80",
-                            verified: property.status === "VERIFIED",
-                            type: property.propertyType.replace(/_/g, " "),
-                            status: property.status,
-                            isFavorited: true
-                        }}
-                    />
-                ))}
+            {/* Header Strip */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-muted)]/30 rounded-3xl border border-[var(--border-color)] shadow-xs">
+                <div>
+                    <div className="flex items-center gap-2.5 mb-1.5">
+                        <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
+                            <Heart className="h-5 w-5 fill-rose-500" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)] tracking-tight">
+                            Saved Homes
+                        </h2>
+                        <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            {totalCount} {totalCount === 1 ? "Property" : "Properties"}
+                        </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
+                        Compare your bookmarked properties, book guided physical tours, and apply directly.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2.5 shrink-0">
+                    <Link href="/search">
+                        <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold rounded-2xl px-4 sm:px-5 h-10 sm:h-11 shadow-xs gap-2 text-xs sm:text-sm">
+                            <Search className="h-4 w-4" />
+                            <span>Browse More</span>
+                        </Button>
+                    </Link>
+                </div>
             </div>
+
+            {/* KPI Metric Strip */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+                <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-[var(--text-secondary)]">Total Saved</span>
+                        <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
+                            <Heart className="h-4 w-4 fill-rose-500/30" />
+                        </div>
+                    </div>
+                    <p className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">{totalCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Properties bookmarked</p>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-[var(--text-secondary)]">Available Now</span>
+                        <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                            <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">{availableCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Ready for tour & lease</p>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-[var(--text-secondary)]">Price Range</span>
+                        <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                            <Wallet className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <p className="text-base sm:text-lg font-black text-[var(--text-primary)] truncate">
+                        {minPrice > 0 ? `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}` : "N/A"}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Annual rent range</p>
+                </div>
+
+                <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-[var(--text-secondary)]">Neighborhoods</span>
+                        <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
+                            <MapPin className="h-4 w-4" />
+                        </div>
+                    </div>
+                    <p className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">
+                        {distinctCities.length > 0 ? distinctCities.length : 1} {distinctCities.length === 1 ? "City" : "Cities"}
+                    </p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5 truncate">
+                        {distinctCities.slice(0, 2).join(", ") || "Active locations"}
+                    </p>
+                </div>
+            </div>
+
+            {/* Controls Bar: Search, Filters, Sort, View Toggle */}
+            <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs space-y-3">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    {/* Search Input */}
+                    <div className="relative flex-1 min-w-0">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search saved homes by title, address, or city..."
+                            className="w-full h-10 pl-10 pr-9 text-xs sm:text-sm font-medium bg-[var(--bg-muted)]/70 rounded-xl border border-transparent focus:border-[var(--color-brand-green)] focus:bg-[var(--bg-card)] text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-hidden transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] p-0.5"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Filter Dropdown & Sort */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {/* Property Type Dropdown */}
+                        {propertyTypes.length > 1 && (
+                            <select
+                                value={selectedType}
+                                onChange={(e) => setSelectedType(e.target.value)}
+                                className="h-10 px-3 text-xs font-bold rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)]/60 text-[var(--text-primary)] focus:border-[var(--color-brand-green)] outline-hidden transition-all cursor-pointer"
+                            >
+                                <option value="ALL">All Types</option>
+                                {propertyTypes.map((type) => (
+                                    <option key={type} value={type}>
+                                        {type.replace(/_/g, " ")}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+
+                        {/* Sort Dropdown */}
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as any)}
+                            className="h-10 px-3 text-xs font-bold rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)]/60 text-[var(--text-primary)] focus:border-[var(--color-brand-green)] outline-hidden transition-all cursor-pointer"
+                        >
+                            <option value="NEWEST">Recently Saved</option>
+                            <option value="PRICE_ASC">Price: Low to High</option>
+                            <option value="PRICE_DESC">Price: High to Low</option>
+                            <option value="BEDS_DESC">Most Bedrooms</option>
+                        </select>
+
+                        {/* View Mode Toggle */}
+                        <div className="flex items-center p-1 rounded-xl bg-[var(--bg-muted)] border border-[var(--border-color)]">
+                            <button
+                                onClick={() => setViewMode("GRID")}
+                                className={`p-1.5 rounded-lg transition-all ${
+                                    viewMode === "GRID"
+                                        ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-2xs font-bold"
+                                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                                }`}
+                                title="Grid View"
+                            >
+                                <Grid className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => setViewMode("LIST")}
+                                className={`p-1.5 rounded-lg transition-all ${
+                                    viewMode === "LIST"
+                                        ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-2xs font-bold"
+                                        : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                                }`}
+                                title="List View"
+                            >
+                                <List className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-2 pt-1 overflow-x-auto scrollbar-none">
+                    <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider shrink-0 flex items-center gap-1">
+                        <Filter className="h-3 w-3" /> Status:
+                    </span>
+                    <button
+                        onClick={() => setAvailabilityFilter("ALL")}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                            availabilityFilter === "ALL"
+                                ? "bg-[var(--color-brand-green)] text-white shadow-2xs"
+                                : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                    >
+                        All ({totalCount})
+                    </button>
+                    <button
+                        onClick={() => setAvailabilityFilter("AVAILABLE")}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                            availabilityFilter === "AVAILABLE"
+                                ? "bg-[var(--color-brand-green)] text-white shadow-2xs"
+                                : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                    >
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        Available ({availableCount})
+                    </button>
+                    {rentedCount > 0 && (
+                        <button
+                            onClick={() => setAvailabilityFilter("RENTED")}
+                            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                                availabilityFilter === "RENTED"
+                                    ? "bg-[var(--color-brand-green)] text-white shadow-2xs"
+                                    : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                            }`}
+                        >
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                            Rented ({rentedCount})
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Results Grid / List */}
+            {filteredFavorites.length === 0 ? (
+                <div className="p-12 text-center rounded-3xl border border-dashed border-[var(--border-color)] bg-[var(--bg-muted)]/20">
+                    <Search className="h-10 w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-40" />
+                    <h4 className="text-base font-extrabold text-[var(--text-primary)] mb-1">
+                        No saved homes match your filters
+                    </h4>
+                    <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto mb-4 font-medium">
+                        Try clearing your search query or changing the filter options to view other bookmarked properties.
+                    </p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setSearchQuery("");
+                            setSelectedType("ALL");
+                            setAvailabilityFilter("ALL");
+                        }}
+                        className="rounded-xl border-[var(--border-color)] text-xs font-bold"
+                    >
+                        Reset All Filters
+                    </Button>
+                </div>
+            ) : viewMode === "GRID" ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                    {filteredFavorites.map((property) => {
+                        const isRented = property.status === "RENTED" || property.status === "UNAVAILABLE";
+                        const primaryImg =
+                            property.images?.[0]?.url ||
+                            "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80";
+
+                        return (
+                            <div
+                                key={property.id}
+                                className="group bg-[var(--bg-card)] rounded-3xl overflow-hidden border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-lg transition-all duration-300 flex flex-col"
+                            >
+                                {/* Property Image & Floating Badges */}
+                                <div className="relative aspect-[16/10] w-full bg-[var(--bg-muted)] overflow-hidden">
+                                    <Image
+                                        src={primaryImg}
+                                        alt={property.title}
+                                        fill
+                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+
+                                    {/* Gradient overlay for readability */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
+
+                                    {/* Rented Overlay */}
+                                    {isRented && (
+                                        <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex items-center justify-center z-20">
+                                            <span className="bg-rose-600 text-white px-5 py-1.5 text-xs font-black rounded-full tracking-wider shadow-lg transform -rotate-6 border border-white/20">
+                                                RENTED OUT
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Top Left Badges */}
+                                    <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5 items-center">
+                                        <Badge
+                                            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-lg border-none shadow-sm ${
+                                                isRented
+                                                    ? "bg-rose-600/90 text-white"
+                                                    : "bg-emerald-600/95 text-white"
+                                            }`}
+                                        >
+                                            {isRented ? "Rented" : "Available"}
+                                        </Badge>
+
+                                        {property.propertyType && (
+                                            <Badge className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold rounded-lg border-none shadow-sm">
+                                                {property.propertyType.replace(/_/g, " ")}
+                                            </Badge>
+                                        )}
+
+                                        {(property.verified || property.status === "VERIFIED") && (
+                                            <Badge className="bg-blue-600/90 text-white text-[10px] font-bold rounded-lg border-none shadow-sm flex items-center gap-1">
+                                                <ShieldCheck className="h-3 w-3" /> Verified
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    {/* Top Right Quick Actions: Heart Remove & Share */}
+                                    <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+                                        <button
+                                            onClick={(e) => handleShare(e, property.id, property.title)}
+                                            className="h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-md text-white flex items-center justify-center transition-all shadow-sm"
+                                            title="Share property link"
+                                        >
+                                            <Share2 className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleRemoveFavorite(e, property.id, property.title)}
+                                            disabled={removingId === property.id}
+                                            className="h-8 w-8 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-all shadow-sm"
+                                            title="Remove from saved homes"
+                                        >
+                                            <Heart className="h-4 w-4 fill-rose-500" />
+                                        </button>
+                                    </div>
+
+                                    {/* Bottom Left Price Tag on Image */}
+                                    <div className="absolute bottom-3 left-3 z-10">
+                                        <p className="text-xl font-black text-white drop-shadow-sm leading-tight">
+                                            {formatPrice(property.pricePerYear)}
+                                            <span className="text-xs font-semibold text-white/80">/yr</span>
+                                        </p>
+                                        <p className="text-[11px] font-semibold text-emerald-300 drop-shadow-xs">
+                                            ~{formatPrice(Math.round(property.pricePerYear / 12))}/mo
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Body Information */}
+                                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
+                                    <div>
+                                        <Link
+                                            href={`/properties/${property.id}`}
+                                            className="block font-black text-sm sm:text-base text-[var(--text-primary)] hover:text-[var(--color-brand-green)] transition-colors line-clamp-1 mb-1.5"
+                                        >
+                                            {property.title}
+                                        </Link>
+
+                                        <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1.5 truncate">
+                                            <MapPin className="h-3.5 w-3.5 text-[var(--color-brand-green)] shrink-0" />
+                                            <span>{property.address || property.city || "Location available on inquiry"}</span>
+                                        </p>
+                                    </div>
+
+                                    {/* Specs Ribbon */}
+                                    <div className="flex items-center gap-4 py-2.5 px-3 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)]/60 text-xs font-bold text-[var(--text-secondary)]">
+                                        <div className="flex items-center gap-1.5">
+                                            <Bed className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                                            <span>{property.bedrooms} {property.bedrooms === 1 ? "Bed" : "Beds"}</span>
+                                        </div>
+                                        <div className="h-3 w-px bg-[var(--border-color)]" />
+                                        <div className="flex items-center gap-1.5">
+                                            <Bath className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                                            <span>{property.bathrooms} {property.bathrooms === 1 ? "Bath" : "Baths"}</span>
+                                        </div>
+                                        {property.city && (
+                                            <>
+                                                <div className="h-3 w-px bg-[var(--border-color)]" />
+                                                <span className="truncate text-[var(--text-muted)]">{property.city}</span>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Direct Action Buttons */}
+                                    <div className="grid grid-cols-2 gap-2 pt-1">
+                                        <Link
+                                            href={`/properties/${property.id}/tour`}
+                                            className="w-full"
+                                        >
+                                            <Button
+                                                variant="outline"
+                                                className="w-full h-9 rounded-xl border-[var(--border-color)] hover:border-[var(--color-brand-green)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] text-xs font-extrabold gap-1.5"
+                                            >
+                                                <Calendar className="h-3.5 w-3.5 text-[var(--color-brand-green)]" />
+                                                <span>Book Tour</span>
+                                            </Button>
+                                        </Link>
+
+                                        <Link
+                                            href={`/properties/${property.id}`}
+                                            className="w-full"
+                                        >
+                                            <Button
+                                                className="w-full h-9 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-extrabold gap-1 shadow-2xs"
+                                            >
+                                                <span>View Home</span>
+                                                <ArrowUpRight className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                /* LIST VIEW */
+                <div className="space-y-4">
+                    {filteredFavorites.map((property) => {
+                        const isRented = property.status === "RENTED" || property.status === "UNAVAILABLE";
+                        const primaryImg =
+                            property.images?.[0]?.url ||
+                            "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=800&q=80";
+
+                        return (
+                            <div
+                                key={property.id}
+                                className="group bg-[var(--bg-card)] rounded-3xl p-3.5 sm:p-4 border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all duration-200 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center"
+                            >
+                                {/* Thumbnail */}
+                                <div className="relative h-44 sm:h-32 sm:w-48 rounded-2xl overflow-hidden shrink-0 bg-[var(--bg-muted)]">
+                                    <Image
+                                        src={primaryImg}
+                                        alt={property.title}
+                                        fill
+                                        sizes="(max-width: 640px) 100vw, 200px"
+                                        className="object-cover transition-transform group-hover:scale-105"
+                                    />
+                                    {isRented && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                                            <span className="bg-rose-600 text-white text-[10px] font-black px-3 py-1 rounded-full">
+                                                RENTED
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="absolute top-2 left-2 z-10">
+                                        <Badge
+                                            className={`text-[9px] font-black px-2 py-0.5 rounded-lg border-none shadow-xs ${
+                                                isRented ? "bg-rose-600 text-white" : "bg-emerald-600 text-white"
+                                            }`}
+                                        >
+                                            {isRented ? "Rented" : "Available"}
+                                        </Badge>
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0 space-y-1.5">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <Link
+                                            href={`/properties/${property.id}`}
+                                            className="font-extrabold text-sm sm:text-base text-[var(--text-primary)] hover:text-[var(--color-brand-green)] truncate"
+                                        >
+                                            {property.title}
+                                        </Link>
+                                        {(property.verified || property.status === "VERIFIED") && (
+                                            <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 text-[9px] px-1.5 py-0 font-bold">
+                                                Verified
+                                            </Badge>
+                                        )}
+                                    </div>
+
+                                    <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 truncate">
+                                        <MapPin className="h-3 w-3 text-[var(--color-brand-green)] shrink-0" />
+                                        <span>{property.address || property.city}</span>
+                                    </p>
+
+                                    <div className="flex items-center gap-3 text-xs font-bold text-[var(--text-muted)] pt-0.5">
+                                        <span>{property.bedrooms} Beds</span>
+                                        <span>•</span>
+                                        <span>{property.bathrooms} Baths</span>
+                                        {property.propertyType && (
+                                            <>
+                                                <span>•</span>
+                                                <span>{property.propertyType.replace(/_/g, " ")}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Price and Action Buttons */}
+                                <div className="sm:text-right flex sm:flex-col justify-between items-center sm:items-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-color)]">
+                                    <div>
+                                        <p className="text-lg font-black text-[var(--text-primary)]">
+                                            {formatPrice(property.pricePerYear)}
+                                            <span className="text-xs font-semibold text-[var(--text-muted)]">/yr</span>
+                                        </p>
+                                        <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                            ~{formatPrice(Math.round(property.pricePerYear / 12))}/mo
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={(e) => handleRemoveFavorite(e, property.id, property.title)}
+                                            className="p-2 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-transparent hover:border-rose-200 transition-all"
+                                            title="Remove from saved"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+
+                                        <Link href={`/properties/${property.id}/tour`}>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 px-3 rounded-xl border-[var(--border-color)] text-xs font-bold"
+                                            >
+                                                Tour
+                                            </Button>
+                                        </Link>
+
+                                        <Link href={`/properties/${property.id}`}>
+                                            <Button
+                                                size="sm"
+                                                className="h-8 px-3 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-bold"
+                                            >
+                                                View
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }
