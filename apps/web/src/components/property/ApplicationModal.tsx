@@ -32,10 +32,12 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
 
     if (!isOpen) return null;
 
-    const rent = property.pricePerYear;
+    const durationMonths = parseInt(leaseDuration) || 12;
+    const durationYears = durationMonths / 12;
+    const rent = Math.round(property.pricePerYear * durationYears);
     const caution = property.cautionFee || 0;
     const legal = property.legalFee || 0;
-    const platformFee = Math.round(rent * 0.02); // 2% platform fee
+    const platformFee = Math.round(rent * 0.02); // 2% tenant platform escrow fee
     const estimatedTotal = rent + caution + legal + platformFee;
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -132,7 +134,11 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
                     <div className="bg-[var(--bg-muted)] rounded-xl p-4 border border-[var(--border-color)] text-xs space-y-2">
                         <div className="font-bold text-[var(--text-primary)] mb-1">Estimated Cost Breakdown (If Accepted)</div>
                         <div className="flex justify-between text-[var(--text-secondary)] font-medium">
-                            <span>Annual Rent:</span>
+                            <span>
+                                {durationMonths === 12
+                                    ? "Annual Rent (1 Year):"
+                                    : `Rent (${durationYears} Years @ ${formatPrice(property.pricePerYear)}/yr):`}
+                            </span>
                             <span className="font-bold text-[var(--text-primary)]">{formatPrice(rent)}</span>
                         </div>
                         {caution > 0 && (
