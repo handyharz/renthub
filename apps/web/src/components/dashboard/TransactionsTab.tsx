@@ -869,17 +869,30 @@ export function TransactionsTab() {
                                 </p>
                             </div>
 
+                            {/* Escrow Fee Breakdown */}
+                            <div className="p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] space-y-1.5 text-xs">
+                                <div className="flex justify-between text-[var(--text-secondary)]">
+                                    <span>Gross Annual Rent:</span>
+                                    <span className="font-mono font-semibold text-[var(--text-primary)]">
+                                        {formatPrice(otpModalTx.rentAmount)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between text-red-500">
+                                    <span>RentHub Escrow Fee (2%):</span>
+                                    <span className="font-mono font-semibold">
+                                        - {formatPrice(otpModalTx.platformFee || Math.round((otpModalTx.rentAmount || 0) * 0.02))}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between font-bold border-t border-[var(--border-color)]/60 pt-1.5 text-emerald-600 dark:text-emerald-400">
+                                    <span>Net Payout to You (98%):</span>
+                                    <span className="font-mono font-extrabold text-sm">
+                                        {formatPrice((otpModalTx.rentAmount || 0) - (otpModalTx.platformFee || Math.round((otpModalTx.rentAmount || 0) * 0.02)))}
+                                    </span>
+                                </div>
+                            </div>
+
                             <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
-                                Ask tenant <strong className="text-[var(--text-primary)]">{otpModalTx.tenant?.firstName}</strong> for their 6-digit Handover OTP code at physical key exchange to release{" "}
-                                <strong className="text-[var(--color-brand-green)] font-extrabold">
-                                    {formatPrice(
-                                        (otpModalTx.rentAmount || 0) +
-                                        (otpModalTx.cautionFee || 0) +
-                                        (otpModalTx.legalFee || 0) +
-                                        (otpModalTx.serviceFee || 0)
-                                    )}
-                                </strong>{" "}
-                                to your verified payout wallet.
+                                Enter the tenant&apos;s 6-digit Handover OTP code given to you upon physical key exchange. Once verified, your <strong className="text-[var(--color-brand-green)] font-extrabold">98% net payout</strong> is released immediately.
                             </p>
                         </div>
 
