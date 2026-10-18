@@ -55,6 +55,7 @@ export class TourService {
                         firstName: true,
                         lastName: true,
                         avatar: true,
+                        phone: true,
                     },
                 },
                 landlord: {
@@ -63,6 +64,7 @@ export class TourService {
                         firstName: true,
                         lastName: true,
                         avatar: true,
+                        phone: true,
                     },
                 },
             },

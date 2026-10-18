@@ -27,6 +27,7 @@ import {
     AlertCircle,
     AlertTriangle,
     User,
+    Phone,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -846,15 +847,27 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                         </Button>
                                     )}
                                     {tour.status === "CONFIRMED" && (
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="w-full font-bold gap-1.5 rounded-xl border-[var(--border-color)] text-[var(--color-brand-orange)] hover:bg-[var(--bg-muted)]"
-                                            onClick={() => handleMessageClick(displayUser.id, tour.propertyId)}
-                                        >
-                                            <MessageSquare className="h-4 w-4" />
-                                            Message {role === "LANDLORD" ? "Tenant" : "Owner"}
-                                        </Button>
+                                        <div className="flex flex-col gap-2 w-full">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="w-full font-bold gap-1.5 rounded-xl border-[var(--border-color)] text-[var(--color-brand-orange)] hover:bg-[var(--bg-muted)]"
+                                                onClick={() => handleMessageClick(displayUser?.id, tour.propertyId)}
+                                            >
+                                                <MessageSquare className="h-4 w-4" />
+                                                Message {role === "LANDLORD" ? "Tenant" : "Owner"}
+                                            </Button>
+
+                                            {displayUser?.phone && (
+                                                <a
+                                                    href={`tel:${displayUser.phone}`}
+                                                    className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 px-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                                >
+                                                    <Phone className="h-3.5 w-3.5" />
+                                                    Call {displayUser.phone}
+                                                </a>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>
