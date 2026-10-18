@@ -38,7 +38,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { PROPERTY_CATEGORIES, DETAILED_TYPES_MAP } from "@/lib/constants";
-import { NIGERIAN_LOCATIONS, ALL_STATES } from "@/lib/locations";
+import { NIGERIAN_LOCATIONS, ALL_STATES, getCoordinatesForLocation } from "@/lib/locations";
 import { formatPrice } from "@/lib/utils";
 
 interface SearchFilters {
@@ -558,7 +558,7 @@ function SearchContent() {
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
     const [filters, setFilters] = useState<SearchFilters>({});
-    const [searchOnMove, setSearchOnMove] = useState(true);
+    const [searchOnMove, setSearchOnMove] = useState(false);
     const [shouldAutoFit, setShouldAutoFit] = useState(true);
     const [mapKey, setMapKey] = useState(0);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -960,15 +960,20 @@ function SearchContent() {
                                 </div>
                                 <Map
                                     key={mapKey}
-                                    properties={properties.map((p) => ({
-                                        id: p.id,
-                                        title: p.title,
-                                        latitude: p.latitude,
-                                        longitude: p.longitude,
-                                        pricePerYear: p.pricePerYear,
-                                        city: p.city,
-                                        image: p.images?.[0]?.url,
-                                    }))}
+                                    properties={properties.map((p, idx) => {
+                                        const coords = (p.latitude != null && p.longitude != null && !isNaN(Number(p.latitude)) && !isNaN(Number(p.longitude)))
+                                            ? { lat: Number(p.latitude), lng: Number(p.longitude) }
+                                            : getCoordinatesForLocation(p.state, p.city, idx);
+                                        return {
+                                            id: p.id,
+                                            title: p.title,
+                                            latitude: coords.lat,
+                                            longitude: coords.lng,
+                                            pricePerYear: p.pricePerYear,
+                                            city: p.city,
+                                            image: p.images?.[0]?.url,
+                                        };
+                                    })}
                                     onPropertyClick={(id) => {
                                         window.location.href = `/properties/${id}`;
                                     }}
