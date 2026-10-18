@@ -28,11 +28,21 @@ import {
     AlertTriangle,
     User,
     Phone,
+    Building2,
+    Sparkles,
+    ArrowUpRight,
+    ArrowRight,
+    Lock,
+    Key,
+    Shield,
+    Check,
+    ExternalLink,
+    ChevronRight,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import api from "@/lib/api";
-import { formatPrice, cn } from "@/lib/utils";
+import { formatPrice, cn, calculateTrustScore } from "@/lib/utils";
 import { PropertyCard } from "@/components/property/PropertyCard";
 import { Inbox } from "@/components/messaging/Inbox";
 import { ApplicationsTab } from "@/components/dashboard/ApplicationsTab";
@@ -141,6 +151,8 @@ function DashboardContent() {
         active: 0,
         messages: 0,
         favorites: 0,
+        tours: 0,
+        applications: 0,
     });
 
     useEffect(() => {
@@ -190,8 +202,22 @@ function DashboardContent() {
                 const userProperties = res.data.data.properties || [];
                 setProperties(userProperties);
 
-                const unreadRes = await api.get(`/messages/unread-count?clerkId=${user.id}`);
-                const unreadCount = unreadRes.data.data.count || 0;
+                let unreadCount = 0;
+                let toursCount = 0;
+                let appCount = 0;
+
+                try {
+                    const [unreadRes, toursRes, appRes] = await Promise.allSettled([
+                        api.get(`/messages/unread-count?clerkId=${user.id}`),
+                        api.get(`/tours?clerkId=${user.id}&role=LANDLORD`),
+                        api.get("/applications/landlord"),
+                    ]);
+                    if (unreadRes.status === "fulfilled") unreadCount = unreadRes.value.data?.data?.count || 0;
+                    if (toursRes.status === "fulfilled") toursCount = toursRes.value.data?.data?.length || 0;
+                    if (appRes.status === "fulfilled") appCount = appRes.value.data?.data?.length || 0;
+                } catch (e) {
+                    console.warn("Extra landlord stats fetch error:", e);
+                }
 
                 const totalViews = userProperties.reduce((sum: number, p: Property) => sum + (p.viewCount || 0), 0);
                 const activeCount = userProperties.filter((p: Property) => p.status === "AVAILABLE").length;
@@ -202,6 +228,8 @@ function DashboardContent() {
                     active: activeCount,
                     messages: unreadCount,
                     favorites: 0,
+                    tours: toursCount,
+                    applications: appCount,
                 });
             } else {
                 const favRes = await api.get(`/favorites/me?clerkId=${user.id}`);
@@ -211,8 +239,22 @@ function DashboardContent() {
                 })) || [];
                 setFavorites(favProperties);
 
-                const unreadRes = await api.get(`/messages/unread-count?clerkId=${user.id}`);
-                const unreadCount = unreadRes.data.data.count || 0;
+                let unreadCount = 0;
+                let toursCount = 0;
+                let appCount = 0;
+
+                try {
+                    const [unreadRes, toursRes, appRes] = await Promise.allSettled([
+                        api.get(`/messages/unread-count?clerkId=${user.id}`),
+                        api.get(`/tours?clerkId=${user.id}&role=TENANT`),
+                        api.get("/applications/tenant"),
+                    ]);
+                    if (unreadRes.status === "fulfilled") unreadCount = unreadRes.value.data?.data?.count || 0;
+                    if (toursRes.status === "fulfilled") toursCount = toursRes.value.data?.data?.length || 0;
+                    if (appRes.status === "fulfilled") appCount = appRes.value.data?.data?.length || 0;
+                } catch (e) {
+                    console.warn("Extra tenant stats fetch error:", e);
+                }
 
                 setStats({
                     total: 0,
@@ -220,6 +262,8 @@ function DashboardContent() {
                     active: 0,
                     messages: unreadCount,
                     favorites: favProperties.length,
+                    tours: toursCount,
+                    applications: appCount,
                 });
             }
 
@@ -354,8 +398,8 @@ function DashboardContent() {
                     <div className="p-4 sm:p-6">
                         {activeTab === "overview" && (
                             role === "LANDLORD"
-                                ? <OverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} dbUser={dbUser} />
-                                : <TenantOverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} />
+                                ? <OverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} dbUser={dbUser} properties={properties} />
+                                : <TenantOverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} favorites={favorites} dbUser={dbUser} />
                         )}
                         {activeTab === "properties" && role === "LANDLORD" && <PropertiesTab properties={properties} loading={loading} onRefresh={fetchDashboardData} />}
                         {activeTab === "tours" && <ToursTab role={role as "LANDLORD" | "TENANT"} />}
@@ -376,179 +420,953 @@ function DashboardContent() {
     );
 }
 
-function OverviewTab({ stats, activities, loading, onTabChange, dbUser }: { stats: any; activities: Activity[]; loading: boolean; onTabChange: (tab: string) => void; dbUser: any }) {
+function OverviewTab({
+    stats,
+    activities,
+    loading,
+    onTabChange,
+    dbUser,
+    properties = [],
+}: {
+    stats: any;
+    activities: Activity[];
+    loading: boolean;
+    onTabChange: (tab: string) => void;
+    dbUser: any;
+    properties?: Property[];
+}) {
+    const trustScore = calculateTrustScore(dbUser);
+    const activeRate = stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0;
+    const userProperties = properties || [];
+
     const statCards = [
-        { label: "Total Properties", value: stats.total, icon: Home, bgColor: "bg-blue-500/10", iconColor: "text-blue-500" },
-        { label: "Total Views", value: stats.views, icon: Eye, bgColor: "bg-emerald-500/10", iconColor: "text-emerald-500" },
-        { label: "Active Listings", value: stats.active, icon: TrendingUp, bgColor: "bg-orange-500/10", iconColor: "text-orange-500" },
-        { label: "Messages", value: stats.messages, icon: MessageSquare, bgColor: "bg-purple-500/10", iconColor: "text-purple-500", onClick: () => onTabChange("messages") },
+        {
+            label: "Listed Properties",
+            value: stats.total,
+            sub: `${stats.active} live in market`,
+            icon: Building2,
+            bgColor: "bg-blue-500/10 dark:bg-blue-500/20",
+            iconColor: "text-blue-500 dark:text-blue-400",
+            badge: stats.active > 0 ? `${activeRate}% active` : "0 active",
+            badgeColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
+            onClick: () => onTabChange("properties"),
+        },
+        {
+            label: "Total Listing Views",
+            value: stats.views.toLocaleString(),
+            sub: "Tenant reach across Nigeria",
+            icon: Eye,
+            bgColor: "bg-emerald-500/10 dark:bg-emerald-500/20",
+            iconColor: "text-emerald-500 dark:text-emerald-400",
+            badge: "Market Reach",
+            badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+        },
+        {
+            label: "Inquiries & Tours",
+            value: (stats.tours || 0) + (stats.applications || 0),
+            sub: `${stats.tours || 0} tours · ${stats.applications || 0} applications`,
+            icon: Calendar,
+            bgColor: "bg-purple-500/10 dark:bg-purple-500/20",
+            iconColor: "text-purple-500 dark:text-purple-400",
+            badge: (stats.tours || 0) + (stats.applications || 0) > 0 ? "Active Leads" : "No Leads",
+            badgeColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20",
+            onClick: () => onTabChange((stats.applications || 0) > 0 ? "applications" : "tours"),
+        },
+        {
+            label: "AfriExchange Escrow",
+            value: dbUser?.settlementLinkedAt ? "Connected" : "Action Needed",
+            sub: dbUser?.settlementLinkedAt ? "Instant 98% payout ready" : "Link settlement wallet",
+            icon: Wallet,
+            bgColor: dbUser?.settlementLinkedAt ? "bg-emerald-500/10 dark:bg-emerald-500/20" : "bg-amber-500/10 dark:bg-amber-500/20",
+            iconColor: dbUser?.settlementLinkedAt ? "text-emerald-500 dark:text-emerald-400" : "text-amber-500 dark:text-amber-400",
+            badge: dbUser?.settlementLinkedAt ? "Instant Payout" : "Setup",
+            badgeColor: dbUser?.settlementLinkedAt
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20",
+            onClick: () => onTabChange("payouts"),
+        },
+    ];
+
+    const quickActions = [
+        {
+            title: "Add New Property",
+            desc: "List apartment or house in 2 mins",
+            href: "/properties/new",
+            icon: Plus,
+            badge: "0% Broker Fee",
+            color: "text-emerald-600 dark:text-emerald-400",
+            bg: "bg-emerald-500/10 dark:bg-emerald-500/20",
+        },
+        {
+            title: "AfriExchange Settlement",
+            desc: dbUser?.settlementLinkedAt ? "Manage settlement wallet" : "Link wallet for rent escrow",
+            onClick: () => onTabChange("payouts"),
+            icon: Wallet,
+            badge: dbUser?.settlementLinkedAt ? "Active" : "Action Needed",
+            color: "text-amber-600 dark:text-amber-400",
+            bg: "bg-amber-500/10 dark:bg-amber-500/20",
+        },
+        {
+            title: "Rental Applications",
+            desc: "Screen prospective renters & lock leases",
+            onClick: () => onTabChange("applications"),
+            icon: FileText,
+            badge: stats.applications > 0 ? `${stats.applications} pending` : "Screening",
+            color: "text-blue-600 dark:text-blue-400",
+            bg: "bg-blue-500/10 dark:bg-blue-500/20",
+        },
+        {
+            title: "Physical Tours",
+            desc: "Manage walkthrough visits & calls",
+            onClick: () => onTabChange("tours"),
+            icon: Calendar,
+            badge: stats.tours > 0 ? `${stats.tours} tours` : "Schedule",
+            color: "text-purple-600 dark:text-purple-400",
+            bg: "bg-purple-500/10 dark:bg-purple-500/20",
+        },
     ];
 
     return (
-        <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="space-y-6 sm:space-y-8">
+            {/* Hero / Overview Banner */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[var(--bg-muted)] border border-[var(--border-color)] p-5 sm:p-7 shadow-xs">
+                <div className="absolute -right-16 -top-16 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -left-16 -bottom-16 w-56 h-56 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {dbUser?.verified ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                    <ShieldCheck className="h-3.5 w-3.5" /> Verified Landlord
+                                </Badge>
+                            ) : (
+                                <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                    <AlertCircle className="h-3.5 w-3.5" /> Verification In Progress
+                                </Badge>
+                            )}
+
+                            {dbUser?.settlementLinkedAt ? (
+                                <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                    <Wallet className="h-3.5 w-3.5" /> AfriExchange Payouts Active
+                                </Badge>
+                            ) : (
+                                <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                    <AlertTriangle className="h-3.5 w-3.5" /> Settlement Link Required
+                                </Badge>
+                            )}
+
+                            <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                <Lock className="h-3.5 w-3.5" /> 100% Escrow Protected
+                            </Badge>
+                        </div>
+
+                        <div>
+                            <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
+                                Landlord Command Center
+                            </h2>
+                            <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-2xl mt-1 leading-relaxed">
+                                Monitor listing reach, review prospective tenant offers, and receive direct 98% net rent disbursements securely into your account upon physical key inspection.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 flex-wrap sm:flex-nowrap">
+                        <Link href="/properties/new" className="w-full sm:w-auto">
+                            <Button className="w-full sm:w-auto bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-5 rounded-xl shadow-xs gap-2">
+                                <Plus className="h-4 w-4" />
+                                List New Property
+                            </Button>
+                        </Link>
+                        <Button
+                            variant="outline"
+                            onClick={() => onTabChange("payouts")}
+                            className="w-full sm:w-auto border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] font-bold h-11 px-4 rounded-xl gap-2"
+                        >
+                            <Wallet className="h-4 w-4 text-emerald-500" />
+                            Settlement Wallet
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Performance Stat Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
                 {statCards.map((stat) => (
                     <div
                         key={stat.label}
                         onClick={stat.onClick}
                         className={cn(
-                            "bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)] transition-all",
-                            stat.onClick ? "cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-[var(--color-brand-green)]" : ""
+                            "relative overflow-hidden bg-[var(--bg-card)] p-5 rounded-2xl border border-[var(--border-color)] transition-all",
+                            stat.onClick ? "cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-[var(--color-brand-green)]/50 group" : ""
                         )}
                     >
-                        <div className="flex items-center justify-between mb-3 sm:mb-4">
-                            <div className={`p-2.5 sm:p-3 rounded-xl ${stat.bgColor}`}>
-                                <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.iconColor}`} />
+                        <div className="flex items-center justify-between mb-4">
+                            <div className={`p-2.5 rounded-xl ${stat.bgColor}`}>
+                                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                             </div>
+                            {stat.badge && (
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${stat.badgeColor}`}>
+                                    {stat.badge}
+                                </span>
+                            )}
                         </div>
-                        <p className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">{loading ? "..." : stat.value}</p>
-                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-semibold">{stat.label}</p>
+                        <p className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">
+                            {loading ? "..." : stat.value}
+                        </p>
+                        <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">{stat.label}</p>
+                        <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">{stat.sub}</p>
                     </div>
                 ))}
             </div>
 
-            {/* Quick Actions */}
-            <div className="bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)]">
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <Link href="/properties/new">
-                        <Button className="w-full bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 justify-start gap-3 h-14 rounded-xl text-white">
-                            <Plus className="h-5 w-5" />
-                            <div className="text-left font-bold">
-                                <p className="font-bold text-sm">Add New Property</p>
-                                <p className="text-xs opacity-90 font-medium">List a property in minutes</p>
+            {/* Quick Action Tiles */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+                {quickActions.map((action) => {
+                    const Content = (
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 transition-all h-full group">
+                            <div className="flex items-center gap-3.5 min-w-0">
+                                <div className={`p-2.5 rounded-xl ${action.bg} ${action.color} shrink-0`}>
+                                    <action.icon className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                        <h4 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">{action.title}</h4>
+                                    </div>
+                                    <p className="text-[11px] text-[var(--text-secondary)] truncate font-medium mt-0.5">{action.desc}</p>
+                                </div>
                             </div>
-                        </Button>
-                    </Link>
-
-                    <Button
-                        variant="outline"
-                        onClick={() => onTabChange("payouts")}
-                        className={cn(
-                            "w-full justify-start gap-3 h-14 rounded-xl border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]",
-                            dbUser?.settlementLinkedAt ? "border-emerald-200" : "border-amber-300 bg-amber-50/40"
-                        )}
-                    >
-                        <Wallet className={cn("h-5 w-5 shrink-0", dbUser?.settlementLinkedAt ? "text-emerald-600" : "text-amber-600")} />
-                        <div className="text-left font-bold truncate">
-                            <p className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-1.5">
-                                AfriExchange Payouts
-                                {dbUser?.settlementLinkedAt ? (
-                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-full">Active</span>
-                                ) : (
-                                    <span className="text-[10px] font-bold text-amber-700 bg-amber-200 px-1.5 py-0.2 rounded-full">Link Needed</span>
-                                )}
-                            </p>
-                            <p className="text-xs text-[var(--text-secondary)] font-medium truncate">
-                                {dbUser?.settlementLinkedAt ? "Manage settlement wallet" : "Link account for rent escrow"}
-                            </p>
+                            <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--color-brand-green)] group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
                         </div>
-                    </Button>
+                    );
 
-                    <Link href="/search">
-                        <Button variant="outline" className="w-full justify-start gap-3 h-14 rounded-xl border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)]">
-                            <Search className="h-5 w-5 text-[var(--color-brand-orange)]" />
-                            <div className="text-left font-bold">
-                                <p className="font-bold text-sm text-[var(--text-primary)]">Browse Properties</p>
-                                <p className="text-xs text-[var(--text-secondary)] font-medium">Explore the marketplace</p>
-                            </div>
-                        </Button>
-                    </Link>
-                </div>
+                    if (action.href) {
+                        return (
+                            <Link key={action.title} href={action.href} className="block">
+                                {Content}
+                            </Link>
+                        );
+                    }
+
+                    return (
+                        <div key={action.title} onClick={action.onClick} className="cursor-pointer">
+                            {Content}
+                        </div>
+                    );
+                })}
             </div>
 
-            <ActivitySection activities={activities} loading={loading} />
+            {/* Main Content Split: Left (Spotlight + Activity) & Right (Escrow + Trust + Protocol) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column (2 Cols) */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Properties Spotlight */}
+                    <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-color)] shadow-xs">
+                        <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl text-blue-500 dark:text-blue-400">
+                                    <Building2 className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">My Listings</h3>
+                                    <p className="text-xs text-[var(--text-secondary)] font-medium">Your properties on RentHub</p>
+                                </div>
+                                <span className="ml-1 text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--bg-muted)] text-[var(--text-secondary)]">
+                                    {userProperties.length}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => onTabChange("properties")}
+                                className="text-xs sm:text-sm font-bold text-[var(--color-brand-green)] hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                                View all ({userProperties.length})
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        {userProperties.length === 0 ? (
+                            <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-muted)]/30">
+                                <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto mb-3">
+                                    <Home className="h-6 w-6" />
+                                </div>
+                                <h4 className="text-sm sm:text-base font-bold text-[var(--text-primary)] mb-1">No properties listed yet</h4>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium max-w-sm mx-auto mb-4">
+                                    List your apartment, flat, or commercial space with 0% broker fee and automated escrow disbursements.
+                                </p>
+                                <Link href="/properties/new">
+                                    <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs h-9 px-4 rounded-xl gap-2">
+                                        <Plus className="h-4 w-4" />
+                                        List Your First Property
+                                    </Button>
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="space-y-3.5">
+                                {userProperties.slice(0, 3).map((property) => (
+                                    <div
+                                        key={property.id}
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 hover:bg-[var(--bg-muted)]/70 border border-[var(--border-color)] transition-all gap-3.5 group"
+                                    >
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className="relative h-16 w-16 sm:h-18 sm:w-18 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-color)]">
+                                                <Image
+                                                    src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=400&q=80"}
+                                                    alt={property.title}
+                                                    fill
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <Badge
+                                                        className={cn(
+                                                            "text-[10px] font-bold px-2 py-0.2 rounded-md border-none",
+                                                            property.status === "AVAILABLE"
+                                                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                                                : property.status === "RENTED"
+                                                                ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                                                                : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                                                        )}
+                                                    >
+                                                        {property.status}
+                                                    </Badge>
+                                                    <span className="text-[11px] font-medium text-[var(--text-secondary)] flex items-center gap-1">
+                                                        <Eye className="h-3 w-3 text-emerald-500" />
+                                                        {property.viewCount || 0} views
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">{property.title}</h4>
+                                                <p className="text-[11px] text-[var(--text-secondary)] truncate flex items-center gap-1 font-medium mt-0.5">
+                                                    <MapPin className="h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+                                                    {property.address}, {property.city}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-[var(--border-color)]">
+                                            <div className="text-left sm:text-right">
+                                                <p className="text-xs sm:text-sm font-extrabold text-[var(--text-primary)]">{formatPrice(property.pricePerYear)}</p>
+                                                <p className="text-[10px] text-[var(--text-muted)] font-medium">per year</p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <Link href={`/properties/${property.id}/edit`}>
+                                                    <Button size="sm" variant="outline" className="h-8 px-2.5 rounded-lg border-[var(--border-color)] text-xs font-bold hover:bg-[var(--bg-card)]">
+                                                        <Edit className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </Link>
+                                                <Link href={`/properties/${property.id}`}>
+                                                    <Button size="sm" variant="outline" className="h-8 px-2.5 rounded-lg border-[var(--border-color)] text-xs font-bold hover:bg-[var(--bg-card)]">
+                                                        <ExternalLink className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Activity Section */}
+                    <ActivitySection activities={activities} loading={loading} />
+                </div>
+
+                {/* Right Column (1 Col Sidebar) */}
+                <div className="space-y-6">
+                    {/* AfriExchange Settlement Card */}
+                    <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-color)] shadow-xs space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-amber-500/10 dark:bg-amber-500/20 rounded-xl text-amber-500">
+                                    <Wallet className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">Escrow Settlement</h3>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">AfriExchange Automated</p>
+                                </div>
+                            </div>
+                            {dbUser?.settlementLinkedAt ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                                    Connected
+                                </Badge>
+                            ) : (
+                                <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                                    Action Needed
+                                </Badge>
+                            )}
+                        </div>
+
+                        <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                            RentHub Escrow holds 100% of tenant rent securely. Upon validating the tenant's 6-digit Key Handover OTP, your 98% net rent is disbursed automatically in seconds.
+                        </p>
+
+                        <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-[var(--text-secondary)] font-medium">Settlement Status</span>
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {dbUser?.settlementLinkedAt ? "AfriExchange Linked" : "Unlinked Wallet"}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-[var(--text-secondary)] font-medium">Platform Escrow Fee</span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400">2.0%</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-[var(--text-secondary)] font-medium">Disbursement Speed</span>
+                                <span className="font-bold text-[var(--text-primary)]">Instant (&lt;60s)</span>
+                            </div>
+                        </div>
+
+                        <Button
+                            onClick={() => onTabChange("payouts")}
+                            className="w-full bg-[var(--bg-muted)] hover:bg-[var(--border-color)] text-[var(--text-primary)] font-bold text-xs h-10 rounded-xl border border-[var(--border-color)]"
+                        >
+                            {dbUser?.settlementLinkedAt ? "Manage Settlement Account" : "Link AfriExchange Account"}
+                        </Button>
+                    </div>
+
+                    {/* Landlord Trust Score Card */}
+                    <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-color)] shadow-xs space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-xl text-emerald-500">
+                                    <ShieldCheck className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">Trust Score</h3>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">Landlord credibility</p>
+                                </div>
+                            </div>
+                            <span className="text-base font-extrabold text-[var(--color-brand-green)]">{trustScore}%</span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="w-full bg-[var(--bg-muted)] h-2 rounded-full overflow-hidden">
+                            <div
+                                className="bg-[var(--color-brand-green)] h-full rounded-full transition-all duration-500"
+                                style={{ width: `${trustScore}%` }}
+                            />
+                        </div>
+
+                        <div className="space-y-2 pt-1 text-xs">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
+                                    {dbUser?.verified ? (
+                                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                    ) : (
+                                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                                    )}
+                                    ID & Identity Verification
+                                </span>
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {dbUser?.verified ? "Verified" : "Pending"}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
+                                    {dbUser?.phone ? (
+                                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                    ) : (
+                                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                                    )}
+                                    Direct Phone Verified
+                                </span>
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {dbUser?.phone ? "Active" : "Add Phone"}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
+                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                    RentHub Escrow Guaranteed
+                                </span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400">100%</span>
+                            </div>
+                        </div>
+
+                        {trustScore < 100 && (
+                            <Link href="/dashboard/profile" className="block">
+                                <Button variant="outline" className="w-full text-xs font-bold h-9 rounded-xl border-[var(--border-color)]">
+                                    Improve Trust Score
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+
+                    {/* Safe Handover Security Reminder */}
+                    <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/20 space-y-2.5">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                                <Key className="h-4 w-4" />
+                            </div>
+                            <h4 className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200">
+                                Safe Handover Protocol
+                            </h4>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-amber-800 dark:text-amber-300/90 leading-relaxed font-medium">
+                            Never hand over physical keys without entering the tenant's 6-digit Key Handover OTP in person. The OTP unlocks your 98% escrow payout instantly.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
 
-function TenantOverviewTab({ stats, activities, loading, onTabChange }: { stats: any; activities: Activity[]; loading: boolean; onTabChange: (tab: string) => void }) {
+function TenantOverviewTab({
+    stats,
+    activities,
+    loading,
+    onTabChange,
+    favorites = [],
+    dbUser,
+}: {
+    stats: any;
+    activities: Activity[];
+    loading: boolean;
+    onTabChange: (tab: string) => void;
+    favorites?: Property[];
+    dbUser: any;
+}) {
+    const trustScore = calculateTrustScore(dbUser);
+    const userFavorites = favorites || [];
+
     const statCards = [
-        { label: "Saved Homes", value: stats.favorites, icon: Home, bgColor: "bg-blue-500/10", iconColor: "text-blue-500", onClick: () => onTabChange("favorites") },
-        { label: "Messages", value: stats.messages, icon: MessageSquare, bgColor: "bg-purple-500/10", iconColor: "text-purple-500", onClick: () => onTabChange("messages") },
-        { label: "Applications", value: 0, icon: TrendingUp, bgColor: "bg-emerald-500/10", iconColor: "text-emerald-500" },
-        { label: "Safety Guides", value: 4, icon: ShieldCheck, bgColor: "bg-orange-500/10", iconColor: "text-orange-500" },
+        {
+            label: "Saved Homes",
+            value: stats.favorites,
+            sub: "Wishlist properties",
+            icon: Home,
+            bgColor: "bg-blue-500/10 dark:bg-blue-500/20",
+            iconColor: "text-blue-500 dark:text-blue-400",
+            badge: "Wishlist",
+            badgeColor: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20",
+            onClick: () => onTabChange("favorites"),
+        },
+        {
+            label: "Physical Tours",
+            value: stats.tours || 0,
+            sub: "Scheduled walkthroughs",
+            icon: Calendar,
+            bgColor: "bg-purple-500/10 dark:bg-purple-500/20",
+            iconColor: "text-purple-500 dark:text-purple-400",
+            badge: stats.tours > 0 ? "Upcoming" : "Schedule",
+            badgeColor: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20",
+            onClick: () => onTabChange("tours"),
+        },
+        {
+            label: "Rental Applications",
+            value: stats.applications || 0,
+            sub: "Offers & escrow locks",
+            icon: FileText,
+            bgColor: "bg-emerald-500/10 dark:bg-emerald-500/20",
+            iconColor: "text-emerald-500 dark:text-emerald-400",
+            badge: stats.applications > 0 ? "Active" : "Apply",
+            badgeColor: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20",
+            onClick: () => onTabChange("applications"),
+        },
+        {
+            label: "Messages",
+            value: stats.messages,
+            sub: "Direct landlord chats",
+            icon: MessageSquare,
+            bgColor: "bg-orange-500/10 dark:bg-orange-500/20",
+            iconColor: "text-orange-500 dark:text-orange-400",
+            badge: stats.messages > 0 ? "Unread" : "All read",
+            badgeColor: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20",
+            onClick: () => onTabChange("messages"),
+        },
+    ];
+
+    const quickActions = [
+        {
+            title: "Browse Verified Homes",
+            desc: "Explore homes directly from owners",
+            href: "/search",
+            icon: Search,
+            badge: "0% Broker Fee",
+            color: "text-emerald-600 dark:text-emerald-400",
+            bg: "bg-emerald-500/10 dark:bg-emerald-500/20",
+        },
+        {
+            title: "My Applications & Escrow",
+            desc: "Track approvals & Key Handover OTP",
+            onClick: () => onTabChange("applications"),
+            icon: FileText,
+            badge: "Escrow Locked",
+            color: "text-blue-600 dark:text-blue-400",
+            bg: "bg-blue-500/10 dark:bg-blue-500/20",
+        },
+        {
+            title: "Physical Tours",
+            desc: "Manage visits & call landlords",
+            onClick: () => onTabChange("tours"),
+            icon: Calendar,
+            badge: "Walkthrough",
+            color: "text-purple-600 dark:text-purple-400",
+            bg: "bg-purple-500/10 dark:bg-purple-500/20",
+        },
+        {
+            title: "Trust & Safety Hub",
+            desc: "How RentHub protects your rent money",
+            href: "/resources",
+            icon: ShieldCheck,
+            badge: "Protection",
+            color: "text-orange-600 dark:text-orange-400",
+            bg: "bg-orange-500/10 dark:bg-orange-500/20",
+        },
     ];
 
     return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="space-y-6 sm:space-y-8">
+            {/* Hero / Overview Banner */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[var(--bg-muted)] border border-[var(--border-color)] p-5 sm:p-7 shadow-xs">
+                <div className="absolute -right-16 -top-16 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -left-16 -bottom-16 w-56 h-56 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                <ShieldCheck className="h-3.5 w-3.5" /> Zero Broker Scams
+                            </Badge>
+                            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                <Lock className="h-3.5 w-3.5" /> 100% Escrow Protection
+                            </Badge>
+                            <Badge className="bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5" /> Direct Landlord Access
+                            </Badge>
+                        </div>
+
+                        <div>
+                            <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
+                                Find & Secure Your Next Home
+                            </h2>
+                            <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-2xl mt-1 leading-relaxed">
+                                Explore verified homes across Nigeria, schedule physical tours, and lock leases with zero agent extortion. Your money stays protected in escrow until you inspect the keys.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 flex-wrap sm:flex-nowrap">
+                        <Link href="/search" className="w-full sm:w-auto">
+                            <Button className="w-full sm:w-auto bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-5 rounded-xl shadow-xs gap-2">
+                                <Search className="h-4 w-4" />
+                                Browse Verified Homes
+                            </Button>
+                        </Link>
+                        <Button
+                            variant="outline"
+                            onClick={() => onTabChange("applications")}
+                            className="w-full sm:w-auto border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] font-bold h-11 px-4 rounded-xl gap-2"
+                        >
+                            <FileText className="h-4 w-4 text-[var(--color-brand-blue)]" />
+                            My Applications
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Performance Stat Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
                 {statCards.map((stat) => (
                     <div
                         key={stat.label}
                         onClick={stat.onClick}
-                        className={cn(
-                            "bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)] transition-all",
-                            stat.onClick ? "cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-[var(--color-brand-green)]" : ""
-                        )}
+                        className="relative overflow-hidden bg-[var(--bg-card)] p-5 rounded-2xl border border-[var(--border-color)] transition-all cursor-pointer hover:shadow-[var(--shadow-md)] hover:border-[var(--color-brand-green)]/50 group"
                     >
-                        <div className="flex items-center justify-between mb-3 sm:mb-4">
-                            <div className={`p-2.5 sm:p-3 rounded-xl ${stat.bgColor}`}>
-                                <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.iconColor}`} />
+                        <div className="flex items-center justify-between mb-4">
+                            <div className={`p-2.5 rounded-xl ${stat.bgColor}`}>
+                                <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                             </div>
+                            {stat.badge && (
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${stat.badgeColor}`}>
+                                    {stat.badge}
+                                </span>
+                            )}
                         </div>
-                        <p className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">{loading ? "..." : stat.value}</p>
-                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-semibold">{stat.label}</p>
+                        <p className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">
+                            {loading ? "..." : stat.value}
+                        </p>
+                        <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">{stat.label}</p>
+                        <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">{stat.sub}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)]">
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <Link href="/search">
-                        <Button className="w-full bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 justify-start gap-3 h-14 rounded-xl text-white">
-                            <Search className="h-5 w-5" />
-                            <div className="text-left font-bold">
-                                <p className="font-bold text-sm">Find a Home</p>
-                                <p className="text-xs opacity-90 font-medium">Browse verified properties</p>
+            {/* Quick Actions Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+                {quickActions.map((action) => {
+                    const Content = (
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-card)] hover:bg-[var(--bg-card-hover)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 transition-all h-full group">
+                            <div className="flex items-center gap-3.5 min-w-0">
+                                <div className={`p-2.5 rounded-xl ${action.bg} ${action.color} shrink-0`}>
+                                    <action.icon className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                        <h4 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">{action.title}</h4>
+                                    </div>
+                                    <p className="text-[11px] text-[var(--text-secondary)] truncate font-medium mt-0.5">{action.desc}</p>
+                                </div>
                             </div>
-                        </Button>
-                    </Link>
-                    <Link href="/resources">
-                        <Button variant="outline" className="w-full justify-start gap-3 h-14 rounded-xl border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)]">
-                            <ShieldCheck className="h-5 w-5 text-[var(--color-brand-orange)]" />
-                            <div className="text-left font-bold">
-                                <p className="font-bold text-sm text-[var(--text-primary)]">Trust & Safety Hub</p>
-                                <p className="text-xs text-[var(--text-secondary)] font-medium">Learn how to rent safely</p>
-                            </div>
-                        </Button>
-                    </Link>
-                </div>
+                            <ChevronRight className="h-4 w-4 text-[var(--text-muted)] group-hover:text-[var(--color-brand-green)] group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                        </div>
+                    );
+
+                    if (action.href) {
+                        return (
+                            <Link key={action.title} href={action.href} className="block">
+                                {Content}
+                            </Link>
+                        );
+                    }
+
+                    return (
+                        <div key={action.title} onClick={action.onClick} className="cursor-pointer">
+                            {Content}
+                        </div>
+                    );
+                })}
             </div>
 
-            <div className="bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)]">
-                <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-4">Getting Started</h3>
-                <div className="space-y-3 sm:space-y-4">
-                    <div className="flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)]">
-                        <div className="h-8 w-8 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 shrink-0">
-                            <ShieldCheck className="h-4 w-4" />
+            {/* Main Content Split: Left (Saved Homes + Activity) & Right (Escrow Protection + Trust Profile) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column (2 Cols) */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Saved Homes Spotlight */}
+                    <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-color)] shadow-xs">
+                        <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl text-blue-500 dark:text-blue-400">
+                                    <Home className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Saved Properties</h3>
+                                    <p className="text-xs text-[var(--text-secondary)] font-medium">Homes you bookmarked while browsing</p>
+                                </div>
+                                <span className="ml-1 text-xs font-bold px-2 py-0.5 rounded-full bg-[var(--bg-muted)] text-[var(--text-secondary)]">
+                                    {userFavorites.length}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => onTabChange("favorites")}
+                                className="text-xs sm:text-sm font-bold text-[var(--color-brand-green)] hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                                View all ({userFavorites.length})
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">Complete your profile</p>
-                            <p className="text-xs text-[var(--text-secondary)] font-medium truncate">Add your phone number and ID to get verified</p>
+
+                        {userFavorites.length === 0 ? (
+                            <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-muted)]/30">
+                                <div className="h-12 w-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-3">
+                                    <Home className="h-6 w-6" />
+                                </div>
+                                <h4 className="text-sm sm:text-base font-bold text-[var(--text-primary)] mb-1">No saved homes yet</h4>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium max-w-sm mx-auto mb-4">
+                                    Save verified properties while browsing to quickly compare features, prices, and schedule physical walkthroughs.
+                                </p>
+                                <Link href="/search">
+                                    <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs h-9 px-4 rounded-xl gap-2">
+                                        <Search className="h-4 w-4" />
+                                        Explore Marketplace
+                                    </Button>
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="space-y-3.5">
+                                {userFavorites.slice(0, 3).map((property) => (
+                                    <div
+                                        key={property.id}
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 hover:bg-[var(--bg-muted)]/70 border border-[var(--border-color)] transition-all gap-3.5 group"
+                                    >
+                                        <div className="flex items-center gap-3.5 min-w-0">
+                                            <div className="relative h-16 w-16 sm:h-18 sm:w-18 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-color)]">
+                                                <Image
+                                                    src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-e32c53048057?auto=format&fit=crop&w=400&q=80"}
+                                                    alt={property.title}
+                                                    fill
+                                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.2 rounded-md border-none">
+                                                        {property.propertyType?.replace(/_/g, " ") || "Residential"}
+                                                    </Badge>
+                                                    <span className="text-[11px] text-[var(--text-secondary)] font-medium">
+                                                        {property.bedrooms} beds · {property.bathrooms} baths
+                                                    </span>
+                                                </div>
+                                                <h4 className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">{property.title}</h4>
+                                                <p className="text-[11px] text-[var(--text-secondary)] truncate flex items-center gap-1 font-medium mt-0.5">
+                                                    <MapPin className="h-3 w-3 shrink-0 text-[var(--text-muted)]" />
+                                                    {property.address}, {property.city}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-[var(--border-color)]">
+                                            <div className="text-left sm:text-right">
+                                                <p className="text-xs sm:text-sm font-extrabold text-[var(--text-primary)]">{formatPrice(property.pricePerYear)}</p>
+                                                <p className="text-[10px] text-[var(--text-muted)] font-medium">per year</p>
+                                            </div>
+                                            <Link href={`/properties/${property.id}`}>
+                                                <Button size="sm" className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-8 px-3 rounded-lg text-xs gap-1.5">
+                                                    View Details
+                                                    <ArrowRight className="h-3 w-3" />
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Activity Section */}
+                    <ActivitySection activities={activities} loading={loading} />
+                </div>
+
+                {/* Right Column (1 Col Sidebar) */}
+                <div className="space-y-6">
+                    {/* RentHub 100% Escrow Protection Card */}
+                    <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-color)] shadow-xs space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-xl text-emerald-500">
+                                    <ShieldCheck className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">Escrow Guarantee</h3>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">Zero Broker Extortion</p>
+                                </div>
+                            </div>
+                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none font-bold text-[10px] px-2 py-0.5 rounded-full">
+                                100% Protected
+                            </Badge>
                         </div>
-                        <Link href="/dashboard/profile">
-                            <Button size="sm" className="font-bold bg-[var(--color-brand-green)] text-white rounded-xl text-xs">Complete</Button>
+
+                        <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                            How RentHub safeguards your rent payment against scammers:
+                        </p>
+
+                        <div className="space-y-2.5 text-xs">
+                            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)]">
+                                <span className="h-5 w-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-extrabold flex items-center justify-center shrink-0">1</span>
+                                <div>
+                                    <p className="font-bold text-[var(--text-primary)]">Lock Rental in Escrow</p>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">Your rent is held safely in escrow, not sent to the landlord upfront.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)]">
+                                <span className="h-5 w-5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-extrabold flex items-center justify-center shrink-0">2</span>
+                                <div>
+                                    <p className="font-bold text-[var(--text-primary)]">Physical Inspection & Keys</p>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">Inspect condition and receive keys physically from the landlord.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)]">
+                                <span className="h-5 w-5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400 text-[10px] font-extrabold flex items-center justify-center shrink-0">3</span>
+                                <div>
+                                    <p className="font-bold text-[var(--text-primary)]">Share 6-Digit OTP</p>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">Disclose your OTP code only when completely satisfied.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Link href="/resources" className="block">
+                            <Button variant="outline" className="w-full text-xs font-bold h-9 rounded-xl border-[var(--border-color)]">
+                                Learn More in Safety Hub
+                            </Button>
                         </Link>
                     </div>
-                    <div className="flex items-center gap-3 sm:gap-4 p-3.5 sm:p-4 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)]">
-                        <div className="h-8 w-8 rounded-full bg-blue-500/15 flex items-center justify-center text-blue-500 shrink-0">
-                            <Search className="h-4 w-4" />
+
+                    {/* Tenant Profile Readiness Card */}
+                    <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-color)] shadow-xs space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 bg-blue-500/10 dark:bg-blue-500/20 rounded-xl text-blue-500">
+                                    <User className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">Renter Profile</h3>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">Verification checklist</p>
+                                </div>
+                            </div>
+                            <span className="text-base font-extrabold text-[var(--color-brand-blue)]">{trustScore}%</span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-bold text-xs sm:text-sm text-[var(--text-primary)]">Find your dream home</p>
-                            <p className="text-xs text-[var(--text-secondary)] font-medium truncate">Browse verified properties directly from landlords</p>
+
+                        {/* Progress Bar */}
+                        <div className="w-full bg-[var(--bg-muted)] h-2 rounded-full overflow-hidden">
+                            <div
+                                className="bg-[var(--color-brand-blue)] h-full rounded-full transition-all duration-500"
+                                style={{ width: `${trustScore}%` }}
+                            />
                         </div>
-                        <Link href="/search">
-                            <Button size="sm" className="font-bold bg-[var(--color-brand-green)] text-white rounded-xl text-xs">Browse</Button>
+
+                        <div className="space-y-2 pt-1 text-xs">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
+                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                    Email Account Verified
+                                </span>
+                                <span className="font-bold text-emerald-600 dark:text-emerald-400">Complete</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
+                                    {dbUser?.phone ? (
+                                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                    ) : (
+                                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                                    )}
+                                    Direct Phone Number
+                                </span>
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {dbUser?.phone ? "Added" : "Action Needed"}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
+                                    {dbUser?.verified ? (
+                                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                    ) : (
+                                        <Clock className="h-3.5 w-3.5 text-amber-500" />
+                                    )}
+                                    Government ID Verified
+                                </span>
+                                <span className="font-bold text-[var(--text-primary)]">
+                                    {dbUser?.verified ? "Verified" : "Optional"}
+                                </span>
+                            </div>
+                        </div>
+
+                        <Link href="/dashboard/profile" className="block">
+                            <Button variant="outline" className="w-full text-xs font-bold h-9 rounded-xl border-[var(--border-color)]">
+                                Update Renter Profile
+                            </Button>
                         </Link>
+                    </div>
+
+                    {/* Direct Contact Tip */}
+                    <div className="p-4 sm:p-5 rounded-3xl bg-blue-500/10 border border-blue-500/20 space-y-2">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                <Phone className="h-4 w-4" />
+                            </div>
+                            <h4 className="text-xs sm:text-sm font-bold text-blue-950 dark:text-blue-200">
+                                Direct Landlord Contact
+                            </h4>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-blue-900 dark:text-blue-300/90 leading-relaxed font-medium">
+                            Once your physical tour is scheduled, you can call or message the verified landlord directly in RentHub without third-party interference.
+                        </p>
                     </div>
                 </div>
             </div>
-
-            <ActivitySection activities={activities} loading={loading} />
         </div>
     );
 }
@@ -614,46 +1432,69 @@ function FavoritesTab({ favorites, loading }: { favorites: Property[]; loading: 
 
 function ActivitySection({ activities, loading }: { activities: Activity[]; loading: boolean }) {
     return (
-        <div className="bg-[var(--bg-card)] p-4 sm:p-6 rounded-2xl border border-[var(--border-color)]">
-            <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-4 sm:mb-6">Recent Activity</h3>
+        <div className="bg-[var(--bg-card)] p-5 sm:p-6 rounded-3xl border border-[var(--border-color)] shadow-xs">
+            <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-purple-500/10 dark:bg-purple-500/20 rounded-xl text-purple-500 dark:text-purple-400">
+                        <TrendingUp className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">Recent Activity</h3>
+                        <p className="text-xs text-[var(--text-secondary)] font-medium">Real-time updates on your rental journey</p>
+                    </div>
+                </div>
+            </div>
+
             {loading ? (
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-4 animate-pulse">
-                            <div className="h-10 w-10 bg-[var(--bg-muted)] rounded-full" />
+                        <div key={i} className="flex items-center gap-3.5 p-3 rounded-xl bg-[var(--bg-muted)]/30 animate-pulse">
+                            <div className="h-10 w-10 bg-[var(--bg-muted)] rounded-xl shrink-0" />
                             <div className="space-y-2 flex-1">
-                                <div className="h-4 bg-[var(--bg-muted)] rounded w-1/4" />
-                                <div className="h-3 bg-[var(--bg-muted)] rounded w-1/2" />
+                                <div className="h-3.5 bg-[var(--bg-muted)] rounded w-1/3" />
+                                <div className="h-2.5 bg-[var(--bg-muted)] rounded w-1/2" />
                             </div>
                         </div>
                     ))}
                 </div>
             ) : activities.length === 0 ? (
-                <div className="text-center py-10 sm:py-12 text-[var(--text-secondary)]">
-                    <Calendar className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 text-[var(--text-muted)] opacity-60" />
-                    <p className="font-bold text-sm sm:text-base text-[var(--text-primary)]">No recent activity</p>
-                    <p className="text-xs sm:text-sm font-medium text-[var(--text-secondary)]">Your property views and updates will appear here</p>
+                <div className="text-center py-8 sm:py-10 text-[var(--text-secondary)] rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-muted)]/20">
+                    <Calendar className="h-10 w-10 mx-auto mb-2.5 text-[var(--text-muted)] opacity-50" />
+                    <p className="font-bold text-sm text-[var(--text-primary)]">No recent activity</p>
+                    <p className="text-xs font-medium text-[var(--text-secondary)] mt-0.5">Your property updates, tour events, and views will reflect here.</p>
                 </div>
             ) : (
-                <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-3">
                     {activities.map((activity) => {
                         let Icon = Calendar;
-                        let iconBg = "bg-blue-500/10";
-                        let iconColor = "text-blue-500";
-                        if (activity.type === "PROPERTY_LISTED") { Icon = Home; iconBg = "bg-emerald-500/10"; iconColor = "text-emerald-500"; }
-                        else if (activity.type === "PROPERTY_VIEWED") { Icon = Eye; iconBg = "bg-blue-500/10"; iconColor = "text-blue-500"; }
-                        else if (activity.type === "PROPERTY_UPDATED") { Icon = TrendingUp; iconBg = "bg-orange-500/10"; iconColor = "text-orange-500"; }
+                        let iconBg = "bg-blue-500/10 text-blue-500 dark:bg-blue-500/20 dark:text-blue-400";
+                        if (activity.type === "PROPERTY_LISTED") {
+                            Icon = Home;
+                            iconBg = "bg-emerald-500/10 text-emerald-500 dark:bg-emerald-500/20 dark:text-emerald-400";
+                        } else if (activity.type === "PROPERTY_VIEWED") {
+                            Icon = Eye;
+                            iconBg = "bg-blue-500/10 text-blue-500 dark:bg-blue-500/20 dark:text-blue-400";
+                        } else if (activity.type === "PROPERTY_UPDATED") {
+                            Icon = TrendingUp;
+                            iconBg = "bg-orange-500/10 text-orange-500 dark:bg-orange-500/20 dark:text-orange-400";
+                        }
+
                         return (
-                            <div key={activity.id} className="flex items-center gap-3 sm:gap-4 group">
-                                <div className={`h-9 w-9 sm:h-10 sm:w-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
-                                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
+                            <div
+                                key={activity.id}
+                                className="flex items-center gap-3.5 p-3 rounded-2xl bg-[var(--bg-muted)]/30 hover:bg-[var(--bg-muted)]/60 border border-[var(--border-color)]/60 transition-all group"
+                            >
+                                <div className={`h-10 w-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
+                                    <Icon className="h-5 w-5" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs sm:text-sm font-bold text-[var(--text-primary)] truncate">{activity.title}</p>
-                                    <p className="text-xs text-[var(--text-secondary)] truncate font-medium">{activity.description}</p>
+                                    <p className="text-[11px] sm:text-xs text-[var(--text-secondary)] truncate font-medium mt-0.5">{activity.description}</p>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-medium">{new Date(activity.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</p>
+                                    <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-medium">
+                                        {new Date(activity.timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                    </p>
                                 </div>
                             </div>
                         );
