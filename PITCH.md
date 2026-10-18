@@ -15,6 +15,7 @@ Every year, millions of working Nigerians—bankers in Victoria Island, tech pro
 * **The "Agreement & Commission" Inflation**: Arbitrary 10% legal fees drafted on photocopied 1-page templates with zero legal standing under the Lagos Tenancy Law 2011 or Abuja Recovery of Premises Act.
 * **The Multiple-Tenant Scam**: Paying rent to a rogue agent who collected money from 5 different people for the exact same apartment and switched off their phone.
 * **The Hostage Caution Deposit**: Caution deposits that are pocketed by landlords and never returned, regardless of how spotless the apartment is kept.
+* **The Renewal Shakedown**: When a lease expires, agents reappear demanding fresh 10%–20% commissions to "re-process" the same house the tenant has lived in for years.
 
 ### The Mathematics of Exploitation
 | Line Item | Traditional Market | RentHub | Your Savings on a ₦2,000,000 Apartment |
@@ -26,6 +27,8 @@ Every year, millions of working Nigerians—bankers in Victoria Island, tech pro
 | **Legal / Agreement Fee** | ₦200,000 (arbitrary) | **Compliant Model Template** | **+₦150,000 saved** |
 | **Escrow Security & Guarantee** | ❌ None (Cash / Direct Transfer) | **✅ 100% Escrow Protected** | **Priceless Peace of Mind** |
 | **Key Handover Safety** | ❌ Trust in luck | **✅ 6-Digit Handover OTP** | **Zero Fraud Risk** |
+| **Renewal Agent Fee** | ₦200,000 – ₦400,000 (paid again!) | **✅ ₦0 — 1-Click Renewal** | **+₦400,000 saved every renewal year** |
+| **Caution Deposit on Renewal** | Fresh ₦100,000 – ₦400,000 demanded | **✅ ₦0 — Rolled Over in Escrow** | **+₦200,000 saved** |
 | **Total Tenant Upfront Cash** | **₦2,500,000+** | **₦2,040,000** | **Save up to ₦460,000+ upfront!** |
 
 ---
@@ -41,18 +44,21 @@ graph TD
     C -->|Tenant Pays: Rent + 2% Escrow Fee| D[RentHub 100% Escrow Account]
     D -->|Funds Locked Safely| E[Physical Key Inspection Walkthrough]
     E -->|Tenant Hands Over 6-Digit OTP| F[Landlord Enters OTP on Dashboard]
-    F -->|Instant Payout: 98% Net Rent to Landlord| G[Landlord Bank Account (Rent - 2%)]
-    F -->|Platform Revenue: 2% Tenant + 2% Landlord| H[RentHub Platform (4% Total Revenue)]
+    F -->|Instant Payout: 98% Net Rent to Landlord| G[Landlord Bank Account — Rent minus 2%]
+    F -->|Platform Revenue: 2% Tenant + 2% Landlord| H[RentHub Platform — 4% Total Revenue]
     F -->|48-Hour Dispute Window| I[Digital Legal Receipt & Tenancy Agreement]
+    I -->|Lease Expiry Approaching| J[1-Click Lease Renewal Engine]
+    J -->|Landlord Offers Renewal via Dashboard| K[Tenant Accepts & Locks New Term in Escrow]
+    K -->|₦0 Caution Rollover — Protected in Escrow| L[Next Lease Term Active — No Agent Ever]
 ```
 
-### The 5 Iron-Clad Pillars of RentHub
+### The 6 Iron-Clad Pillars of RentHub
 
 #### 1. 0% Agent Commission
 Tenants never pay agent fees. Ever. In the traditional Nigerian market, an agent demands 10% to 20% (₦150,000–₦300,000 on a ₦1.5M/yr home). On RentHub, that entire agent markup is completely eliminated.
 
 #### 2. The 100% Escrow Guarantee: The Shared 2% + 2% Fee Model
-When a tenant pays their rent on RentHub via Paystack, **the money does NOT go to the landlord immediately**. Funds remain secured in an audited, bank-grade escrow account until the tenant physically walks through the doors and inspects the premises.
+When a tenant pays their rent on RentHub via Paystack or AfriExchange, **the money does NOT go to the landlord immediately**. Funds remain secured in an audited, bank-grade escrow account until the tenant physically walks through the doors and inspects the premises.
 
 ##### ⚖️ Who Pays the Escrow Fee?
 We have settled on a fair, balanced, 2-sided marketplace model where both parties contribute a small fraction compared to predatory street fees:
@@ -66,6 +72,11 @@ We have settled on a fair, balanced, 2-sided marketplace model where both partie
 3. **Therefore: RentHub Receives 4% Total Platform Revenue**:
    * **2% from Tenant + 2% from Landlord = 4% Total Revenue per transaction** (₦80,000 total on a ₦2,000,000 lease).
    * Aligned incentives: RentHub only profits when both the tenant and the landlord are safely housed, physically satisfied, and fully protected.
+
+##### 🗓️ Multi-Year Lease Support
+Tenants can apply for **1-year (12-month)** or **2-year (24-month)** leases directly on the platform. The escrow engine automatically scales all calculations:
+* Rent, 2% tenant escrow fee, caution deposit, and legal fees are computed dynamically for the full chosen term.
+* Landlords receive 98% of the full multi-year rent in a single guaranteed payout after OTP confirmation.
 
 #### 3. The 6-Digit Key Handover OTP Protocol
 Never hand over keys without the OTP. Never release money without the keys:
@@ -84,6 +95,43 @@ Every "Verified" property on RentHub undergoes a rigorous audit:
 #### 5. Legal Contract Toolkit & Tenancy Law Compliance
 RentHub provides standardized, legally enforceable tenancy agreements adhering strictly to the **Lagos State Tenancy Law 2011** and the **Recovery of Premises Act (Abuja & Northern States)**. Every completed transaction generates an instant, tamper-proof Digital Rent Receipt and Tenancy Agreement.
 
+#### 6. 🔄 The 1-Click Lease Renewal Engine — Zero Agent, Zero Caution, Zero Stress
+
+This is where RentHub permanently severs the tenant's dependency on the street agent ecosystem — not just at first move-in, but **at every renewal, for life**.
+
+When a lease approaches its end date, landlords no longer need to resort to agents to "manage the renewal". Everything happens in 4 frictionless steps on the RentHub dashboard:
+
+1. **Landlord Sends a Renewal Offer (From Dashboard)**:
+   * The landlord opens the "Lease Renewals & Extensions" tab and clicks "Offer Lease Renewal".
+   * They use quick percentage buttons (**Same Rent**, **+5%**, **+10%**, **+15%**) to propose a new annual rent.
+   * They choose the new lease duration (1 year or 2 years) and optionally add a personal note.
+   * The platform instantly calculates the **Landlord Net Payout (98%)** and the **Tenant Total to Pay (Rent + 2%)** with full transparency before sending.
+
+2. **Tenant Reviews & Accepts (From Dashboard)**:
+   * The tenant receives an in-app notification and sees the full renewal proposal card:
+     * Proposed Rent, New Lease Period, and Total Escrow Amount Due.
+     * **"₦0 Caution Rollover — Caution Protected in Existing Escrow"** — no fresh caution demanded.
+     * **"0% Street Agent Fee"** — zero agent cost ever.
+   * The tenant clicks **"Accept & Lock Renewal"** or initiates a counter-offer or decline.
+
+3. **Caution Deposit Rolls Over Automatically — ₦0 Additional Deposit**:
+   * Unlike traditional renewals where landlords routinely demand a fresh caution deposit, RentHub **rolls over the existing caution deposit** held safely in the escrow vault from the original lease.
+   * This alone saves tenants ₦100,000 – ₦500,000 on every single renewal.
+
+4. **New Term Locked in Escrow — No Middleman, Ever**:
+   * The tenant deposits the new year's rent + 2% escrow fee directly into escrow.
+   * The landlord receives 98% net payout after the renewal key handover OTP is confirmed.
+   * A new tamper-proof Tenancy Agreement and Digital Receipt is auto-generated.
+
+##### 💰 Renewal Revenue Model (Per ₦2,000,000 Lease Renewal)
+| Party | Gross Amount | Platform Fee | Net Amount |
+| :--- | :--- | :--- | :--- |
+| **Tenant** | ₦2,000,000 rent | +₦40,000 (2%) escrow fee | ₦2,040,000 total paid |
+| **Landlord** | ₦2,000,000 rent | −₦40,000 (2%) deducted | ₦1,960,000 net payout |
+| **RentHub** | — | +₦40,000 (tenant) + ₦40,000 (landlord) | **₦80,000 recurring revenue per renewal** |
+
+> 💡 **Recurring revenue moat**: Every tenant who stays in their home for 5 years generates **5 renewal cycles × ₦80,000 = ₦400,000** in platform revenue — all without a single agent ever touching the transaction.
+
 ---
 
 ## 📈 The Market Opportunity
@@ -94,6 +142,7 @@ Nigeria is Africa's largest economy with a population surpassing 220 million peo
 * **45% Urbanization Pressure**: Lagos alone absorbs over 2,000 new residents daily; Abuja, Port Harcourt, Ibadan, and Enugu are experiencing massive housing demand surges.
 * **Massive Pain Point**: 94% of Nigerian urban renters surveyed rank agent fees and rental fraud among their top 3 financial anxieties.
 * **The Target**: **Save Nigerian renters ₦10 Billion in unearned agent commissions over the next 5 years.**
+* **Recurring Revenue Flywheel**: Every tenant we onboard generates compounding renewal revenue with zero marginal acquisition cost.
 
 ---
 
@@ -104,6 +153,8 @@ Nigeria is Africa's largest economy with a population surpassing 220 million peo
 * **Zero Scam Anxiety**: No rogue agents, no duplicate leases, no fake property pictures.
 * **Free Showing Calendar**: Schedule property viewings directly with landlords at times that suit you.
 * **Automated Tenancy History**: Build an authenticated rental track record that makes renting future apartments effortless.
+* **1-Click Renewals**: When your lease ends, renew directly with your landlord in minutes — no agent, no fresh caution, no stress.
+* **Diaspora Payments**: Pay rent in USD, GBP, or EUR via AfriExchange — zero international wire hassle for Nigerian diaspora renters.
 
 ### For Landlords: Better Yields, Zero Stress
 * **Keep 98% of Your Rental Value**: Only a 2% platform fee deducted upon successful OTP key handover—saving you the typical 10% lost to traditional caretakers and middlemen.
@@ -111,6 +162,7 @@ Nigeria is Africa's largest economy with a population surpassing 220 million peo
 * **Guaranteed Solvency**: You know the rent is already sitting safely in escrow before you hand over physical keys.
 * **Fast Vacancy Fill**: Properties listed on RentHub receive 3.8x faster tour requests than properties hidden behind multiple layers of street agents.
 * **Direct Tenant Vetting**: Screen employment, identity, and past rental conduct with full compliance.
+* **1-Click Lease Renewals**: Renew with your existing tenant directly from your dashboard. No agents. No re-listing fees. No fresh caution negotiation. Repeat revenue with zero effort.
 
 ---
 
@@ -131,11 +183,12 @@ RentHub is engineered for national scale:
 
 A battle-tested, high-performance architecture built for 99.99% uptime and zero latency:
 
-* **Frontend**: Next.js 16 (Turbopack, App Router), TypeScript, Tailwind CSS, Lucide React, Framer Motion.
+* **Frontend**: Next.js 16 (Turbopack, App Router), TypeScript, Tailwind CSS, Lucide React.
 * **Backend**: Node.js, Express.js (Modular Controllers & Services), TypeScript.
-* **Database & ORM**: PostgreSQL with Prisma ORM (41 indexed schemas, soft deletes, spatial coordinates).
+* **Database & ORM**: PostgreSQL with Prisma ORM (42+ indexed schemas including `LeaseRenewal`, soft deletes, spatial coordinates, GPS indexing).
 * **Identity & Security**: Clerk Authentication (Biometric, Passkey, OAuth, Multi-Factor Authentication).
-* **Payment Engine**: Paystack Multi-Tier Escrow Subaccounts & Instant Automated Settlement.
+* **Payment Engine**: Paystack Multi-Tier Escrow Subaccounts & Instant Automated Settlement + **AfriExchange** (diaspora cross-border payments in USD/GBP/EUR).
+* **Lease Renewals Engine**: In-platform offer → accept → escrow → OTP loop with ₦0 caution rollover and automated revenue splits.
 * **SMS & Communications**: Termii Verified Sender ID OTP Routing.
 * **Cloud Storage**: Cloudinary High-Def Image & Video Media Pipelines.
 
@@ -152,4 +205,4 @@ We are on a relentless mission to restore dignity, fairness, and trust to the Ni
 
 ---
 
-*RentHub Nigeria — Rent Directly. Pay Safely. Keep Your Money.*
+*RentHub Nigeria — Rent Directly. Pay Safely. Keep Your Money. Renew with Dignity.*
