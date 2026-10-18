@@ -923,16 +923,16 @@ function OverviewTab({
                     </div>
 
                     {/* Safe Handover Security Reminder */}
-                    <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/20 space-y-2.5">
-                        <div className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                    <div className="p-4 sm:p-5 rounded-3xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 space-y-2.5 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-amber-500 text-white shadow-xs shrink-0">
                                 <Key className="h-4 w-4" />
                             </div>
-                            <h4 className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200">
+                            <h4 className="text-xs sm:text-sm font-black text-amber-950 dark:text-amber-100">
                                 Safe Handover Protocol
                             </h4>
                         </div>
-                        <p className="text-[11px] sm:text-xs text-amber-800 dark:text-amber-300/90 leading-relaxed font-medium">
+                        <p className="text-[11px] sm:text-xs text-amber-950 dark:text-amber-200 leading-relaxed font-semibold">
                             Never hand over physical keys without entering the tenant's 6-digit Key Handover OTP in person. The OTP unlocks your 98% escrow payout instantly.
                         </p>
                     </div>

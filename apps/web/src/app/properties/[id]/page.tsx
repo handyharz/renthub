@@ -807,13 +807,15 @@ export default function PropertyDetailsPage() {
                             </div>
 
                             {/* RentHub Escrow Trust Guarantee Banner */}
-                            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-3">
-                                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                            <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 flex items-start gap-3 shadow-xs">
+                                <div className="p-2 rounded-xl bg-emerald-600 dark:bg-emerald-500 text-white shrink-0 mt-0.5 shadow-xs">
+                                    <ShieldCheck className="w-4 h-4" />
+                                </div>
                                 <div className="text-xs leading-relaxed">
-                                    <p className="font-black text-emerald-700 dark:text-emerald-300">
+                                    <p className="font-black text-emerald-950 dark:text-emerald-100 text-sm">
                                         100% Escrow Protected
                                     </p>
-                                    <p className="text-emerald-800/80 dark:text-emerald-200/70 mt-0.5 font-medium">
+                                    <p className="text-emerald-950 dark:text-emerald-200/90 mt-0.5 font-semibold leading-normal">
                                         Your rent is locked safely in escrow. Landlord is only paid after physical inspection & key handover.
                                     </p>
                                 </div>
@@ -883,7 +885,7 @@ export default function PropertyDetailsPage() {
                                 <Button
                                     variant="outline"
                                     onClick={() => setShowPhone(!showPhone)}
-                                    className="w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] rounded-2xl"
+                                    className="w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-2xl"
                                 >
                                     <Phone className="w-4 h-4 text-[var(--color-brand-green)]" />
                                     <span>
@@ -899,7 +901,7 @@ export default function PropertyDetailsPage() {
                                     landlordId={property.landlordId}
                                     propertyId={property.id}
                                     propertyTitle={property.title}
-                                    className="w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] rounded-2xl"
+                                    className="w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-2xl"
                                 />
                             </div>
                         </div>

@@ -47,7 +47,7 @@ export function LockedMessageButton({ landlordId, propertyId, propertyTitle, cla
 
     const handleClick = async () => {
         if (!user) {
-            alert("Please sign in to contact the landlord.");
+            router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
             return;
         }
 
@@ -77,50 +77,83 @@ export function LockedMessageButton({ landlordId, propertyId, propertyTitle, cla
     };
 
     if (loading) {
-        return <Button disabled className={className} size="sm">Loading...</Button>;
+        return (
+            <Button
+                disabled
+                className={cn(
+                    "w-full justify-center gap-2 h-11 text-xs sm:text-sm font-bold border border-[var(--border-color)] bg-[var(--bg-muted)] text-[var(--text-secondary)] rounded-2xl cursor-not-allowed",
+                    className
+                )}
+            >
+                <MessageSquare className="h-4 w-4 animate-pulse text-[var(--color-brand-green)]" />
+                <span>Checking Access...</span>
+            </Button>
+        );
     }
 
     return (
         <>
             <Button
                 onClick={handleClick}
+                disabled={initiating}
                 className={cn(
-                    "gap-2 transition-all",
-                    trustScore < 60 ? "opacity-100 border-gray-300 text-gray-500 hover:text-gray-700" : "",
+                    "w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] hover:border-[var(--color-brand-green)] rounded-2xl shadow-xs transition-all active:scale-[0.99]",
                     className
                 )}
-                variant={trustScore < 60 ? "outline" : "default"}
             >
-                {trustScore < 60 ? <Lock className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
-                {trustScore < 60 ? "Contact Locked" : "Message Landlord"}
+                {initiating ? (
+                    <>
+                        <MessageSquare className="h-4 w-4 animate-spin text-[var(--color-brand-green)]" />
+                        <span className="font-black text-[var(--text-primary)]">Connecting...</span>
+                    </>
+                ) : (
+                    <>
+                        <MessageSquare className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
+                        <span className="font-black text-[var(--text-primary)]">Message Landlord</span>
+                        {user && trustScore < 60 && (
+                            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-800 dark:text-amber-300 text-[10px] font-bold border border-amber-500/20 flex items-center gap-0.5">
+                                <Lock className="h-2.5 w-2.5" /> 60% ID
+                            </span>
+                        )}
+                    </>
+                )}
             </Button>
 
             <Dialog open={showLockModal} onOpenChange={setShowLockModal}>
-                <DialogContent>
+                <DialogContent className="bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-primary)]">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                        <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400 font-black">
                             <Lock className="h-5 w-5" />
-                            Security Check
+                            Security Trust Check
                         </DialogTitle>
-                        <DialogDescription>
-                            To protect our community, messaging is locked for new accounts.
+                        <DialogDescription className="text-[var(--text-secondary)]">
+                            To protect landlords and renters from fraud, direct messaging requires a verified profile.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="py-4 text-center space-y-4">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="font-bold text-gray-900 mb-1">Your Trust Score: {trustScore}%</p>
-                            <p className="text-sm text-gray-600">You need <span className="font-bold text-green-600">60%</span> to contact landlords.</p>
-                            <div className="h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
-                                <div className="h-full bg-red-500" style={{ width: `${trustScore}%` }} />
+                        <div className="bg-[var(--bg-muted)] p-5 rounded-2xl border border-[var(--border-color)]">
+                            <p className="font-black text-base text-[var(--text-primary)] mb-1">
+                                Your Current Trust Score: {trustScore}%
+                            </p>
+                            <p className="text-xs sm:text-sm text-[var(--text-secondary)]">
+                                You need at least <span className="font-black text-[var(--color-brand-green)]">60%</span> to start conversations.
+                            </p>
+                            <div className="h-2.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-full mt-3 overflow-hidden">
+                                <div
+                                    className="h-full bg-[var(--color-brand-orange)] transition-all"
+                                    style={{ width: `${Math.max(trustScore, 5)}%` }}
+                                />
                             </div>
                         </div>
 
-                        <p className="text-sm">Please complete your profile to verify you are a real tenant.</p>
+                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
+                            Complete your profile verification with your Government ID or BVN/NIN to unlock instant messaging.
+                        </p>
 
                         <Link href="/dashboard/profile" onClick={() => setShowLockModal(false)}>
-                            <Button className="w-full bg-[var(--color-brand-blue)] font-bold">
-                                Complete Profile Now
+                            <Button className="w-full bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-black h-12 rounded-2xl shadow-md">
+                                Complete Profile Verification
                             </Button>
                         </Link>
                     </div>
