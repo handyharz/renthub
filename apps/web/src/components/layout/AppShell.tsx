@@ -7,10 +7,12 @@ import { Footer } from "@/components/layout/Footer";
 export function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const isAdminRoute = pathname.startsWith("/admin");
+    const isAuthUtilRoute = pathname.startsWith("/auth");
 
-    if (isAdminRoute) {
+    if (isAdminRoute || isAuthUtilRoute) {
         return <>{children}</>;
     }
+
 
     return (
         <>
