@@ -5,7 +5,9 @@ const isProtectedRoute = createRouteMatcher([
     '/properties/new(.*)',
     '/onboarding(.*)',
     '/admin(.*)',
+    // /auth/redirect is intentionally excluded — it handles its own auth state
 ])
+
 
 export default clerkMiddleware(async (auth, req) => {
     if (isProtectedRoute(req)) await auth.protect()
