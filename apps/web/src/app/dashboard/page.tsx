@@ -108,6 +108,7 @@ interface Activity {
 
 function DashboardContent() {
     const { user, isLoaded } = useUser();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") || "overview");
     const [activeConversationId, setActiveConversationId] = useState<string | null>(searchParams.get("convId"));
@@ -211,7 +212,13 @@ function DashboardContent() {
 
             const dbUserId = fetchedUser.id;
             setDbUser(fetchedUser);
-            
+
+            // Admins should never land on the user dashboard — send them to admin portal
+            if (fetchedUser.role === "ADMIN") {
+                router.replace("/admin");
+                return;
+            }
+
             // If the user owns properties, treat them as LANDLORD even if DB role was default TENANT
             const effectiveRole = (fetchedUser.propertiesOwned && fetchedUser.propertiesOwned.length > 0) || fetchedUser.role === "LANDLORD"
                 ? "LANDLORD"
