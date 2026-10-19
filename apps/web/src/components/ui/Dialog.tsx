@@ -14,11 +14,13 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="relative bg-white w-full max-w-md rounded-xl shadow-lg border border-gray-100 p-6 text-gray-900 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+            <div
+                className="relative bg-[var(--bg-card)] w-full max-w-md rounded-3xl shadow-2xl border border-[var(--border-color)] p-6 text-[var(--text-primary)] animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {children}
             </div>
-            {/* Click outside to close - handling via the overlay div/click listener would be better but this is a simple custom implementation */}
             <div className="absolute inset-0 -z-10" onClick={() => onOpenChange(false)} />
         </div>
     );
@@ -33,11 +35,11 @@ export function DialogHeader({ children, className }: { children: React.ReactNod
 }
 
 export function DialogTitle({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <h2 className={cn("text-lg font-bold leading-none tracking-tight text-gray-900", className)}>{children}</h2>;
+    return <h2 className={cn("text-lg font-bold leading-none tracking-tight text-[var(--text-primary)]", className)}>{children}</h2>;
 }
 
 export function DialogDescription({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <p className={cn("text-sm text-gray-500", className)}>{children}</p>;
+    return <p className={cn("text-sm text-[var(--text-secondary)] font-medium", className)}>{children}</p>;
 }
 
 export function DialogFooter({ children, className }: { children: React.ReactNode; className?: string }) {
