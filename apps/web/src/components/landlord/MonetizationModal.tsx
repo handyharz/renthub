@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { RevenueCard } from './RevenueCard';
-import api from '@/lib/api';
+"use client";
+
+import React, { useState } from "react";
+import { RevenueCard } from "./RevenueCard";
+import api from "@/lib/api";
+import { Sparkles, ShieldCheck, X, CreditCard, Lock, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface MonetizationModalProps {
     propertyId: string;
@@ -19,68 +23,110 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
     onClose,
     onSuccess,
 }) => {
-    const [loadingType, setLoadingType] = useState<'PROPERTY_VERIFICATION' | 'FEATURED_LISTING' | null>(null);
+    const [loadingType, setLoadingType] = useState<"PROPERTY_VERIFICATION" | "FEATURED_LISTING" | null>(null);
 
     if (!isOpen) return null;
 
-    const handlePayment = async (type: 'PROPERTY_VERIFICATION' | 'FEATURED_LISTING') => {
+    const handlePayment = async (type: "PROPERTY_VERIFICATION" | "FEATURED_LISTING") => {
         setLoadingType(type);
         try {
-            const response = await api.post('/services/pay', { type, propertyId });
+            const response = await api.post("/services/pay", { type, propertyId });
 
-            if (response.data.data.authorizationUrl) {
+            if (response.data?.data?.authorizationUrl) {
                 // Redirect to Paystack
                 window.location.href = response.data.data.authorizationUrl;
             } else {
                 throw new Error("Authorization URL not received");
             }
         } catch (error: any) {
-            console.error('Payment failed', error);
-            const message = error.response?.data?.error || error.message || 'Payment initiation failed. Please try again.';
-            alert(message);
+            console.error("Payment failed", error);
+            const message =
+                error.response?.data?.error ||
+                error.message ||
+                "Payment initiation failed. Please try again.";
+            toast.error("Payment Initiation Failed", {
+                description: message,
+            });
         } finally {
             setLoadingType(null);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
+                {/* Header */}
+                <div className="p-6 sm:p-7 border-b border-[var(--border-color)] flex justify-between items-start gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Boost Your Listing</h2>
-                        <p className="text-gray-500">Get verified or featured to find tenants faster.</p>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="p-1.5 rounded-xl bg-orange-500/10 text-orange-500 border border-orange-500/20">
+                                <Sparkles className="h-5 w-5" />
+                            </span>
+                            <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">
+                                Boost Your Listing
+                            </h2>
+                        </div>
+                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
+                            Attract 3x more tenants faster with verified badges and prominent homepage placement.
+                        </p>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors shrink-0"
+                        aria-label="Close"
+                    >
+                        <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                <div className="p-8 grid md:grid-cols-2 gap-8">
+                {/* Cards Grid */}
+                <div className="p-6 sm:p-8 grid md:grid-cols-2 gap-6 sm:gap-8">
                     <RevenueCard
                         title="Get Verified"
-                        description="Build trust instantly. We visit your property, verify details, and add a trusted badge. Tenants prefer verified properties."
+                        description="Build instant tenant trust. Our physical inspectors visit your property, verify legal ownership documents, and award the Official Verified Badge."
                         price="₦20,000"
-                        buttonText={isVerified ? "Already Verified" : (loadingType === 'PROPERTY_VERIFICATION' ? "Processing..." : "Verify Property")}
+                        buttonText={
+                            isVerified
+                                ? "Already Verified"
+                                : loadingType === "PROPERTY_VERIFICATION"
+                                ? "Processing..."
+                                : "Verify Property"
+                        }
                         disabled={loadingType !== null || isVerified}
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>}
-                        onClick={() => handlePayment('PROPERTY_VERIFICATION')}
+                        loading={loadingType === "PROPERTY_VERIFICATION"}
+                        icon={<ShieldCheck className="h-6 w-6" />}
+                        onClick={() => handlePayment("PROPERTY_VERIFICATION")}
                     />
 
                     <RevenueCard
                         title="Feature Listing"
-                        description="Skyrocket your visibility. Get pinned to the top of search results and the homepage for 30 days. 3x more views."
+                        description="Skyrocket listing impressions. Get pinned right at the top of search results and featured on the RentHub homepage for 30 consecutive days."
                         price="₦50,000"
-                        buttonText={isFeatured ? "Already Featured" : (loadingType === 'FEATURED_LISTING' ? "Processing..." : "Feature Property")}
+                        buttonText={
+                            isFeatured
+                                ? "Already Featured"
+                                : loadingType === "FEATURED_LISTING"
+                                ? "Processing..."
+                                : "Feature Property"
+                        }
                         disabled={loadingType !== null || isFeatured}
+                        loading={loadingType === "FEATURED_LISTING"}
                         isPopular={true}
-                        icon={<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>}
-                        onClick={() => handlePayment('FEATURED_LISTING')}
+                        icon={<Sparkles className="h-6 w-6" />}
+                        onClick={() => handlePayment("FEATURED_LISTING")}
                     />
                 </div>
 
-                <div className="p-6 bg-gray-50 border-t border-gray-100 text-center text-sm text-gray-500">
-                    Secure payment via Paystack. Service fees are non-refundable once service is delivered.
+                {/* Security & Payment Notice Footer */}
+                <div className="p-5 sm:p-6 bg-[var(--bg-muted)]/70 border-t border-[var(--border-color)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
+                    <div className="flex items-center gap-2 font-medium">
+                        <Lock className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
+                        <span>Secure 256-bit payment via Paystack (Debit Card, USSD, Bank Transfer)</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] font-semibold">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                        <span>Instant activation upon payment confirmation</span>
+                    </div>
                 </div>
             </div>
         </div>
