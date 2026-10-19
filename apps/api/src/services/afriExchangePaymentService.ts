@@ -2,6 +2,8 @@ import axios from "axios";
 import { prisma } from "../config/database";
 import { PaymentGateway, TransactionStatus } from "@prisma/client";
 
+import { getCleanAfriExchangeUrl, getAfriExchangeApiKey } from "../config/afriExchange";
+
 /**
  * Service handling inbound rent collections via AfriExchange.
  * Tenants can pay their rent and caution fee directly into RentHub escrow
@@ -13,14 +15,13 @@ export class AfriExchangePaymentService {
     private readonly enabled: boolean;
 
     constructor() {
-        this.baseUrl = (process.env.AFRIEXCHANGE_API_URL || "").replace(/\/$/, "");
-        this.apiKey = process.env.RENTHUB_AFRIEXCHANGE_API_KEY || "";
+        this.baseUrl = getCleanAfriExchangeUrl();
+        this.apiKey = getAfriExchangeApiKey();
         this.enabled = !!(this.baseUrl && this.apiKey);
 
         if (!this.enabled) {
             console.warn(
-                "[AfriExchangePaymentService] AFRIEXCHANGE_API_URL or RENTHUB_AFRIEXCHANGE_API_KEY not configured. " +
-                "AfriExchange payments will run in simulation mode for development."
+                "[AfriExchangePaymentService] AFRIEXCHANGE_API_URL or RENTHUB_AFRIEXCHANGE_API_KEY not configured."
             );
         }
     }

@@ -2,6 +2,7 @@ import { PrismaClient, ServiceType, TransactionStatus } from "@prisma/client";
 import { prisma } from "../config/database";
 import { paymentService } from "./paymentService";
 import axios from "axios";
+import { getCleanAfriExchangeUrl, getAfriExchangeApiKey } from "../config/afriExchange";
 
 export class ServiceTransactionService {
     /**
@@ -178,74 +179,73 @@ export class ServiceTransactionService {
             },
         });
 
-        const baseUrl = (process.env.AFRIEXCHANGE_API_URL || "").replace(/\/$/, "");
-        const apiKey = process.env.RENTHUB_AFRIEXCHANGE_API_KEY || "";
-        const isEnabled = !!(baseUrl && apiKey);
+        const baseUrl = getCleanAfriExchangeUrl();
+        const apiKey = getAfriExchangeApiKey();
 
-        if (isEnabled) {
-            try {
-                const payload = {
-                    rentHubTransactionId: transaction.id,
-                    amount: resolvedTokenAmount,
-                    amountInToken: resolvedTokenAmount,
-                    amountInNgn: amount,
-                    currency: "NGN",
-                    tokenType: tokenType || "NT",
-                    customerEmail: accountEmail || user.email,
-                    returnUrl: effectiveReturnUrl,
-                    description: `RentHub ${type.replace(/_/g, " ")} — ${propertyTitle}`,
-                    metadata: {
-                        serviceType: type,
-                        propertyId,
-                        propertyTitle,
-                        serviceTransactionId: transaction.id,
-                        reference,
+        try {
+            const payload = {
+                rentHubTransactionId: transaction.id,
+                amount: resolvedTokenAmount,
+                amountInToken: resolvedTokenAmount,
+                amountInNgn: amount,
+                currency: "NGN",
+                tokenType: tokenType || "NT",
+                customerEmail: accountEmail || user.email,
+                returnUrl: effectiveReturnUrl,
+                description: `RentHub ${type.replace(/_/g, " ")} — ${propertyTitle}`,
+                metadata: {
+                    serviceType: type,
+                    propertyId,
+                    propertyTitle,
+                    serviceTransactionId: transaction.id,
+                    reference,
+                },
+            };
+
+            const response = await axios.post(
+                `${baseUrl}/integrations/renthub/checkout-session`,
+                payload,
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-renthub-api-key": apiKey,
                     },
-                };
+                    timeout: 15000,
+                }
+            );
 
-                const response = await axios.post(
-                    `${baseUrl}/integrations/renthub/checkout-session`,
-                    payload,
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                            "x-renthub-api-key": apiKey,
-                        },
-                        timeout: 10000,
-                    }
-                );
+            const data = response.data?.data || {};
+            const externalRef = data.reference || reference;
+            const paymentUrl = data.paymentUrl || data.payment_url;
 
-                const data = response.data?.data || {};
-                return {
-                    success: true,
-                    transaction,
-                    paymentUrl: data.paymentUrl || data.payment_url,
-                    reference: data.reference || reference,
-                    amount: data.amount || resolvedTokenAmount,
-                    tokenType,
-                };
-            } catch (err: any) {
-                console.warn(
-                    "[AfriExchange Service Checkout] Error calling external checkout session:",
-                    err.message
-                );
+            // Persist the real AfriExchange PaymentRequest reference (e.g. RQST-RH-...)
+            if (externalRef && externalRef !== transaction.reference) {
+                await prisma.serviceTransaction.update({
+                    where: { id: transaction.id },
+                    data: { reference: externalRef },
+                });
             }
+
+            return {
+                success: true,
+                transaction,
+                paymentUrl,
+                reference: externalRef,
+                amount: data.amount || resolvedTokenAmount,
+                tokenType,
+            };
+        } catch (err: any) {
+            console.error(
+                "[AfriExchange Service Checkout] Error calling external checkout session:",
+                err.response?.data || err.message
+            );
+            const errorMsg =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                err.message ||
+                "Failed to initialize AfriExchange checkout session";
+            throw new Error(errorMsg);
         }
-
-        // Simulation / Hosted Portal fallback
-        const mockRef = `SIM-${reference}`;
-        const webBaseUrl = (process.env.AFRIEXCHANGE_WEB_APP_URL || "https://afri-x.vercel.app").replace(/\/$/, "");
-        const mockUrl = `${webBaseUrl}/pay/${mockRef}?amount=${resolvedTokenAmount}&token=${tokenType}`;
-
-        return {
-            success: true,
-            simulated: true,
-            transaction,
-            paymentUrl: mockUrl,
-            reference,
-            amount: resolvedTokenAmount,
-            tokenType,
-        };
     }
 
     /**
