@@ -1,48 +1,120 @@
-import { Request, Response } from 'express';
-import { ServiceTransactionService } from '../services/serviceTransaction.service';
-import { ServiceType } from '@prisma/client';
+import { Request, Response } from "express";
+import { ServiceTransactionService } from "../services/serviceTransaction.service";
+import { ServiceType } from "@prisma/client";
+import { prisma } from "../config/database";
 
 const serviceTransactionService = new ServiceTransactionService();
 
 export class ServiceTransactionController {
-
     /**
-     * INITIATE PAYMENT
+     * INITIATE PAYSTACK PAYMENT
      * POST /api/services/pay
      * Body: { type: 'PROPERTY_VERIFICATION' | 'FEATURED_LISTING', propertyId: string }
      */
     async initiate(req: Request, res: Response): Promise<void> {
         try {
-            // Assuming userId is available from auth middleware (req.user.id)
-            // Check interface augmentation for req.user
-            const userId = (req as any).user?.id;
+            let userId = (req as any).user?.id;
+            const clerkId = req.query.clerkId || req.body.clerkId || (req as any).auth?.userId;
+
+            if (!userId && clerkId) {
+                const u = await prisma.user.findUnique({ where: { clerkId: String(clerkId) } });
+                userId = u?.id;
+            }
 
             if (!userId) {
-                res.status(401).json({ error: 'Unauthorized' });
+                res.status(401).json({ error: "Unauthorized: User not found" });
                 return;
             }
 
             const { type, propertyId } = req.body;
 
             if (!type || !Object.values(ServiceType).includes(type)) {
-                res.status(400).json({ error: 'Invalid service type' });
+                res.status(400).json({ error: "Invalid service type" });
                 return;
             }
 
-            if ((type === ServiceType.PROPERTY_VERIFICATION || type === ServiceType.FEATURED_LISTING) && !propertyId) {
-                res.status(400).json({ error: 'Property ID is required for this service' });
+            if (
+                (type === ServiceType.PROPERTY_VERIFICATION || type === ServiceType.FEATURED_LISTING) &&
+                !propertyId
+            ) {
+                res.status(400).json({ error: "Property ID is required for this service" });
                 return;
             }
 
             const result = await serviceTransactionService.initiateTransaction(userId, type, propertyId);
 
             res.status(201).json({
-                message: 'Payment initiated successfully',
-                data: result
+                message: "Payment initiated successfully",
+                data: result,
             });
         } catch (error: any) {
-            console.error('Initiate payment error:', error);
-            res.status(500).json({ error: error.message || 'Internal server error' });
+            console.error("Initiate payment error:", error);
+            res.status(500).json({ error: error.message || "Internal server error" });
+        }
+    }
+
+    /**
+     * INITIATE AFRIEXCHANGE PAYMENT
+     * POST /api/services/afriexchange/pay
+     * Body: { type, propertyId, accountEmail, walletAddress, tokenType, amountInToken, returnUrl }
+     */
+    async initiateAfriExchange(req: Request, res: Response): Promise<void> {
+        try {
+            let userId = (req as any).user?.id;
+            const clerkId = req.query.clerkId || req.body.clerkId || (req as any).auth?.userId;
+
+            if (!userId && clerkId) {
+                const u = await prisma.user.findUnique({ where: { clerkId: String(clerkId) } });
+                userId = u?.id;
+            }
+
+            if (!userId) {
+                res.status(401).json({ error: "Unauthorized: User not found" });
+                return;
+            }
+
+            const {
+                type,
+                propertyId,
+                accountEmail,
+                walletAddress,
+                tokenType,
+                amountInToken,
+                returnUrl,
+            } = req.body;
+
+            if (!type || !Object.values(ServiceType).includes(type)) {
+                res.status(400).json({ error: "Invalid service type" });
+                return;
+            }
+
+            if (
+                (type === ServiceType.PROPERTY_VERIFICATION || type === ServiceType.FEATURED_LISTING) &&
+                !propertyId
+            ) {
+                res.status(400).json({ error: "Property ID is required for this service" });
+                return;
+            }
+
+            const result = await serviceTransactionService.initiateAfriExchangeTransaction({
+                userId,
+                type,
+                propertyId,
+                accountEmail,
+                walletAddress,
+                tokenType: tokenType || "NT",
+                amountInToken: amountInToken ? parseFloat(amountInToken) : undefined,
+                returnUrl,
+            });
+
+            res.status(200).json({
+                success: true,
+                message: "AfriExchange payment initialized successfully",
+                data: result,
+            });
+        } catch (error: any) {
+            console.error("Initiate AfriExchange payment error:", error);
+            res.status(500).json({ error: error.message || "Internal server error" });
         }
     }
 
@@ -53,31 +125,31 @@ export class ServiceTransactionController {
      */
     async verify(req: Request, res: Response): Promise<void> {
         try {
-            const { reference } = req.body;
+            const reference = req.body.reference || req.params.reference || req.query.reference;
 
             if (!reference) {
-                res.status(400).json({ error: 'Transaction reference is required' });
+                res.status(400).json({ error: "Transaction reference is required" });
                 return;
             }
 
-            const result = await serviceTransactionService.verifyTransaction(reference);
+            const result = await serviceTransactionService.verifyTransaction(String(reference));
 
-            if (result.status === 'failed') {
-                res.status(400).json({ error: 'Payment verification failed' });
+            if (result.status === "failed") {
+                res.status(400).json({ error: "Payment verification failed" });
                 return;
             }
 
             res.status(200).json({
-                message: 'Payment verified successfully',
-                data: result
+                message: "Payment verified successfully",
+                data: result,
             });
         } catch (error: any) {
-            console.error('Verify payment error:', error);
-            if (error.message === 'Transaction not found') {
-                res.status(404).json({ success: false, message: 'Transaction not found' });
+            console.error("Verify payment error:", error);
+            if (error.message === "Transaction not found") {
+                res.status(404).json({ success: false, message: "Transaction not found" });
                 return;
             }
-            res.status(500).json({ error: error.message || 'Internal server error' });
+            res.status(500).json({ error: error.message || "Internal server error" });
         }
     }
 }

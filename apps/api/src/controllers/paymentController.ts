@@ -476,6 +476,31 @@ export class PaymentController {
                         `[AfriExchange Webhook] Secured escrow for transaction ${tx.id} from reference ${reference}`
                     );
                 }
+
+                // Also check if this is a ServiceTransaction (Property Verification or Featured Listing)
+                const cleanRef = reference ? reference.replace(/^RQST-/i, "").replace(/^SIM-/i, "") : null;
+                const serviceTx = await prisma.serviceTransaction.findFirst({
+                    where: {
+                        OR: [
+                            ...(rentHubTransactionId ? [{ id: rentHubTransactionId }] : []),
+                            ...(reference
+                                ? [
+                                      { reference },
+                                      ...(cleanRef ? [{ reference: cleanRef }, { reference: `SIM-${cleanRef}` }] : []),
+                                  ]
+                                : []),
+                        ],
+                    },
+                });
+
+                if (serviceTx && serviceTx.status !== "SUCCESSFUL") {
+                    const { ServiceTransactionService } = require("../services/serviceTransaction.service");
+                    const serviceTxService = new ServiceTransactionService();
+                    await serviceTxService.completeServicePayment(serviceTx.reference);
+                    console.info(
+                        `[AfriExchange Webhook] Activated service transaction ${serviceTx.id} (${serviceTx.type}) from reference ${reference}`
+                    );
+                }
             }
 
             return res.status(200).json({ success: true, received: true });

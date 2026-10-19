@@ -1,20 +1,18 @@
-import { Router } from 'express';
-import { ServiceTransactionController } from '../controllers/serviceTransaction.controller';
-// import { requireAuth } from '../middleware/requireAuth'; // Assuming this middleware exists
+import { Router } from "express";
+import { ServiceTransactionController } from "../controllers/serviceTransaction.controller";
+import { requireAuth } from "../middleware/auth";
 
 const router: Router = Router();
 const controller = new ServiceTransactionController();
 
-// TODO: cache authentication middleware if available
-// const auth = requireAuth; 
+// Paystack payment initiation
+router.post("/pay", requireAuth, controller.initiate.bind(controller));
 
-// Mock auth middleware for now if we can't find the real one easily, 
-// but we should try to use the real one. 
-// Based on progress.md, "Built auth middleware (JWT verification with Clerk)".
-// It should be in ../middleware/auth or similar.
-import { requireAuth } from '../middleware/auth'; // Trying standard naming
+// AfriExchange payment initiation
+router.post("/afriexchange/pay", requireAuth, controller.initiateAfriExchange.bind(controller));
 
-router.post('/pay', requireAuth, controller.initiate);
-router.post('/verify', requireAuth, controller.verify);
+// Payment verification (Paystack or AfriExchange)
+router.post("/verify", requireAuth, controller.verify.bind(controller));
+router.get("/verify/:reference", controller.verify.bind(controller));
 
 export default router;
