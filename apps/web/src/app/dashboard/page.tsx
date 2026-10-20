@@ -73,7 +73,10 @@ import { TransactionsTab } from "@/components/dashboard/TransactionsTab";
 import { MonetizationModal } from "@/components/landlord/MonetizationModal";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
 import { LandlordPayoutHistory } from "@/components/payouts/LandlordPayoutHistory";
+import AgentDashboard from "@/components/agent/AgentDashboard";
+import { LandlordAgentDelegationsTab } from "@/components/agent/LandlordAgentDelegationsTab";
 import { Rocket } from "lucide-react";
+import { Briefcase } from "lucide-react";
 import { toast } from "sonner";
 
 interface Property {
@@ -222,7 +225,9 @@ function DashboardContent() {
             // If the user owns properties, treat them as LANDLORD even if DB role was default TENANT
             const effectiveRole = (fetchedUser.propertiesOwned && fetchedUser.propertiesOwned.length > 0) || fetchedUser.role === "LANDLORD"
                 ? "LANDLORD"
-                : fetchedUser.role;
+                : fetchedUser.role === "AGENT"
+                    ? "AGENT"
+                    : fetchedUser.role;
             setRole(effectiveRole);
             setUserVerified(fetchedUser.verified);
 
@@ -312,6 +317,7 @@ function DashboardContent() {
         { id: "tours", label: "Physical Tours", icon: Calendar },
         { id: "transactions", label: "Transactions", icon: Receipt },
         { id: "payouts", label: "Payouts & Settlements", icon: Wallet },
+        { id: "agent-delegations", label: "Agent Partners", icon: Briefcase },
         { id: "messages", label: "Messages", icon: MessageSquare },
         { id: "resources", label: "Resources", icon: BookOpen },
     ];
@@ -326,7 +332,13 @@ function DashboardContent() {
         { id: "resources", label: "Resources", icon: BookOpen },
     ];
 
-    const tabs = role === "LANDLORD" ? landlordTabs : tenantTabs;
+    const agentTabs = [
+        { id: "agent", label: "My Listings", icon: Briefcase },
+        { id: "messages", label: "Messages", icon: MessageSquare },
+        { id: "resources", label: "Resources", icon: BookOpen },
+    ];
+
+    const tabs = role === "LANDLORD" ? landlordTabs : role === "AGENT" ? agentTabs : tenantTabs;
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] pt-6 sm:pt-8 pb-16 sm:pb-20">
@@ -347,7 +359,9 @@ function DashboardContent() {
                         <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
                             {role === "LANDLORD"
                                 ? "Manage your properties and track performance"
-                                : "Manage your home search, applications, and messages"}
+                                : role === "AGENT"
+                                    ? "Manage your delegated listings and grow your portfolio"
+                                    : "Manage your home search, applications, and messages"}
                         </p>
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -453,6 +467,8 @@ function DashboardContent() {
                                 <LandlordPayoutHistory />
                             </div>
                         )}
+                        {activeTab === "agent-delegations" && role === "LANDLORD" && <LandlordAgentDelegationsTab />}
+                        {activeTab === "agent" && role === "AGENT" && <AgentDashboard />}
                         {activeTab === "messages" && <Inbox initialConversationId={activeConversationId} />}
                         {activeTab === "resources" && <DashboardResourcesTab role={role as "LANDLORD" | "TENANT"} />}
                     </div>

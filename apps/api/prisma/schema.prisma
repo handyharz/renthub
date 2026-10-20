@@ -53,6 +53,11 @@ model User {
   afriExchangeAccountEmail  String?
   settlementLinkedAt        DateTime?
 
+  // Agent relations
+  agentProfile            AgentProfile?
+  agentListings           AgentListing[] @relation("AgentListings")
+  delegatedListings       AgentListing[] @relation("LandlordDelegations")
+
   @@index([clerkId])
   @@index([email])
   @@index([phone])
@@ -118,6 +123,7 @@ model Property {
   serviceTransactions ServiceTransaction[]
   videos        Video[]
   renewals      LeaseRenewal[]
+  agentListings AgentListing[]
 
   @@index([landlordId])
   @@index([city, state])
@@ -640,4 +646,85 @@ model LeaseRenewal {
   @@index([landlordId])
   @@index([status])
   @@map("lease_renewals")
+}
+
+// ─── AGENT SYSTEM ──────────────────────────────────────────────────────────────
+
+enum AgentStatus {
+  PENDING_REVIEW   // submitted application, awaiting admin approval
+  ACTIVE           // verified & active agent
+  SUSPENDED        // temporarily suspended
+  REJECTED         // application rejected
+}
+
+enum AgentListingStatus {
+  PENDING_LANDLORD   // agent requested to list; awaiting landlord authorization
+  AUTHORIZED         // landlord approved; agent can manage this listing
+  REVOKED            // landlord revoked agent access
+  COMPLETED          // rental closed; no longer active
+}
+
+// Verified agent profile — one per AGENT user
+model AgentProfile {
+  id                  String      @id @default(cuid())
+  userId              String      @unique
+  // KYC / business identity
+  licenseNumber       String?     // e.g. NIESV/ESVARBON registration
+  licenseDocUrl       String?
+  businessName        String?
+  businessAddress     String?
+  yearsOfExperience   Int         @default(0)
+  operatingCities     String[]    @default([]) // cities the agent covers
+  bio                 String?
+  // Status & review
+  status              AgentStatus @default(PENDING_REVIEW)
+  reviewedAt          DateTime?
+  reviewedBy          String?     // admin clerkId
+  rejectionReason     String?
+  // Commission config (max 5 % per reviewer recommendation)
+  defaultCommissionPct Float      @default(5.0) // % of rent, landlord-paid
+  // Ratings
+  avgRating           Float?
+  reviewCount         Int         @default(0)
+  totalListings       Int         @default(0)
+  totalClosed         Int         @default(0)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+  @@map("agent_profiles")
+}
+
+// One record per property an agent is authorized to manage on behalf of a landlord
+model AgentListing {
+  id              String            @id @default(cuid())
+  propertyId      String
+  agentId         String            // references User (role=AGENT)
+  landlordId      String            // references User (role=LANDLORD)
+  status          AgentListingStatus @default(PENDING_LANDLORD)
+  // Commission agreed for this specific listing (landlord-paid)
+  commissionPct   Float             @default(5.0)
+  commissionAmount Int?             // calculated at transaction time
+  // Auth trail
+  requestedAt     DateTime          @default(now())
+  authorizedAt    DateTime?
+  revokedAt       DateTime?
+  completedAt     DateTime?
+  // Notes
+  agentNote       String?           // why the agent wants to list this
+  landlordNote    String?           // landlord's authorization comment
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  property        Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  agent           User              @relation("AgentListings", fields: [agentId], references: [id], onDelete: Cascade)
+  landlord        User              @relation("LandlordDelegations", fields: [landlordId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, agentId]) // one delegation per property-agent pair
+  @@index([propertyId])
+  @@index([agentId])
+  @@index([landlordId])
+  @@index([status])
+  @@map("agent_listings")
 }

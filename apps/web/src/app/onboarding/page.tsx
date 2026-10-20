@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Home, Search, ChevronRight, ShieldCheck } from "lucide-react";
+import { Home, Search, ChevronRight, ShieldCheck, Briefcase } from "lucide-react";
 import api from "@/lib/api";
 
 export default function OnboardingPage() {
@@ -17,7 +17,7 @@ export default function OnboardingPage() {
     useEffect(() => {
         const timer = setTimeout(() => {
             if (!isLoaded) setTookTooLong(true);
-        }, 8000); // 8 seconds timeout
+        }, 8000);
         return () => clearTimeout(timer);
     }, [isLoaded]);
 
@@ -52,12 +52,11 @@ export default function OnboardingPage() {
         return null;
     }
 
-    const handleRoleSelection = async (role: "TENANT" | "LANDLORD") => {
+    const handleRoleSelection = async (role: "TENANT" | "LANDLORD" | "AGENT") => {
         if (!user) return;
 
         setLoading(role);
         try {
-            // Ensure user exists in our DB first (or update if they do)
             await api.post("/users", {
                 clerkId: user.id,
                 email: user.emailAddresses[0]?.emailAddress,
@@ -65,13 +64,24 @@ export default function OnboardingPage() {
                 firstName: user.firstName || "User",
                 lastName: user.lastName || "",
                 avatar: user.imageUrl,
-                role: role,
+                // Agents start as TENANT in DB until they are verified by admin
+                role: role === "AGENT" ? "TENANT" : role,
                 onboardingCompleted: true,
             });
 
-            // Redirect based on role
+            // For AGENT: pre-create the agent profile shell
+            if (role === "AGENT") {
+                try {
+                    await api.get(`/agents/me?clerkId=${user.id}`);
+                } catch {
+                    // Auto-created on GET — ignore errors
+                }
+            }
+
             if (role === "LANDLORD") {
                 router.push("/dashboard");
+            } else if (role === "AGENT") {
+                router.push("/dashboard?tab=agent");
             } else {
                 router.push("/search");
             }
@@ -85,7 +95,7 @@ export default function OnboardingPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
-            <div className="max-w-4xl w-full">
+            <div className="max-w-5xl w-full">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl font-extrabold text-[var(--color-brand-blue)] mb-4">
                         Welcome to RentHub!
@@ -95,8 +105,8 @@ export default function OnboardingPage() {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-8">
-                    {/* Tenant Option */}
+                <div className="grid md:grid-cols-3 gap-6">
+                    {/* Tenant */}
                     <div
                         className="bg-white rounded-3xl p-8 border-2 border-transparent hover:border-[var(--color-brand-blue)] transition-all cursor-pointer group shadow-sm hover:shadow-xl"
                         onClick={() => handleRoleSelection("TENANT")}
@@ -128,7 +138,7 @@ export default function OnboardingPage() {
                         </Button>
                     </div>
 
-                    {/* Landlord Option */}
+                    {/* Landlord */}
                     <div
                         className="bg-white rounded-3xl p-8 border-2 border-transparent hover:border-[var(--color-brand-green)] transition-all cursor-pointer group shadow-sm hover:shadow-xl"
                         onClick={() => handleRoleSelection("LANDLORD")}
@@ -156,6 +166,39 @@ export default function OnboardingPage() {
                             disabled={!!loading}
                         >
                             {loading === "LANDLORD" ? "Setting up..." : "List a Property"}
+                            <ChevronRight className="ml-2 h-5 w-5" />
+                        </Button>
+                    </div>
+
+                    {/* Agent */}
+                    <div
+                        className="bg-white rounded-3xl p-8 border-2 border-transparent hover:border-purple-500 transition-all cursor-pointer group shadow-sm hover:shadow-xl"
+                        onClick={() => handleRoleSelection("AGENT")}
+                    >
+                        <div className="w-16 h-16 bg-purple-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                            <Briefcase className="h-8 w-8 text-purple-600 group-hover:text-white" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-1">I'm an Agent</h2>
+                        <p className="text-xs text-purple-600 font-semibold mb-3">Verified Partner Programme</p>
+                        <ul className="space-y-3 text-gray-600 mb-8">
+                            <li className="flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4 text-purple-500" />
+                                <span>List on behalf of landlords</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4 text-purple-500" />
+                                <span>Earn up to 5% commission</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <ShieldCheck className="h-4 w-4 text-purple-500" />
+                                <span>All payments via RentHub escrow</span>
+                            </li>
+                        </ul>
+                        <Button
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white h-12 text-lg font-bold"
+                            disabled={!!loading}
+                        >
+                            {loading === "AGENT" ? "Setting up..." : "Join as Agent"}
                             <ChevronRight className="ml-2 h-5 w-5" />
                         </Button>
                     </div>

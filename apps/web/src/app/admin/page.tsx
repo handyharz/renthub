@@ -107,6 +107,15 @@ export default function AdminOverviewPage() {
             badgeVariant: "neutral",
             accent: "border-[var(--color-brand-blue)]/30 hover:border-[var(--color-brand-blue)]/60",
         },
+        {
+            href: "/admin/agents",
+            label: "Agent Partners",
+            desc: "Review & approve verified agent applications",
+            icon: BadgeAlert,
+            badge: "Review Queue",
+            badgeVariant: "warning",
+            accent: "border-purple-500/40 hover:border-purple-500/70",
+        },
     ];
 
     const getBadgeStyle = (variant: string) => {
