@@ -64,8 +64,7 @@ export default function OnboardingPage() {
                 firstName: user.firstName || "User",
                 lastName: user.lastName || "",
                 avatar: user.imageUrl,
-                // Agents start as TENANT in DB until they are verified by admin
-                role: role === "AGENT" ? "TENANT" : role,
+                role: role, // AGENT, LANDLORD, or TENANT — stored directly
                 onboardingCompleted: true,
             });
 

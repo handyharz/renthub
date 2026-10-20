@@ -24,6 +24,8 @@ import {
     Building2,
     AlertCircle,
     Save,
+    Briefcase,
+    RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -498,6 +500,60 @@ export default function ProfilePage() {
                     <div className="space-y-6 lg:sticky lg:top-36">
                         {/* Trust Score Card */}
                         <TrustScore user={dbUser} />
+
+                        {/* Role Switch Card — for tenants who meant to be agents */}
+                        {!isLandlord && (
+                            <div className={`rounded-3xl border p-5 space-y-3 ${
+                                isAgent
+                                    ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
+                                    : "bg-[var(--bg-muted)]/60 border-[var(--border-color)]"
+                            }`}>
+                                <div className="flex items-center gap-2.5">
+                                    <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                        isAgent ? "bg-purple-100 text-purple-600" : "bg-gray-200 text-gray-500"
+                                    }`}>
+                                        <Briefcase className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-extrabold text-sm text-[var(--text-primary)]">
+                                            {isAgent ? "Agent Partner" : "Are you an Agent?"}
+                                        </h4>
+                                        <p className="text-[11px] text-[var(--text-secondary)]">
+                                            {isAgent
+                                                ? "Your profile is set up as a verified partner agent."
+                                                : "Switch your account to access the Agent dashboard"}
+                                        </p>
+                                    </div>
+                                </div>
+                                {isAgent ? (
+                                    <div className="text-xs text-purple-700 dark:text-purple-300 font-medium bg-purple-100 dark:bg-purple-900/30 rounded-xl px-3 py-2">
+                                        ✓ Role: Agent — go to <a href="/dashboard?tab=agent" className="font-bold underline">your Agent dashboard</a>
+                                    </div>
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full h-9 text-xs font-bold border-purple-300 text-purple-600 hover:bg-purple-50"
+                                        onClick={async () => {
+                                            if (!confirm("Switch your account to Agent role? You'll be redirected to set up your agent profile.")) return;
+                                            try {
+                                                await api.post("/users", {
+                                                    clerkId: user?.id,
+                                                    role: "AGENT",
+                                                    onboardingCompleted: true,
+                                                });
+                                                toast.success("Role updated! Redirecting to agent dashboard...");
+                                                setTimeout(() => window.location.href = "/dashboard?tab=agent", 1000);
+                                            } catch {
+                                                toast.error("Failed to switch role. Please try again.");
+                                            }
+                                        }}
+                                    >
+                                        <Briefcase className="h-3.5 w-3.5 mr-2" />
+                                        Switch to Agent Role
+                                    </Button>
+                                )}
+                            </div>
+                        )}
 
                         {/* Why Verification Matters Card */}
                         <div className="rounded-3xl bg-gradient-to-br from-blue-500/10 via-emerald-500/5 to-transparent border border-blue-500/20 p-6 shadow-xs space-y-4">

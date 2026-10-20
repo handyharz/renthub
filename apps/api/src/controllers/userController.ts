@@ -181,7 +181,8 @@ export class UserController {
                 // If a different role or onboardingCompleted is provided, update it
                 if (req.body.role || req.body.onboardingCompleted !== undefined) {
                     const newRole = (req.body.role as UserRole) || existingUser.role;
-                    const markOnboarded = req.body.onboardingCompleted ?? (newRole === UserRole.LANDLORD || existingUser.onboardingCompleted);
+                    const markOnboarded = req.body.onboardingCompleted ??
+                        (newRole === UserRole.LANDLORD || newRole === UserRole.AGENT || existingUser.onboardingCompleted);
 
                     console.log(`Updating role/onboarding for user ${clerkId} to role=${newRole}, onboardingCompleted=${markOnboarded}`);
                     const updatedUser = await userService.updateUserByClerkId(clerkId, {
@@ -211,7 +212,7 @@ export class UserController {
                 avatar,
                 role,
                 status: UserStatus.ACTIVE,
-                onboardingCompleted: req.body.onboardingCompleted ?? (role === UserRole.LANDLORD),
+                onboardingCompleted: req.body.onboardingCompleted ?? (role === UserRole.LANDLORD || role === UserRole.AGENT),
             });
 
             console.log("User created successfully in DB:", user.id);
