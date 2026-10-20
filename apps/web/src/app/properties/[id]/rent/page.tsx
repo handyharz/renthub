@@ -157,6 +157,38 @@ export default function RentPropertyPage() {
         );
     }
 
+    const isOwner = Boolean(
+        user && (
+            property.landlordId === user.id ||
+            property.landlord?.clerkId === user.id ||
+            property.landlord?.id === user.id
+        )
+    );
+
+    if (isOwner) {
+        return (
+            <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-4 text-center">
+                <div className="max-w-md p-6 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-xl space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+                        <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-xl font-black text-[var(--text-primary)]">Property Owner Notice</h2>
+                    <p className="text-sm text-[var(--text-secondary)] font-medium leading-relaxed">
+                        You are registered as the landlord of this property. Landlords cannot rent or pay escrow fees for their own listing.
+                    </p>
+                    <div className="flex flex-col gap-2 pt-2">
+                        <Button asChild className="rounded-xl bg-[var(--color-brand-green)] text-white font-bold">
+                            <Link href={`/properties/${property.id}`}>Back to Property Listing</Link>
+                        </Button>
+                        <Button asChild variant="outline" className="rounded-xl border-[var(--border-color)]">
+                            <Link href="/dashboard?tab=properties">Go to Landlord Dashboard</Link>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // Calculate platform fee (2% of annual rent)
     const platformFee = Math.round(property.pricePerYear * 0.02);
 

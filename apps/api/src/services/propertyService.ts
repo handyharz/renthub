@@ -231,6 +231,7 @@ export class PropertyService {
                 landlord: {
                     select: {
                         id: true,
+                        clerkId: true,
                         firstName: true,
                         lastName: true,
                         email: true,

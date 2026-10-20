@@ -19,6 +19,11 @@ interface ApplicationModalProps {
         legalFee?: number;
         address: string;
         city: string;
+        landlordId?: string;
+        landlord?: {
+            id?: string;
+            clerkId?: string;
+        };
     };
     onSuccess?: () => void;
 }
@@ -32,6 +37,14 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
 
     if (!isOpen) return null;
 
+    const isOwner = Boolean(
+        user && (
+            property.landlordId === user.id ||
+            property.landlord?.clerkId === user.id ||
+            property.landlord?.id === user.id
+        )
+    );
+
     const durationMonths = parseInt(leaseDuration) || 12;
     const durationYears = durationMonths / 12;
     const rent = Math.round(property.pricePerYear * durationYears);
@@ -42,6 +55,14 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isOwner) {
+            toast.error("Ownership Conflict", {
+                description: "You own this property and cannot apply to rent your own listing.",
+            });
+            return;
+        }
+
         if (!proposedMoveInDate) {
             toast.error("Please select a proposed move-in date");
             return;
@@ -50,7 +71,7 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
         try {
             setLoading(true);
 
-            await api.post("/applications", {
+            await api.post(`/applications?clerkId=${user?.id}`, {
                 propertyId: property.id,
                 proposedMoveInDate,
                 leaseDuration: parseInt(leaseDuration),
@@ -163,10 +184,17 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
                         </div>
                     </div>
 
-                    <div className="flex items-start gap-2.5 text-[11px] text-[var(--text-secondary)] bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 font-medium">
-                        <ShieldCheck className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                        <span>No payment is charged right now. If the landlord accepts your application, you will receive an offer lock and pay into RentHub Escrow.</span>
-                    </div>
+                    {isOwner ? (
+                        <div className="flex items-start gap-2.5 text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 p-3.5 rounded-xl border border-amber-500/30 font-medium">
+                            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                            <span>You are registered as the landlord of this property. Landlords cannot submit rental applications for their own properties.</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-start gap-2.5 text-[11px] text-[var(--text-secondary)] bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 font-medium">
+                            <ShieldCheck className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                            <span>No payment is charged right now. If the landlord accepts your application, you will receive an offer lock and pay into RentHub Escrow.</span>
+                        </div>
+                    )}
 
                     <div className="flex justify-end gap-3 pt-2">
                         <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="rounded-xl border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] font-bold">
@@ -174,10 +202,10 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
                         </Button>
                         <Button
                             type="submit"
-                            disabled={loading}
-                            className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold rounded-xl px-5"
+                            disabled={loading || isOwner}
+                            className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold rounded-xl px-5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? "Submitting..." : "Submit Application"}
+                            {loading ? "Submitting..." : isOwner ? "Owner (Disabled)" : "Submit Application"}
                         </Button>
                     </div>
                 </form>

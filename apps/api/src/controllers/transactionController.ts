@@ -35,12 +35,24 @@ export class TransactionController {
             // Get property details
             const property = await prisma.property.findUnique({
                 where: { id: propertyId },
+                include: { landlord: { select: { id: true, clerkId: true } } },
             });
 
             if (!property) {
                 return res.status(404).json({
                     success: false,
                     message: "Property not found",
+                });
+            }
+
+            if (
+                property.landlordId === tenantId ||
+                property.landlord?.id === tenantId ||
+                property.landlord?.clerkId === tenantId
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "You cannot rent or make payments on your own property",
                 });
             }
 

@@ -15,11 +15,24 @@ export class ApplicationService {
         // Check if property exists and is available
         const property = await prisma.property.findUnique({
             where: { id: data.propertyId },
-            select: { id: true, status: true, landlordId: true }
+            select: {
+                id: true,
+                status: true,
+                landlordId: true,
+                landlord: { select: { id: true, clerkId: true } }
+            }
         });
 
         if (!property) {
             throw new Error("Property not found");
+        }
+
+        if (
+            property.landlordId === data.tenantId ||
+            property.landlord?.id === data.tenantId ||
+            property.landlord?.clerkId === data.tenantId
+        ) {
+            throw new Error("You cannot apply to rent your own property");
         }
 
         if (property.status !== "AVAILABLE") {

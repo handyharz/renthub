@@ -143,6 +143,7 @@ export function FeaturedProperties() {
             const currentTab = TABS.find((t) => t.key === activeTab);
             const params = new URLSearchParams();
             params.set("limit", "6");
+            params.set("status", "AVAILABLE");
 
             if (currentTab?.filter.state) params.set("state", currentTab.filter.state);
             if (currentTab?.filter.featured) params.set("featured", "true");
@@ -150,9 +151,14 @@ export function FeaturedProperties() {
             const res = await api.get(`/properties?${params.toString()}`);
             const rawList = res.data?.data?.properties || res.data?.properties || (Array.isArray(res.data?.data) ? res.data.data : []);
 
-            if (Array.isArray(rawList) && rawList.length > 0) {
+            // Strictly filter for AVAILABLE homes to avoid wasting homepage space with rented listings
+            const availableList = Array.isArray(rawList)
+                ? rawList.filter((p: any) => p.status === "AVAILABLE" || !p.status)
+                : [];
+
+            if (availableList.length > 0) {
                 // Normalize properties from API
-                const normalized: PropertyCardProps[] = rawList.map((p: any) => ({
+                const normalized: PropertyCardProps[] = availableList.map((p: any) => ({
                     id: p.id,
                     title: p.title,
                     address: p.address,

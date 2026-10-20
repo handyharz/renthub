@@ -53,6 +53,8 @@ import { ReviewList } from "@/components/reviews/ReviewList";
 import { ImageCarousel } from "@/components/property/ImageCarousel";
 import { ApplicationModal } from "@/components/property/ApplicationModal";
 import { getCoordinatesForLocation } from "@/lib/locations";
+import { useAuth } from "@/hooks/useAuth";
+import { MessageSquare } from "lucide-react";
 
 // Amenity Icons mapping
 const AMENITY_ICONS: Record<string, any> = {
@@ -80,6 +82,7 @@ const AMENITY_ICONS: Record<string, any> = {
 export default function PropertyDetailsPage() {
     const { id } = useParams();
     const router = useRouter();
+    const { user: dbUser, clerkUser } = useAuth();
     const [property, setProperty] = useState<any>(null);
     const [similarProperties, setSimilarProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -87,6 +90,14 @@ export default function PropertyDetailsPage() {
     const [showPhone, setShowPhone] = useState(false);
     const [copiedLink, setCopiedLink] = useState(false);
     const [copiedId, setCopiedId] = useState(false);
+
+    const isOwner = Boolean(
+        property && (
+            (dbUser && property.landlordId === dbUser.id) ||
+            (clerkUser && property.landlord?.clerkId === clerkUser.id) ||
+            (clerkUser && property.landlordId === clerkUser.id)
+        )
+    );
 
     useEffect(() => {
         if (id) {
@@ -115,10 +126,10 @@ export default function PropertyDetailsPage() {
     const fetchSimilarProperties = async (city?: string, state?: string, currentId?: string) => {
         try {
             const queryParam = city ? `city=${encodeURIComponent(city)}` : state ? `state=${encodeURIComponent(state)}` : "";
-            const res = await api.get(`/properties?${queryParam}&limit=4`);
+            const res = await api.get(`/properties?${queryParam}&status=AVAILABLE&limit=4`);
             const rawItems = res.data?.data?.properties || (Array.isArray(res.data?.data) ? res.data.data : res.data?.properties) || [];
-            // Filter out current property
-            const filtered = rawItems.filter((p: any) => p.id !== currentId).slice(0, 3);
+            // Filter out current property and ensure strictly available homes
+            const filtered = rawItems.filter((p: any) => p.id !== currentId && (p.status === "AVAILABLE" || !p.status)).slice(0, 3);
             setSimilarProperties(filtered);
         } catch (err) {
             console.error("Failed to fetch similar listings:", err);
@@ -754,7 +765,36 @@ export default function PropertyDetailsPage() {
 
                             {/* Primary Action Buttons */}
                             <div className="space-y-3">
-                                {property.status === "RENTED" ? (
+                                {isOwner ? (
+                                    <div className="space-y-3">
+                                        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center space-y-1">
+                                            <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                <span>You Own This Listing</span>
+                                            </div>
+                                            <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
+                                                You are viewing your own property. Applications cannot be submitted for your own listing.
+                                            </p>
+                                        </div>
+                                        <Button
+                                            asChild
+                                            className="w-full h-13 text-base font-black bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+                                        >
+                                            <Link href={`/properties/${property.id}/edit`}>
+                                                Edit Listing Details
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            className="w-full h-12 text-sm font-black border-2 border-[var(--border-color)] hover:border-[var(--color-brand-green)] hover:text-[var(--color-brand-green)] rounded-2xl transition-all"
+                                        >
+                                            <Link href="/dashboard?tab=properties">
+                                                Manage in Dashboard
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                ) : property.status === "RENTED" ? (
                                     <>
                                         <Button
                                             disabled
@@ -909,12 +949,25 @@ export default function PropertyDetailsPage() {
                                     </span>
                                 </Button>
 
-                                <LockedMessageButton
-                                    landlordId={property.landlordId}
-                                    propertyId={property.id}
-                                    propertyTitle={property.title}
-                                    className="w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-2xl"
-                                />
+                                {isOwner ? (
+                                    <Button
+                                        asChild
+                                        variant="outline"
+                                        className="w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-2xl"
+                                    >
+                                        <Link href="/dashboard?tab=inbox">
+                                            <MessageSquare className="w-4 h-4 text-[var(--color-brand-green)]" />
+                                            <span>View Inquiries & Messages</span>
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <LockedMessageButton
+                                        landlordId={property.landlordId}
+                                        propertyId={property.id}
+                                        propertyTitle={property.title}
+                                        className="w-full justify-center gap-2 h-11 text-xs sm:text-sm font-black border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-2xl"
+                                    />
+                                )}
                             </div>
                         </div>
                     </div>
@@ -960,19 +1013,30 @@ export default function PropertyDetailsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button
-                        asChild
-                        variant="outline"
-                        className="h-11 px-4 text-xs font-black rounded-xl border-[var(--border-color)]"
-                    >
-                        <Link href={`/properties/${property.id}/tour`}>Tour</Link>
-                    </Button>
-                    <Button
-                        onClick={() => setIsAppModalOpen(true)}
-                        className="h-11 px-5 text-xs font-black bg-[var(--color-brand-green)] text-white rounded-xl shadow-md"
-                    >
-                        Apply Now
-                    </Button>
+                    {isOwner ? (
+                        <Button
+                            asChild
+                            className="h-11 px-5 text-xs font-black bg-[var(--color-brand-green)] text-white rounded-xl shadow-md"
+                        >
+                            <Link href={`/properties/${property.id}/edit`}>Edit Listing</Link>
+                        </Button>
+                    ) : (
+                        <>
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="h-11 px-4 text-xs font-black rounded-xl border-[var(--border-color)]"
+                            >
+                                <Link href={`/properties/${property.id}/tour`}>Tour</Link>
+                            </Button>
+                            <Button
+                                onClick={() => setIsAppModalOpen(true)}
+                                className="h-11 px-5 text-xs font-black bg-[var(--color-brand-green)] text-white rounded-xl shadow-md"
+                            >
+                                Apply Now
+                            </Button>
+                        </>
+                    )}
                 </div>
             </div>
 

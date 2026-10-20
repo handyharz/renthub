@@ -40,6 +40,13 @@ export class TourController {
                 });
             }
 
+            if (property.landlordId === tenant.id) {
+                return res.status(400).json({
+                    success: false,
+                    message: "You cannot schedule an inspection tour for your own property",
+                });
+            }
+
             const tourRequest = await tourService.createTourRequest({
                 propertyId,
                 tenantId: tenant.id,

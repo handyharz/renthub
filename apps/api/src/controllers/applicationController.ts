@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { applicationService } from "../services/applicationService";
 import { ApplicationStatus } from "@prisma/client";
+import { prisma } from "../config/database";
 
 export class ApplicationController {
     /**
@@ -9,7 +10,14 @@ export class ApplicationController {
      */
     async createApplication(req: Request, res: Response) {
         try {
-            const tenantId = req.user?.id;
+            let tenantId = req.user?.id;
+            const { clerkId } = req.query;
+
+            if (!tenantId && clerkId && typeof clerkId === "string") {
+                const tenant = await prisma.user.findUnique({ where: { clerkId } });
+                tenantId = tenant?.id;
+            }
+
             if (!tenantId) {
                 return res.status(401).json({ success: false, message: "Unauthorized" });
             }
