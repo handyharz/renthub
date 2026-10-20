@@ -27,13 +27,15 @@ export function OnboardingBanner() {
             const userData = res.data.data;
             setDbUser(userData);
 
-            // and is still a TENANT (default role)
-            // We can also check a 'lastSeenOnboarding' in localStorage to allow Dismiss
             const isDismissed = localStorage.getItem("onboarding_banner_dismissed");
 
-            // Logic: Show if not onboarded and not explicitly dismissed
-            if (userData && !userData.onboardingCompleted && !isDismissed) {
+            // Only show onboarding role selection banner to new/un-onboarded tenants
+            // Landlords, agents, and admins have already established their role and should not see this banner
+            const isEstablishedRole = userData.role && userData.role !== "TENANT";
+            if (userData && !userData.onboardingCompleted && !isEstablishedRole && !isDismissed) {
                 setIsVisible(true);
+            } else {
+                setIsVisible(false);
             }
         } catch (error) {
             console.error("Failed to fetch user for banner:", error);

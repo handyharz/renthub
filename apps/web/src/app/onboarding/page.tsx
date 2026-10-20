@@ -66,6 +66,7 @@ export default function OnboardingPage() {
                 lastName: user.lastName || "",
                 avatar: user.imageUrl,
                 role: role,
+                onboardingCompleted: true,
             });
 
             // Redirect based on role

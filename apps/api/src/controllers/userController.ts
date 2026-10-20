@@ -28,6 +28,12 @@ export class UserController {
                 });
             }
 
+            // If user has chosen LANDLORD role or has properties, ensure onboardingCompleted is true
+            if (user && user.role === UserRole.LANDLORD && !user.onboardingCompleted) {
+                userService.updateUserByClerkId(clerkId, { onboardingCompleted: true }).catch(console.error);
+                user.onboardingCompleted = true;
+            }
+
             // Update last login
             userService.updateLastLogin(clerkId).catch(console.error);
 
@@ -172,15 +178,19 @@ export class UserController {
             // Check if user already exists
             const existingUser = await userService.getUserByClerkId(clerkId);
             if (existingUser) {
-                // If a different role is provided, update it
-                if (req.body.role && req.body.role !== existingUser.role) {
-                    console.log(`Updating role for user ${clerkId} from ${existingUser.role} to ${req.body.role}`);
+                // If a different role or onboardingCompleted is provided, update it
+                if (req.body.role || req.body.onboardingCompleted !== undefined) {
+                    const newRole = (req.body.role as UserRole) || existingUser.role;
+                    const markOnboarded = req.body.onboardingCompleted ?? (newRole === UserRole.LANDLORD || existingUser.onboardingCompleted);
+
+                    console.log(`Updating role/onboarding for user ${clerkId} to role=${newRole}, onboardingCompleted=${markOnboarded}`);
                     const updatedUser = await userService.updateUserByClerkId(clerkId, {
-                        role: req.body.role as UserRole
+                        role: newRole,
+                        onboardingCompleted: Boolean(markOnboarded),
                     });
                     return res.status(200).json({
                         success: true,
-                        message: "User role updated",
+                        message: "User updated",
                         data: updatedUser,
                     });
                 }
@@ -201,6 +211,7 @@ export class UserController {
                 avatar,
                 role,
                 status: UserStatus.ACTIVE,
+                onboardingCompleted: req.body.onboardingCompleted ?? (role === UserRole.LANDLORD),
             });
 
             console.log("User created successfully in DB:", user.id);
