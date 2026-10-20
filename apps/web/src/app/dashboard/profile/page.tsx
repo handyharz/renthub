@@ -37,6 +37,8 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [showVerifyModal, setShowVerifyModal] = useState(false);
+    const [showSwitchModal, setShowSwitchModal] = useState(false);
+    const [switchingRole, setSwitchingRole] = useState(false);
     const [activeSection, setActiveSection] = useState<"all" | "personal" | "kyc" | "settlement">("all");
 
     // Form Stats
@@ -532,21 +534,8 @@ export default function ProfilePage() {
                                 ) : (
                                     <Button
                                         variant="outline"
-                                        className="w-full h-9 text-xs font-bold border-purple-300 text-purple-600 hover:bg-purple-50"
-                                        onClick={async () => {
-                                            if (!confirm("Switch your account to Agent role? You'll be redirected to set up your agent profile.")) return;
-                                            try {
-                                                await api.post("/users", {
-                                                    clerkId: user?.id,
-                                                    role: "AGENT",
-                                                    onboardingCompleted: true,
-                                                });
-                                                toast.success("Role updated! Redirecting to agent dashboard...");
-                                                setTimeout(() => window.location.href = "/dashboard?tab=agent", 1000);
-                                            } catch {
-                                                toast.error("Failed to switch role. Please try again.");
-                                            }
-                                        }}
+                                        className="w-full h-9 text-xs font-bold border-purple-400 text-purple-600 bg-transparent hover:bg-purple-600 hover:text-white hover:border-purple-600 dark:border-purple-500 dark:text-purple-400 dark:hover:bg-purple-600 dark:hover:text-white transition-colors"
+                                        onClick={() => setShowSwitchModal(true)}
                                     >
                                         <Briefcase className="h-3.5 w-3.5 mr-2" />
                                         Switch to Agent Role
@@ -621,6 +610,92 @@ export default function ProfilePage() {
                     toast.success("Phone verified successfully!");
                 }}
             />
+
+            {/* Agent Role Switch Confirmation Modal */}
+            {showSwitchModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    onClick={(e) => { if (e.target === e.currentTarget) setShowSwitchModal(false); }}
+                >
+                    <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-2xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center shrink-0">
+                                <Briefcase className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-extrabold text-[var(--text-primary)]">
+                                    Switch to Agent Role?
+                                </h2>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium">
+                                    Join RentHub's Verified Partner Programme
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-4 space-y-2.5 text-xs text-[var(--text-secondary)]">
+                            <p className="font-bold text-[var(--text-primary)] text-sm">What happens next:</p>
+                            <ul className="space-y-2">
+                                <li className="flex items-start gap-2">
+                                    <span className="text-purple-500 font-bold mt-0.5">→</span>
+                                    Your account role will be updated to <strong className="text-[var(--text-primary)]">Agent</strong>
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-purple-500 font-bold mt-0.5">→</span>
+                                    You'll be redirected to your <strong className="text-[var(--text-primary)]">Agent dashboard</strong> to complete your profile & KYC
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-purple-500 font-bold mt-0.5">→</span>
+                                    Earn up to <strong className="text-[var(--text-primary)]">5% commission</strong> per deal, paid landlord-side via escrow
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="text-amber-500 font-bold mt-0.5">⚠</span>
+                                    Your agent profile requires admin approval before you can manage listings
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-3 pt-1">
+                            <Button
+                                variant="outline"
+                                className="flex-1 h-11 font-bold border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                                onClick={() => setShowSwitchModal(false)}
+                                disabled={switchingRole}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1 h-11 font-bold bg-purple-600 hover:bg-purple-700 text-white"
+                                disabled={switchingRole}
+                                onClick={async () => {
+                                    setSwitchingRole(true);
+                                    try {
+                                        await api.post("/users", {
+                                            clerkId: user?.id,
+                                            role: "AGENT",
+                                            onboardingCompleted: true,
+                                        });
+                                        setShowSwitchModal(false);
+                                        toast.success("Role updated! Taking you to your agent dashboard...");
+                                        setTimeout(() => window.location.href = "/dashboard?tab=agent", 1200);
+                                    } catch {
+                                        toast.error("Failed to switch role. Please try again.");
+                                        setSwitchingRole(false);
+                                    }
+                                }}
+                            >
+                                {switchingRole ? (
+                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Switching...</>
+                                ) : (
+                                    <><Briefcase className="h-4 w-4 mr-2" /> Yes, Switch to Agent</>
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
