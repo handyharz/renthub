@@ -14,6 +14,7 @@ import {
     ArrowLeft,
     ChevronLeft,
     ChevronRight,
+    Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/layout/ThemeProvider";
@@ -26,6 +27,7 @@ const navItems = [
     { href: "/admin/properties", label: "Properties", icon: Building2 },
     { href: "/admin/verifications", label: "Verifications", icon: ShieldCheck },
     { href: "/admin/disputes", label: "Disputes", icon: AlertTriangle },
+    { href: "/admin/agents", label: "Agent Partners", icon: Briefcase, accent: "purple" },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
@@ -61,8 +63,9 @@ export function AdminSidebar() {
 
             {/* Nav */}
             <nav className="flex-1 p-3 space-y-1">
-                {navItems.map(({ href, label, icon: Icon, exact }) => {
+                {navItems.map(({ href, label, icon: Icon, exact, accent }) => {
                     const active = isActive(href, exact);
+                    const isPurple = accent === "purple";
                     return (
                         <Link
                             key={href}
@@ -71,8 +74,12 @@ export function AdminSidebar() {
                             className={cn(
                                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all",
                                 active
-                                    ? "bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/25"
-                                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
+                                    ? isPurple
+                                        ? "bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800"
+                                        : "bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/25"
+                                    : isPurple
+                                        ? "text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-700"
+                                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
                             )}
                         >
                             <Icon className="h-4 w-4 shrink-0" />
