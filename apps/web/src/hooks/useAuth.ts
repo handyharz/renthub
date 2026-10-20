@@ -49,6 +49,7 @@ export function useAuth() {
         authenticated: !!clerkUser,
         isLandlord: dbUser?.role === "LANDLORD",
         isTenant: dbUser?.role === "TENANT",
+        isAgent: dbUser?.role === "AGENT",
         isAdmin: dbUser?.role === "ADMIN",
         error,
     };

@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { UserButton, SignedIn, SignedOut } from "@clerk/nextjs";
-import { Menu, X, PlusCircle, Home, Search, BookOpen, LayoutDashboard, Shield, Wallet, User } from "lucide-react";
+import { Menu, X, PlusCircle, Home, Search, BookOpen, LayoutDashboard, Shield, Wallet, User, Briefcase, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/layout/ThemeProvider";
 import { useState } from "react";
 
 export function Navbar() {
-    const { authenticated, loading, isLandlord, isTenant, isAdmin } = useAuth();
+    const { authenticated, loading, isLandlord, isTenant, isAgent, isAdmin } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
     const closeMobile = () => setMobileOpen(false);
 
@@ -41,6 +41,7 @@ export function Navbar() {
                                 </Link>
                                 {authenticated ? (
                                     <>
+                                        {/* TENANT links */}
                                         {isTenant && (
                                             <Link href="/dashboard?tab=favorites"
                                                 className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
@@ -48,6 +49,8 @@ export function Navbar() {
                                                 Saved Homes
                                             </Link>
                                         )}
+
+                                        {/* LANDLORD links */}
                                         {isLandlord && (
                                             <>
                                                 <Link href="/dashboard?tab=properties"
@@ -63,6 +66,19 @@ export function Navbar() {
                                                 </Link>
                                             </>
                                         )}
+
+                                        {/* AGENT links */}
+                                        {isAgent && (
+                                            <>
+                                                <Link href="/dashboard?tab=agent"
+                                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold
+                                                        text-[var(--text-primary)] hover:bg-purple-600 hover:text-white transition-all duration-200">
+                                                    <Briefcase className="h-4 w-4" />
+                                                    My Listings
+                                                </Link>
+                                            </>
+                                        )}
+
                                         <Link href="/dashboard"
                                             className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
                                                 text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
@@ -84,11 +100,20 @@ export function Navbar() {
                                         )}
                                     </>
                                 ) : (
-                                    <Link href="/dashboard"
-                                        className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
-                                            text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
-                                        For Landlords
-                                    </Link>
+                                    /* Unauthenticated visitors */
+                                    <>
+                                        <Link href="/onboarding"
+                                            className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
+                                                text-[var(--text-primary)] hover:bg-[var(--color-brand-green)] hover:text-white transition-all duration-200">
+                                            For Landlords
+                                        </Link>
+                                        <Link href="/onboarding"
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold
+                                                text-purple-600 hover:bg-purple-600 hover:text-white transition-all duration-200">
+                                            <Briefcase className="h-3.5 w-3.5" />
+                                            For Agents
+                                        </Link>
+                                    </>
                                 )}
                                 <Link href="/resources"
                                     className="inline-flex items-center px-4 py-2 rounded-md text-sm font-bold
@@ -115,11 +140,20 @@ export function Navbar() {
                         <SignedIn>
                             <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "h-9 w-9" } }}>
                                 <UserButton.MenuItems>
-                                    <UserButton.Link
-                                        label="Payouts & Settlements"
-                                        labelIcon={<Wallet className="h-4 w-4 text-emerald-600" />}
-                                        href="/dashboard?tab=payouts"
-                                    />
+                                    {isLandlord && (
+                                        <UserButton.Link
+                                            label="Payouts & Settlements"
+                                            labelIcon={<Wallet className="h-4 w-4 text-emerald-600" />}
+                                            href="/dashboard?tab=payouts"
+                                        />
+                                    )}
+                                    {isAgent && (
+                                        <UserButton.Link
+                                            label="My Listings"
+                                            labelIcon={<Briefcase className="h-4 w-4 text-purple-600" />}
+                                            href="/dashboard?tab=agent"
+                                        />
+                                    )}
                                     <UserButton.Link
                                         label="My Profile"
                                         labelIcon={<User className="h-4 w-4" />}
@@ -130,10 +164,13 @@ export function Navbar() {
                         </SignedIn>
 
                         {!loading && (
-                            <Link href={isLandlord ? "/properties/new" : "/dashboard"} className="hidden sm:block">
+                            <Link
+                                href={isLandlord ? "/properties/new" : isAgent ? "/dashboard?tab=agent" : "/dashboard"}
+                                className="hidden sm:block"
+                            >
                                 <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold">
                                     <PlusCircle className="mr-2 h-4 w-4" />
-                                    {isLandlord ? "Add Property" : "List Your Home"}
+                                    {isLandlord ? "Add Property" : isAgent ? "My Listings" : "List Your Home"}
                                 </Button>
                             </Link>
                         )}
@@ -164,6 +201,7 @@ export function Navbar() {
 
                         {authenticated ? (
                             <>
+                                {/* TENANT */}
                                 {isTenant && (
                                     <Link href="/dashboard?tab=favorites" onClick={closeMobile}
                                         className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
@@ -172,6 +210,8 @@ export function Navbar() {
                                         Saved Homes
                                     </Link>
                                 )}
+
+                                {/* LANDLORD */}
                                 {isLandlord && (
                                     <>
                                         <Link href="/dashboard?tab=properties" onClick={closeMobile}
@@ -188,6 +228,19 @@ export function Navbar() {
                                         </Link>
                                     </>
                                 )}
+
+                                {/* AGENT */}
+                                {isAgent && (
+                                    <>
+                                        <Link href="/dashboard?tab=agent" onClick={closeMobile}
+                                            className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
+                                                text-purple-600 hover:bg-purple-50 transition-colors">
+                                            <Briefcase className="h-5 w-5 text-purple-600" />
+                                            My Listings
+                                        </Link>
+                                    </>
+                                )}
+
                                 <Link href="/dashboard" onClick={closeMobile}
                                     className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
                                         text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
@@ -210,12 +263,21 @@ export function Navbar() {
                                 )}
                             </>
                         ) : (
-                            <Link href="/dashboard" onClick={closeMobile}
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
-                                    text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
-                                <LayoutDashboard className="h-5 w-5 text-[var(--text-primary)]" />
-                                For Landlords
-                            </Link>
+                            /* Unauthenticated visitors */
+                            <>
+                                <Link href="/onboarding" onClick={closeMobile}
+                                    className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
+                                        text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors">
+                                    <Building2 className="h-5 w-5 text-[var(--color-brand-green)]" />
+                                    For Landlords
+                                </Link>
+                                <Link href="/onboarding" onClick={closeMobile}
+                                    className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold
+                                        text-purple-600 hover:bg-purple-50 transition-colors">
+                                    <Briefcase className="h-5 w-5 text-purple-600" />
+                                    For Agents
+                                </Link>
+                            </>
                         )}
 
                         <Link href="/resources" onClick={closeMobile}
@@ -238,10 +300,13 @@ export function Navbar() {
                         </SignedOut>
 
                         {!loading && (
-                            <Link href={isLandlord ? "/properties/new" : "/dashboard"} onClick={closeMobile}>
+                            <Link
+                                href={isLandlord ? "/properties/new" : isAgent ? "/dashboard?tab=agent" : "/dashboard"}
+                                onClick={closeMobile}
+                            >
                                 <Button className="w-full bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold mt-1">
                                     <PlusCircle className="mr-2 h-4 w-4" />
-                                    {isLandlord ? "Add Property" : "List Your Home"}
+                                    {isLandlord ? "Add Property" : isAgent ? "My Listings" : "List Your Home"}
                                 </Button>
                             </Link>
                         )}
