@@ -273,6 +273,30 @@ export class PropertyService {
                     orderBy: { createdAt: "desc" },
                     take: 10,
                 },
+                // @ts-ignore
+                delegatedListings: {
+                    where: { status: "AUTHORIZED" },
+                    take: 1,
+                    include: {
+                        agentProfile: {
+                            select: {
+                                businessName: true,
+                                licenseNumber: true,
+                                avgRating: true,
+                                totalClosed: true,
+                            },
+                        },
+                        agent: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                avatar: true,
+                                verified: true,
+                            },
+                        },
+                    },
+                },
             },
         });
     }

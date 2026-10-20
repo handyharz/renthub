@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatPrice } from "@/lib/utils";
 import { Bed, Bath, ArrowRight, ShieldCheck, MapPin, Sparkles } from "lucide-react";
 import { FavoriteButton } from "./FavoriteButton";
+import { AgentTrustBadge } from "@/components/agent/AgentTrustBadge";
 
 export interface PropertyCardProps {
     id: string;
@@ -29,6 +30,10 @@ export interface PropertyCardProps {
     status?: string;
     isFavorited?: boolean;
     agentFee?: number;
+    delegatedListings?: Array<{
+        agent: { firstName: string; lastName: string; avatar?: string; verified?: boolean };
+        agentProfile: { businessName?: string; licenseNumber?: string; avgRating?: number; totalClosed?: number };
+    }>;
 }
 
 const DEFAULT_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
@@ -150,6 +155,17 @@ export function PropertyCard({ property }: { property: PropertyCardProps }) {
                         <MapPin className="w-3.5 h-3.5 text-[var(--color-brand-green)] shrink-0" />
                         <span className="truncate">{resolvedAddress}</span>
                     </p>
+
+                    {/* Agent Trust Badge (compact) */}
+                    {property.delegatedListings?.[0] && (
+                        <div className="mt-2">
+                            <AgentTrustBadge
+                                compact
+                                agent={property.delegatedListings[0].agent}
+                                agentProfile={property.delegatedListings[0].agentProfile}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Specs Footer */}

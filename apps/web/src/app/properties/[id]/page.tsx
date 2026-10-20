@@ -55,6 +55,7 @@ import { ApplicationModal } from "@/components/property/ApplicationModal";
 import { getCoordinatesForLocation } from "@/lib/locations";
 import { useAuth } from "@/hooks/useAuth";
 import { MessageSquare } from "lucide-react";
+import { AgentTrustBadge } from "@/components/agent/AgentTrustBadge";
 
 // Amenity Icons mapping
 const AMENITY_ICONS: Record<string, any> = {
@@ -873,6 +874,14 @@ export default function PropertyDetailsPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Agent Trust Badge (if this property is managed by a verified agent) */}
+                        {(property as any).delegatedListings?.[0] && (
+                            <AgentTrustBadge
+                                agent={(property as any).delegatedListings[0].agent}
+                                agentProfile={(property as any).delegatedListings[0].agentProfile}
+                            />
+                        )}
 
                         {/* 2. Executive Landlord Card */}
                         <div className="bg-[var(--bg-card)] p-6 rounded-3xl border border-[var(--border-color)] shadow-sm space-y-5">
