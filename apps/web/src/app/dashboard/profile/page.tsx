@@ -100,6 +100,13 @@ export default function ProfilePage() {
     }
 
     const isLandlord = dbUser?.role === "LANDLORD";
+    const isAgent = dbUser?.role === "AGENT";
+    const roleLabel = isLandlord ? "Landlord" : isAgent ? "Agent" : "Tenant";
+    const roleBadgeColor = isLandlord
+        ? "bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] border-[var(--color-brand-green)]/20"
+        : isAgent
+            ? "bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400"
+            : "bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400";
     const memberSince = dbUser?.createdAt
         ? new Date(dbUser.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
         : "Recent";
@@ -119,8 +126,8 @@ export default function ProfilePage() {
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-lg font-black text-[var(--text-primary)]">Account Profile</h1>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/20">
-                                    {isLandlord ? "Landlord" : "Tenant"}
+                                <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${roleBadgeColor}`}>
+                                    {roleLabel}
                                 </span>
                             </div>
                             <p className="text-[11px] text-[var(--text-muted)] font-medium">Manage your personal details, trust verification, and security</p>
@@ -200,7 +207,7 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-3 self-stretch sm:self-auto border-t sm:border-t-0 border-[var(--border-color)] pt-3 sm:pt-0">
                             <div className="px-3.5 py-2 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] text-center flex-1 sm:flex-initial">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Role</p>
-                                <p className="text-xs font-black text-[var(--text-primary)]">{isLandlord ? "Landlord" : "Tenant"}</p>
+                                <p className="text-xs font-black text-[var(--text-primary)]">{roleLabel}</p>
                             </div>
                             <div className="px-3.5 py-2 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] text-center flex-1 sm:flex-initial">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Member Since</p>

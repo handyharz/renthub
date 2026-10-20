@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Calendar, Key, ShieldCheck, Plus, Users, Wallet, ArrowRight } from "lucide-react";
+import { Search, Calendar, Key, ShieldCheck, Plus, Users, Wallet, ArrowRight, Briefcase, FileCheck, BadgeDollarSign } from "lucide-react";
 import Link from "next/link";
 
 const RENTER_STEPS = [
@@ -52,10 +52,37 @@ const LANDLORD_STEPS = [
     },
 ];
 
-export function HowItWorks() {
-    const [mode, setMode] = useState<"renter" | "landlord">("renter");
+const AGENT_STEPS = [
+    {
+        step: "01",
+        title: "Apply as a Verified Partner",
+        description: "Submit your CAC registration, license number, and operating cities. Our team reviews and verifies your credentials within 48 hours.",
+        icon: FileCheck,
+        tag: "KYC Verified",
+    },
+    {
+        step: "02",
+        title: "Request Landlord Authorization",
+        description: "Request delegation rights for properties you want to manage. Landlords approve you per listing — no unauthorized listings ever.",
+        icon: Briefcase,
+        tag: "Landlord-Authorized",
+    },
+    {
+        step: "03",
+        title: "Earn Up to 5% Commission",
+        description: "RentHub pays your commission via escrow on deal close. Tenants pay zero agent fee — your cut comes from the landlord's side only.",
+        icon: BadgeDollarSign,
+        tag: "Escrow-Secured Pay",
+    },
+];
 
-    const steps = mode === "renter" ? RENTER_STEPS : LANDLORD_STEPS;
+type Mode = "renter" | "landlord" | "agent";
+
+export function HowItWorks() {
+    const [mode, setMode] = useState<Mode>("renter");
+
+    const steps = mode === "renter" ? RENTER_STEPS : mode === "landlord" ? LANDLORD_STEPS : AGENT_STEPS;
+    const accentColor = mode === "agent" ? "purple" : "green";
 
     return (
         <section className="py-20 bg-[var(--bg-primary)]">
@@ -79,7 +106,7 @@ export function HowItWorks() {
                         <button
                             type="button"
                             onClick={() => setMode("renter")}
-                            className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
                                 mode === "renter"
                                     ? "bg-[var(--color-brand-green)] text-white shadow-md"
                                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -90,7 +117,7 @@ export function HowItWorks() {
                         <button
                             type="button"
                             onClick={() => setMode("landlord")}
-                            className={`px-5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
                                 mode === "landlord"
                                     ? "bg-[var(--color-brand-green)] text-white shadow-md"
                                     : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -98,8 +125,27 @@ export function HowItWorks() {
                         >
                             For Landlords
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setMode("agent")}
+                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+                                mode === "agent"
+                                    ? "bg-purple-600 text-white shadow-md"
+                                    : "text-[var(--text-secondary)] hover:text-purple-600"
+                            }`}
+                        >
+                            For Agents
+                        </button>
                     </div>
                 </div>
+
+                {/* Agent mode context banner */}
+                {mode === "agent" && (
+                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-4 text-sm text-purple-700 dark:text-purple-300 font-medium">
+                        💼 <strong>Verified Partner Programme</strong> — Agents earn up to 5% commission paid by landlords.
+                        Tenants pay <strong>zero agent fee</strong>. All payments flow through RentHub escrow — no side payments allowed.
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
                     {steps.map((s, idx) => (
@@ -109,15 +155,21 @@ export function HowItWorks() {
                         >
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-3xl sm:text-4xl font-black text-[var(--color-brand-green)]/30">
+                                    <span className={`text-3xl sm:text-4xl font-black ${mode === "agent" ? "text-purple-300" : "text-[var(--color-brand-green)]/30"}`}>
                                         {s.step}
                                     </span>
-                                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/20">
+                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                                        mode === "agent"
+                                            ? "bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800"
+                                            : "bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] border-[var(--color-brand-green)]/20"
+                                    }`}>
                                         {s.tag}
                                     </span>
                                 </div>
 
-                                <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/60 text-[var(--color-brand-green)] w-fit border border-[var(--border-color)]">
+                                <div className={`p-3.5 rounded-2xl bg-[var(--bg-muted)]/60 w-fit border border-[var(--border-color)] ${
+                                    mode === "agent" ? "text-purple-600" : "text-[var(--color-brand-green)]"
+                                }`}>
                                     <s.icon className="w-6 h-6" />
                                 </div>
 
@@ -147,12 +199,20 @@ export function HowItWorks() {
                             <span>Start Searching Verified Homes</span>
                             <ArrowRight className="w-4 h-4" />
                         </Link>
-                    ) : (
+                    ) : mode === "landlord" ? (
                         <Link
                             href="/properties/new"
                             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
                         >
                             <span>List Your Property for Free</span>
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    ) : (
+                        <Link
+                            href="/onboarding"
+                            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-black text-sm shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
+                        >
+                            <span>Apply as a Verified Agent</span>
                             <ArrowRight className="w-4 h-4" />
                         </Link>
                     )}
