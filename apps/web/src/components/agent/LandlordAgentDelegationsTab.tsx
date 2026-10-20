@@ -47,14 +47,14 @@ interface AgentDelegation {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-    PENDING_LANDLORD: { label: "Awaiting Your Decision", color: "bg-amber-100 text-amber-700", icon: Clock },
-    AUTHORIZED: { label: "Authorized", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-    REVOKED: { label: "Revoked", color: "bg-red-100 text-red-700", icon: XCircle },
-    COMPLETED: { label: "Completed", color: "bg-blue-100 text-blue-700", icon: ShieldCheck },
+    PENDING_LANDLORD: { label: "Awaiting Your Decision", color: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800", icon: Clock },
+    AUTHORIZED: { label: "Authorized", color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800", icon: CheckCircle2 },
+    REVOKED: { label: "Revoked", color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800", icon: XCircle },
+    COMPLETED: { label: "Completed", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800", icon: ShieldCheck },
 };
 
 function StatusBadge({ status }: { status: string }) {
-    const cfg = statusConfig[status] || { label: status, color: "bg-gray-100 text-gray-600", icon: AlertCircle };
+    const cfg = statusConfig[status] || { label: status, color: "bg-[var(--bg-muted)] text-[var(--text-secondary)] border border-[var(--border-color)]", icon: AlertCircle };
     const Icon = cfg.icon;
     return (
         <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold", cfg.color)}>
@@ -125,7 +125,7 @@ export function LandlordAgentDelegationsTab() {
         return (
             <div className="space-y-3">
                 {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse" />
+                    <div key={i} className="h-32 bg-[var(--bg-muted)] rounded-2xl animate-pulse" />
                 ))}
             </div>
         );
@@ -134,7 +134,7 @@ export function LandlordAgentDelegationsTab() {
     return (
         <div className="space-y-6">
             {/* Info banner */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-sm text-blue-800 dark:text-blue-300">
                 <strong>🤝 Agent Delegation</strong> — Agents on RentHub are verified professionals. When you authorize an
                 agent for a listing, they can help market and manage it. Their commission (up to 5%) is deducted from your
                 rental income through escrow — tenants pay zero agent fee.
@@ -147,10 +147,10 @@ export function LandlordAgentDelegationsTab() {
                         key={f}
                         onClick={() => setActiveFilter(f)}
                         className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors",
+                            "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border",
                             activeFilter === f
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] border-[var(--border-color)]"
                         )}
                     >
                         {f === "ALL" ? `All (${delegations.length})` : (statusConfig[f]?.label || f) + ` (${delegations.filter(d => d.status === f).length})`}
@@ -159,10 +159,10 @@ export function LandlordAgentDelegationsTab() {
             </div>
 
             {filtered.length === 0 ? (
-                <div className="text-center py-16 bg-gray-50 rounded-2xl">
-                    <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">No agent requests</p>
-                    <p className="text-gray-400 text-sm mt-1">
+                <div className="text-center py-16 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-2xl">
+                    <Users className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
+                    <p className="text-[var(--text-secondary)] font-medium">No agent requests</p>
+                    <p className="text-[var(--text-muted)] text-sm mt-1">
                         Verified agents can request to list your properties. You stay in full control.
                     </p>
                 </div>
@@ -175,16 +175,16 @@ export function LandlordAgentDelegationsTab() {
                         const isRevLoading = actionLoading === d.id + "_rev";
 
                         return (
-                            <div key={d.id} className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                            <div key={d.id} className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
                                 <div className="p-5">
                                     <div className="flex flex-col sm:flex-row gap-4">
                                         {/* Property thumbnail */}
-                                        <div className="relative h-24 w-32 shrink-0 rounded-xl overflow-hidden bg-gray-100">
+                                        <div className="relative h-24 w-32 shrink-0 rounded-xl overflow-hidden bg-[var(--bg-muted)]">
                                             {img ? (
                                                 <Image src={img} alt={d.property.title} fill className="object-cover" />
                                             ) : (
                                                 <div className="flex items-center justify-center h-full">
-                                                    <Home className="h-8 w-8 text-gray-300" />
+                                                    <Home className="h-8 w-8 text-[var(--text-muted)]" />
                                                 </div>
                                             )}
                                         </div>
@@ -192,10 +192,10 @@ export function LandlordAgentDelegationsTab() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between gap-2 flex-wrap">
                                                 <div>
-                                                    <Link href={`/properties/${d.property.id}`} className="font-bold text-gray-900 hover:text-blue-600 transition-colors line-clamp-1">
+                                                    <Link href={`/properties/${d.property.id}`} className="font-bold text-[var(--text-primary)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors line-clamp-1">
                                                         {d.property.title}
                                                     </Link>
-                                                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                                    <p className="text-xs text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
                                                         <MapPin className="h-3 w-3" />
                                                         {d.property.city} · {formatPrice(d.property.pricePerYear)}/yr
                                                     </p>
@@ -204,42 +204,42 @@ export function LandlordAgentDelegationsTab() {
                                             </div>
 
                                             {/* Agent info */}
-                                            <div className="mt-3 flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0 overflow-hidden">
+                                            <div className="mt-3 flex items-center gap-3 p-3 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-xl">
+                                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 overflow-hidden">
                                                     {d.agent.avatar ? (
                                                         <Image src={d.agent.avatar} alt="" width={40} height={40} className="object-cover rounded-full" />
                                                     ) : (
-                                                        <span className="text-blue-600 font-bold text-sm">
+                                                        <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">
                                                             {d.agent.firstName[0]}{d.agent.lastName[0]}
                                                         </span>
                                                     )}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-semibold text-gray-900 text-sm">
+                                                    <p className="font-semibold text-[var(--text-primary)] text-sm">
                                                         {d.agent.firstName} {d.agent.lastName}
                                                     </p>
                                                     {agentProfile?.businessName && (
-                                                        <p className="text-xs text-gray-500">{agentProfile.businessName}</p>
+                                                        <p className="text-xs text-[var(--text-muted)]">{agentProfile.businessName}</p>
                                                     )}
                                                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                                                         {agentProfile?.avgRating && (
-                                                            <span className="text-xs flex items-center gap-0.5 text-amber-600">
+                                                            <span className="text-xs flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
                                                                 <Star className="h-3 w-3 fill-current" />
                                                                 {agentProfile.avgRating.toFixed(1)} ({agentProfile.reviewCount})
                                                             </span>
                                                         )}
                                                         {agentProfile?.totalClosed ? (
-                                                            <span className="text-xs text-gray-500">
+                                                            <span className="text-xs text-[var(--text-muted)]">
                                                                 {agentProfile.totalClosed} deals closed
                                                             </span>
                                                         ) : null}
-                                                        <span className="text-xs font-semibold text-blue-600">
+                                                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                                                             {d.commissionPct}% commission
                                                         </span>
                                                     </div>
                                                 </div>
                                                 {d.agent.phone && (
-                                                    <a href={`tel:${d.agent.phone}`} className="text-gray-400 hover:text-blue-600 shrink-0">
+                                                    <a href={`tel:${d.agent.phone}`} className="text-[var(--text-muted)] hover:text-blue-600 dark:hover:text-blue-400 shrink-0">
                                                         <Phone className="h-4 w-4" />
                                                     </a>
                                                 )}
@@ -247,7 +247,7 @@ export function LandlordAgentDelegationsTab() {
 
                                             {/* Agent note */}
                                             {d.agentNote && (
-                                                <div className="mt-2 p-2.5 bg-blue-50 rounded-lg text-xs text-blue-700">
+                                                <div className="mt-2 p-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-800 dark:text-blue-300">
                                                     <span className="font-semibold">Agent's message:</span> "{d.agentNote}"
                                                 </div>
                                             )}
@@ -260,7 +260,7 @@ export function LandlordAgentDelegationsTab() {
                                                         placeholder="Optional: Add a note for the agent..."
                                                         value={landlordNotes[d.id] || ""}
                                                         onChange={e => setLandlordNotes(n => ({ ...n, [d.id]: e.target.value }))}
-                                                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     />
                                                     <div className="flex gap-2">
                                                         <Button
@@ -274,7 +274,7 @@ export function LandlordAgentDelegationsTab() {
                                                             onClick={() => handleRevoke(d.id)}
                                                             disabled={isAuthLoading || isRevLoading}
                                                             variant="outline"
-                                                            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 h-9 text-xs font-semibold"
+                                                            className="flex-1 border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-9 text-xs font-semibold bg-transparent"
                                                         >
                                                             {isRevLoading ? "Declining..." : "✗ Decline"}
                                                         </Button>
@@ -285,7 +285,7 @@ export function LandlordAgentDelegationsTab() {
                                             {/* Revoke authorized */}
                                             {d.status === "AUTHORIZED" && (
                                                 <div className="mt-3 flex items-center justify-between">
-                                                    <p className="text-xs text-emerald-600 font-medium">
+                                                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                                                         ✓ Authorized {d.authorizedAt ? new Date(d.authorizedAt).toLocaleDateString("en-NG") : ""}
                                                     </p>
                                                     <Button
@@ -293,7 +293,7 @@ export function LandlordAgentDelegationsTab() {
                                                         disabled={isRevLoading}
                                                         variant="outline"
                                                         size="sm"
-                                                        className="border-red-300 text-red-600 hover:bg-red-50 h-8 text-xs"
+                                                        className="border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 text-xs bg-transparent"
                                                     >
                                                         {isRevLoading ? "..." : "Revoke Access"}
                                                     </Button>

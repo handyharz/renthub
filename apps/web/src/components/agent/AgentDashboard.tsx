@@ -68,18 +68,18 @@ interface AgentDelegation {
 // ─── STATUS BADGE ─────────────────────────────────────────────────────────────
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-    PENDING_REVIEW: { label: "Under Review", color: "bg-amber-100 text-amber-700", icon: Clock },
-    ACTIVE: { label: "Active Agent", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-    SUSPENDED: { label: "Suspended", color: "bg-red-100 text-red-700", icon: XCircle },
-    REJECTED: { label: "Rejected", color: "bg-red-100 text-red-700", icon: XCircle },
-    PENDING_LANDLORD: { label: "Awaiting Landlord", color: "bg-amber-100 text-amber-700", icon: Clock },
-    AUTHORIZED: { label: "Authorized", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-    REVOKED: { label: "Revoked", color: "bg-red-100 text-red-700", icon: XCircle },
-    COMPLETED: { label: "Completed", color: "bg-blue-100 text-blue-700", icon: ShieldCheck },
+    PENDING_REVIEW: { label: "Under Review", color: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800", icon: Clock },
+    ACTIVE: { label: "Active Agent", color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800", icon: CheckCircle2 },
+    SUSPENDED: { label: "Suspended", color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800", icon: XCircle },
+    REJECTED: { label: "Rejected", color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800", icon: XCircle },
+    PENDING_LANDLORD: { label: "Awaiting Landlord", color: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800", icon: Clock },
+    AUTHORIZED: { label: "Authorized", color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800", icon: CheckCircle2 },
+    REVOKED: { label: "Revoked", color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800", icon: XCircle },
+    COMPLETED: { label: "Completed", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800", icon: ShieldCheck },
 };
 
 function StatusBadge({ status }: { status: string }) {
-    const cfg = statusConfig[status] || { label: status, color: "bg-gray-100 text-gray-600", icon: AlertCircle };
+    const cfg = statusConfig[status] || { label: status, color: "bg-[var(--bg-muted)] text-[var(--text-secondary)] border border-[var(--border-color)]", icon: AlertCircle };
     const Icon = cfg.icon;
     return (
         <span className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold", cfg.color)}>
@@ -119,34 +119,34 @@ function RequestDelegationModal({ clerkId, onClose, onSuccess }: { clerkId: stri
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl w-full max-w-md p-6">
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-xl font-bold text-gray-900">Request Property Delegation</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <h2 className="text-xl font-bold text-[var(--text-primary)]">Request Property Delegation</h2>
+                    <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
-                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-800 dark:text-amber-300">
                     <strong>How it works:</strong> The landlord will receive your request and must authorize you before you can manage this listing. Commission is paid by the landlord from their rental income.
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Property ID *</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Property ID *</label>
                         <input
                             type="text"
                             value={propertyId}
                             onChange={e => setPropertyId(e.target.value)}
                             placeholder="Paste the property ID from RentHub"
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                         />
-                        <p className="text-xs text-gray-400 mt-1">You can find the property ID in the URL when viewing a listing</p>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">You can find the property ID in the URL when viewing a listing</p>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">
                             Commission Rate (%) — Max 5%
                         </label>
                         <input
@@ -156,20 +156,20 @@ function RequestDelegationModal({ clerkId, onClose, onSuccess }: { clerkId: stri
                             min="0.5"
                             max="5"
                             step="0.5"
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                         />
-                        <p className="text-xs text-gray-400 mt-1">Paid by the landlord. Tenant pays 0% agent fee.</p>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">Paid by the landlord. Tenant pays 0% agent fee.</p>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Note to Landlord</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Note to Landlord</label>
                         <textarea
                             value={note}
                             onChange={e => setNote(e.target.value)}
                             placeholder="Briefly explain your experience and why you want to list this property..."
                             rows={3}
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                     </div>
 
@@ -235,54 +235,54 @@ function ProfileEditModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-8 p-6">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl w-full max-w-lg my-8 p-6">
                 <div className="flex items-center justify-between mb-5">
-                    <h2 className="text-xl font-bold text-gray-900">Edit Agent Profile</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <h2 className="text-xl font-bold text-[var(--text-primary)]">Edit Agent Profile</h2>
+                    <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business / Agency Name *</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Business / Agency Name *</label>
                         <input
                             value={form.businessName}
                             onChange={e => setForm(f => ({ ...f, businessName: e.target.value }))}
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Business Address</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Business Address</label>
                         <input
                             value={form.businessAddress}
                             onChange={e => setForm(f => ({ ...f, businessAddress: e.target.value }))}
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">NIESV / License Number</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">NIESV / License Number</label>
                         <input
                             value={form.licenseNumber}
                             onChange={e => setForm(f => ({ ...f, licenseNumber: e.target.value }))}
                             placeholder="Optional but builds trust"
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Years of Experience</label>
+                            <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Years of Experience</label>
                             <input
                                 type="number"
                                 value={form.yearsOfExperience}
                                 onChange={e => setForm(f => ({ ...f, yearsOfExperience: e.target.value }))}
                                 min="0"
-                                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Default Commission %</label>
+                            <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Default Commission %</label>
                             <input
                                 type="number"
                                 value={form.defaultCommissionPct}
@@ -290,28 +290,28 @@ function ProfileEditModal({
                                 min="0.5"
                                 max="5"
                                 step="0.5"
-                                className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Operating Cities (comma-separated) *</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Operating Cities (comma-separated) *</label>
                         <input
                             value={form.operatingCities}
                             onChange={e => setForm(f => ({ ...f, operatingCities: e.target.value }))}
                             placeholder="Lagos, Abuja, Port Harcourt"
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             required
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Bio</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Bio</label>
                         <textarea
                             value={form.bio}
                             onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
                             placeholder="Tell landlords about your expertise..."
                             rows={3}
-                            className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                     </div>
 
@@ -329,13 +329,13 @@ function ProfileEditModal({
 function DelegationCard({ delegation }: { delegation: AgentDelegation }) {
     const img = delegation.property.images?.[0]?.url;
     return (
-        <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-            <div className="relative h-36 bg-gray-100">
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div className="relative h-36 bg-[var(--bg-muted)]">
                 {img ? (
                     <Image src={img} alt={delegation.property.title} fill className="object-cover" />
                 ) : (
                     <div className="flex items-center justify-center h-full">
-                        <Home className="h-10 w-10 text-gray-300" />
+                        <Home className="h-10 w-10 text-[var(--text-muted)]" />
                     </div>
                 )}
                 <div className="absolute top-2 right-2">
@@ -343,38 +343,38 @@ function DelegationCard({ delegation }: { delegation: AgentDelegation }) {
                 </div>
             </div>
             <div className="p-4">
-                <h3 className="font-bold text-gray-900 text-sm line-clamp-1">{delegation.property.title}</h3>
-                <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                <h3 className="font-bold text-[var(--text-primary)] text-sm line-clamp-1">{delegation.property.title}</h3>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5 flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     {delegation.property.city}, {delegation.property.state}
                 </p>
                 <div className="mt-3 flex items-center justify-between">
                     <div>
-                        <p className="text-xs text-gray-400">Annual Rent</p>
-                        <p className="font-bold text-gray-900 text-sm">{formatPrice(delegation.property.pricePerYear)}</p>
+                        <p className="text-xs text-[var(--text-muted)]">Annual Rent</p>
+                        <p className="font-bold text-[var(--text-primary)] text-sm">{formatPrice(delegation.property.pricePerYear)}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs text-gray-400">Your Commission</p>
-                        <p className="font-bold text-blue-600 text-sm">{delegation.commissionPct}%</p>
+                        <p className="text-xs text-[var(--text-muted)]">Your Commission</p>
+                        <p className="font-bold text-blue-600 dark:text-blue-400 text-sm">{delegation.commissionPct}%</p>
                     </div>
                 </div>
                 {delegation.status === "AUTHORIZED" && (
-                    <div className="mt-3 p-2 bg-emerald-50 rounded-lg text-xs text-emerald-700 font-medium">
+                    <div className="mt-3 p-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                         ✓ You are authorized to manage this listing
                     </div>
                 )}
                 {delegation.status === "PENDING_LANDLORD" && (
-                    <div className="mt-3 p-2 bg-amber-50 rounded-lg text-xs text-amber-700">
+                    <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400">
                         ⏳ Awaiting landlord authorization
                     </div>
                 )}
                 {delegation.landlordNote && (
-                    <div className="mt-2 p-2 bg-gray-50 rounded-lg text-xs text-gray-600">
-                        <span className="font-medium">Landlord note:</span> {delegation.landlordNote}
+                    <div className="mt-2 p-2 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-secondary)]">
+                        <span className="font-medium text-[var(--text-primary)]">Landlord note:</span> {delegation.landlordNote}
                     </div>
                 )}
                 <Link href={`/properties/${delegation.property.id}`}>
-                    <Button variant="outline" size="sm" className="w-full mt-3 text-xs h-8">
+                    <Button variant="outline" size="sm" className="w-full mt-3 text-xs h-8 border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]">
                         View Property <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>
                 </Link>
@@ -439,7 +439,7 @@ export default function AgentDashboard() {
         return (
             <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
+                    <div key={i} className="h-24 bg-[var(--bg-muted)] rounded-2xl animate-pulse" />
                 ))}
             </div>
         );
@@ -524,15 +524,15 @@ export default function AgentDashboard() {
             {profile?.status === "ACTIVE" && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                        { label: "Active Listings", value: stats.authorized, icon: Building2, color: "text-blue-600" },
-                        { label: "Awaiting Auth", value: stats.pending, icon: Clock, color: "text-amber-600" },
-                        { label: "Closed Deals", value: stats.completed, icon: FileCheck, color: "text-emerald-600" },
-                        { label: "Total Earned", value: formatPrice(stats.totalEarned), icon: Wallet, color: "text-purple-600" },
+                        { label: "Active Listings", value: stats.authorized, icon: Building2, color: "text-blue-600 dark:text-blue-400" },
+                        { label: "Awaiting Auth", value: stats.pending, icon: Clock, color: "text-amber-600 dark:text-amber-400" },
+                        { label: "Closed Deals", value: stats.completed, icon: FileCheck, color: "text-emerald-600 dark:text-emerald-400" },
+                        { label: "Total Earned", value: formatPrice(stats.totalEarned), icon: Wallet, color: "text-purple-600 dark:text-purple-400" },
                     ].map(stat => (
-                        <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                        <div key={stat.label} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] p-4 shadow-sm">
                             <stat.icon className={cn("h-5 w-5 mb-2", stat.color)} />
-                            <p className="text-xl font-extrabold text-gray-900">{stat.value}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+                            <p className="text-xl font-extrabold text-[var(--text-primary)]">{stat.value}</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-0.5">{stat.label}</p>
                         </div>
                     ))}
                 </div>
@@ -540,7 +540,7 @@ export default function AgentDashboard() {
 
             {/* Fee Transparency Notice */}
             {profile?.status === "ACTIVE" && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-700">
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 text-sm text-emerald-800 dark:text-emerald-300">
                     <strong>💡 Fee Policy:</strong> Your commission (up to 5%) is paid by the landlord from their rent proceeds.
                     Tenants pay <em>zero</em> agent fee — keeping RentHub's promise intact.
                     All payments flow through RentHub escrow — no side payments allowed.
@@ -551,7 +551,7 @@ export default function AgentDashboard() {
             {profile?.status === "ACTIVE" && (
                 <div>
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">My Listings</h3>
+                        <h3 className="text-lg font-bold text-[var(--text-primary)]">My Listings</h3>
                         <Button
                             onClick={() => setShowDelegationModal(true)}
                             size="sm"
@@ -569,10 +569,10 @@ export default function AgentDashboard() {
                                 key={f}
                                 onClick={() => setActiveFilter(f)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors",
+                                    "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border",
                                     activeFilter === f
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                        ? "bg-blue-600 text-white border-blue-600"
+                                        : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] border-[var(--border-color)]"
                                 )}
                             >
                                 {f === "ALL" ? "All" : statusConfig[f]?.label || f}
@@ -583,10 +583,10 @@ export default function AgentDashboard() {
                     </div>
 
                     {filteredDelegations.length === 0 ? (
-                        <div className="text-center py-16 bg-gray-50 rounded-2xl">
-                            <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-500 font-medium">No listings yet</p>
-                            <p className="text-gray-400 text-sm mt-1 mb-4">
+                        <div className="text-center py-16 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-2xl">
+                            <Building2 className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
+                            <p className="text-[var(--text-secondary)] font-medium">No listings yet</p>
+                            <p className="text-[var(--text-muted)] text-sm mt-1 mb-4">
                                 Request to manage properties and build your portfolio
                             </p>
                             <Button
