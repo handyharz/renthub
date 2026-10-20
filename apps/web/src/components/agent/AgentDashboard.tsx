@@ -91,7 +91,7 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── REQUEST DELEGATION MODAL ─────────────────────────────────────────────────
 
-function RequestDelegationModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+function RequestDelegationModal({ clerkId, onClose, onSuccess }: { clerkId: string; onClose: () => void; onSuccess: () => void }) {
     const [propertyId, setPropertyId] = useState("");
     const [note, setNote] = useState("");
     const [commissionPct, setCommissionPct] = useState("5");
@@ -102,7 +102,7 @@ function RequestDelegationModal({ onClose, onSuccess }: { onClose: () => void; o
         if (!propertyId.trim()) return;
         setLoading(true);
         try {
-            await api.post("/agents/me/delegations", {
+            await api.post(`/agents/me/delegations?clerkId=${clerkId}`, {
                 propertyId: propertyId.trim(),
                 agentNote: note,
                 commissionPct: parseFloat(commissionPct)
@@ -186,10 +186,12 @@ function RequestDelegationModal({ onClose, onSuccess }: { onClose: () => void; o
 // ─── PROFILE EDIT MODAL ───────────────────────────────────────────────────────
 
 function ProfileEditModal({
+    clerkId,
     profile,
     onClose,
     onSuccess
 }: {
+    clerkId: string;
     profile: AgentProfile | null;
     onClose: () => void;
     onSuccess: () => void;
@@ -209,7 +211,7 @@ function ProfileEditModal({
         e.preventDefault();
         setLoading(true);
         try {
-            await api.patch("/agents/me", {
+            await api.patch(`/agents/me?clerkId=${clerkId}`, {
                 businessName: form.businessName,
                 businessAddress: form.businessAddress,
                 licenseNumber: form.licenseNumber || undefined,
@@ -608,12 +610,14 @@ export default function AgentDashboard() {
             {/* Modals */}
             {showDelegationModal && (
                 <RequestDelegationModal
+                    clerkId={user?.id || ""}
                     onClose={() => setShowDelegationModal(false)}
                     onSuccess={fetchData}
                 />
             )}
             {showProfileModal && (
                 <ProfileEditModal
+                    clerkId={user?.id || ""}
                     profile={profile}
                     onClose={() => setShowProfileModal(false)}
                     onSuccess={fetchData}
