@@ -30,9 +30,25 @@ export interface PropertyCardProps {
     status?: string;
     isFavorited?: boolean;
     agentFee?: number;
+    agentListings?: Array<{
+        agent: {
+            firstName: string;
+            lastName: string;
+            avatar?: string;
+            verified?: boolean;
+            agentProfile?: { businessName?: string; licenseNumber?: string; avgRating?: number; totalClosed?: number };
+        };
+        agentProfile?: { businessName?: string; licenseNumber?: string; avgRating?: number; totalClosed?: number };
+    }>;
     delegatedListings?: Array<{
-        agent: { firstName: string; lastName: string; avatar?: string; verified?: boolean };
-        agentProfile: { businessName?: string; licenseNumber?: string; avgRating?: number; totalClosed?: number };
+        agent: {
+            firstName: string;
+            lastName: string;
+            avatar?: string;
+            verified?: boolean;
+            agentProfile?: { businessName?: string; licenseNumber?: string; avgRating?: number; totalClosed?: number };
+        };
+        agentProfile?: { businessName?: string; licenseNumber?: string; avgRating?: number; totalClosed?: number };
     }>;
 }
 
@@ -157,15 +173,21 @@ export function PropertyCard({ property }: { property: PropertyCardProps }) {
                     </p>
 
                     {/* Agent Trust Badge (compact) */}
-                    {property.delegatedListings?.[0] && (
-                        <div className="mt-2">
-                            <AgentTrustBadge
-                                compact
-                                agent={property.delegatedListings[0].agent}
-                                agentProfile={property.delegatedListings[0].agentProfile}
-                            />
-                        </div>
-                    )}
+                    {(() => {
+                        const listing = property.agentListings?.[0] || property.delegatedListings?.[0];
+                        if (!listing?.agent) return null;
+                        const profile = listing.agent?.agentProfile || listing.agentProfile;
+                        if (!profile) return null;
+                        return (
+                            <div className="mt-2">
+                                <AgentTrustBadge
+                                    compact
+                                    agent={listing.agent}
+                                    agentProfile={profile}
+                                />
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* Specs Footer */}

@@ -204,6 +204,29 @@ export class PropertyService {
                         where: { isPrimary: true },
                         take: 1,
                     },
+                    agentListings: {
+                        where: { status: "AUTHORIZED" },
+                        take: 1,
+                        include: {
+                            agent: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    avatar: true,
+                                    verified: true,
+                                    agentProfile: {
+                                        select: {
+                                            businessName: true,
+                                            licenseNumber: true,
+                                            avgRating: true,
+                                            totalClosed: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
                 orderBy: getOrderBy(),
                 take: limit,
@@ -273,19 +296,10 @@ export class PropertyService {
                     orderBy: { createdAt: "desc" },
                     take: 10,
                 },
-                // @ts-ignore
-                delegatedListings: {
+                agentListings: {
                     where: { status: "AUTHORIZED" },
                     take: 1,
                     include: {
-                        agentProfile: {
-                            select: {
-                                businessName: true,
-                                licenseNumber: true,
-                                avgRating: true,
-                                totalClosed: true,
-                            },
-                        },
                         agent: {
                             select: {
                                 id: true,
@@ -293,6 +307,14 @@ export class PropertyService {
                                 lastName: true,
                                 avatar: true,
                                 verified: true,
+                                agentProfile: {
+                                    select: {
+                                        businessName: true,
+                                        licenseNumber: true,
+                                        avgRating: true,
+                                        totalClosed: true,
+                                    },
+                                },
                             },
                         },
                     },

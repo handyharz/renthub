@@ -876,12 +876,18 @@ export default function PropertyDetailsPage() {
                         </div>
 
                         {/* Agent Trust Badge (if this property is managed by a verified agent) */}
-                        {(property as any).delegatedListings?.[0] && (
-                            <AgentTrustBadge
-                                agent={(property as any).delegatedListings[0].agent}
-                                agentProfile={(property as any).delegatedListings[0].agentProfile}
-                            />
-                        )}
+                        {(() => {
+                            const listing = (property as any).agentListings?.[0] || (property as any).delegatedListings?.[0];
+                            if (!listing?.agent) return null;
+                            const profile = listing.agent?.agentProfile || listing.agentProfile;
+                            if (!profile) return null;
+                            return (
+                                <AgentTrustBadge
+                                    agent={listing.agent}
+                                    agentProfile={profile}
+                                />
+                            );
+                        })()}
 
                         {/* 2. Executive Landlord Card */}
                         <div className="bg-[var(--bg-card)] p-6 rounded-3xl border border-[var(--border-color)] shadow-sm space-y-5">
