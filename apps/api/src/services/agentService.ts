@@ -141,6 +141,74 @@ export class AgentService {
         });
     }
 
+    async getAdminAgentKPIs() {
+        const [totalProfiles, activeAgents, pendingReview, suspended, delegations, strikes] = await Promise.all([
+            prisma.agentProfile.count(),
+            prisma.agentProfile.count({ where: { status: AgentStatus.ACTIVE } }),
+            prisma.agentProfile.count({ where: { status: AgentStatus.PENDING_REVIEW } }),
+            prisma.agentProfile.count({ where: { status: AgentStatus.SUSPENDED } }),
+            prisma.agentListing.findMany({
+                where: { status: "COMPLETED" },
+                select: { commissionAmount: true }
+            }),
+            prisma.agentStrike.findMany({
+                where: { status: "UPHELD", strikeApplied: true }
+            }),
+        ]);
+
+        const now = new Date();
+        const activeStrikes = strikes.filter(s => !s.expiresAt || s.expiresAt > now).length;
+        const totalCommissionPaid = delegations.reduce((sum, d) => sum + (d.commissionAmount || 0), 0);
+
+        return {
+            totalProfiles,
+            activeAgents,
+            pendingReview,
+            suspended,
+            activeStrikes,
+            totalCommissionPaid,
+            completedDeals: delegations.length,
+        };
+    }
+
+    async listAdminAgents(filters: { status?: any; search?: string; city?: string; skip?: number; take?: number } = {}) {
+        const { status, search, city, skip = 0, take = 50 } = filters;
+
+        const where: any = {};
+        if (status && status !== "ALL") {
+            where.status = status as AgentStatus;
+        }
+        if (city && city !== "ALL") {
+            where.operatingCities = { has: city };
+        }
+        if (search && search.trim()) {
+            const q = search.trim();
+            where.OR = [
+                { businessName: { contains: q, mode: "insensitive" } },
+                { licenseNumber: { contains: q, mode: "insensitive" } },
+                { user: { firstName: { contains: q, mode: "insensitive" } } },
+                { user: { lastName: { contains: q, mode: "insensitive" } } },
+                { user: { email: { contains: q, mode: "insensitive" } } },
+                { user: { phone: { contains: q, mode: "insensitive" } } },
+            ];
+        }
+
+        return prisma.agentProfile.findMany({
+            where,
+            include: {
+                user: {
+                    select: {
+                        id: true, firstName: true, lastName: true, email: true,
+                        phone: true, avatar: true, verified: true
+                    }
+                }
+            },
+            orderBy: [{ createdAt: "desc" }],
+            skip,
+            take,
+        });
+    }
+
     // ─── DELEGATION (AGENT LISTINGS) ─────────────────────────────────────────────
 
     /**
@@ -409,7 +477,19 @@ export class AgentService {
                             state: true,
                             pricePerYear: true,
                             status: true,
-                            images: { take: 1, where: { isPrimary: true } }
+                            images: { take: 1, where: { isPrimary: true } },
+                            transactions: {
+                                where: { OR: [{ status: "RELEASED" }, { escrowReleased: true }] },
+                                take: 1,
+                                orderBy: { createdAt: "desc" },
+                                select: {
+                                    id: true,
+                                    afriExchangeRef: true,
+                                    status: true,
+                                    releaseDate: true,
+                                    rentAmount: true,
+                                }
+                            }
                         }
                     },
                     landlord: {
@@ -444,21 +524,35 @@ export class AgentService {
                 completedDeals: completed.length,
                 activeDeals: authorized.length,
             },
-            items: delegations.map(d => ({
-                id: d.id,
-                propertyId: d.property.id,
-                propertyTitle: d.property.title,
-                propertyAddress: `${d.property.address}, ${d.property.city}`,
-                propertyImage: d.property.images?.[0]?.url,
-                annualRent: d.property.pricePerYear,
-                commissionPct: d.commissionPct,
-                commissionAmount: d.commissionAmount ?? Math.round(d.property.pricePerYear * (d.commissionPct / 100)),
-                status: d.status,
-                landlordName: `${d.landlord.firstName} ${d.landlord.lastName}`,
-                authorizedAt: d.authorizedAt,
-                completedAt: d.completedAt,
-                createdAt: d.createdAt,
-            }))
+            items: delegations.map(d => {
+                const tx = d.property.transactions?.[0];
+                const grossRent = tx?.rentAmount || d.property.pricePerYear;
+                const commissionAmount = d.commissionAmount ?? Math.round(grossRent * (d.commissionPct / 100));
+                const platformGuaranteeFee = Math.round(grossRent * 0.02); // 2% escrow guarantee fee
+                const netLandlordProceeds = Math.max(0, grossRent - commissionAmount - platformGuaranteeFee);
+
+                return {
+                    id: d.id,
+                    propertyId: d.property.id,
+                    propertyTitle: d.property.title,
+                    propertyAddress: `${d.property.address}, ${d.property.city}`,
+                    propertyImage: d.property.images?.[0]?.url,
+                    annualRent: grossRent,
+                    commissionPct: d.commissionPct,
+                    commissionAmount,
+                    platformGuaranteeFee,
+                    netLandlordProceeds,
+                    transactionId: tx?.id,
+                    afriExchangeRef: tx?.afriExchangeRef,
+                    tokenType: "NT",
+                    status: d.status,
+                    landlordName: `${d.landlord.firstName} ${d.landlord.lastName}`,
+                    landlordPhone: d.landlord.phone,
+                    authorizedAt: d.authorizedAt,
+                    completedAt: d.completedAt || tx?.releaseDate,
+                    createdAt: d.createdAt,
+                };
+            })
         };
     }
 

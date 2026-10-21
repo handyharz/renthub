@@ -321,3 +321,35 @@ export const getMyStrikes = async (req: Request, res: Response) => {
         return fail(res, e.message, 500);
     }
 };
+
+export const adminGetAgentKPIs = async (req: Request, res: Response) => {
+    try {
+        const kpis = await agentService.getAdminAgentKPIs();
+        return ok(res, kpis);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};
+
+export const adminListAllAgents = async (req: Request, res: Response) => {
+    try {
+        const status = str(req.query.status);
+        const search = str(req.query.search);
+        const city = str(req.query.city);
+        const skip = parseInt(str(req.query.skip)) || 0;
+        const take = parseInt(str(req.query.take)) || 50;
+
+        const agents = await agentService.listAdminAgents({
+            status: status && status !== "ALL" ? status : undefined,
+            search: search || undefined,
+            city: city && city !== "ALL" ? city : undefined,
+            skip,
+            take,
+        });
+
+        return ok(res, agents);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};
+

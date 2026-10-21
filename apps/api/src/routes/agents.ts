@@ -20,6 +20,8 @@ import {
     adminListStrikes,
     adminReviewStrike,
     getMyStrikes,
+    adminGetAgentKPIs,
+    adminListAllAgents,
 } from "../controllers/agentController";
 
 const router: IRouter = Router();
@@ -61,6 +63,10 @@ router.patch("/delegations/:id/authorize", authorizeDelegation);
 router.patch("/delegations/:id/revoke", revokeDelegation);
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
+// GET  /api/agents/admin/kpis - KPI stat cards summary for admin
+router.get("/admin/kpis", adminGetAgentKPIs);
+// GET  /api/agents/admin/all - filterable directory of all agents
+router.get("/admin/all", adminListAllAgents);
 // GET  /api/agents/admin/pending
 router.get("/admin/pending", adminListPendingAgents);
 // POST /api/agents/admin/:id/approve

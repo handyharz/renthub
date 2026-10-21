@@ -1,23 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     Briefcase, MapPin, Star, CheckCircle2, Clock, XCircle,
     ShieldCheck, Phone, Mail, Building2, Users, AlertCircle,
     ShieldAlert, AlertTriangle, Flag, DollarSign, Fuel, FileText,
-    Ban, Check, ThumbsUp, ThumbsDown
+    Ban, Search, Filter, RotateCw, ExternalLink, ChevronDown
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { AdminHeader } from "@/components/admin/AdminHeader";
+import { StatCard } from "@/components/admin/StatCard";
 import { Button } from "@/components/ui/Button";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 
 interface AgentProfile {
     id: string;
-    status: string;
+    status: "PENDING_REVIEW" | "ACTIVE" | "SUSPENDED" | "REJECTED";
     businessName?: string;
     businessAddress?: string;
     licenseNumber?: string;
@@ -50,6 +52,7 @@ interface AgentStrikeItem {
     strikeApplied: boolean;
     status: "PENDING" | "UPHELD" | "DISMISSED";
     adminNote?: string;
+    expiresAt?: string;
     createdAt: string;
     agent: {
         id: string;
@@ -78,6 +81,16 @@ interface AgentStrikeItem {
     };
 }
 
+interface AgentKPIs {
+    totalProfiles: number;
+    activeAgents: number;
+    pendingReview: number;
+    suspended: number;
+    activeStrikes: number;
+    totalCommissionPaid: number;
+    completedDeals: number;
+}
+
 const REASON_LABELS: Record<string, { label: string; icon: any; color: string }> = {
     INSPECTION_FEE: { label: "Inspection / Viewing Fee", icon: DollarSign, color: "text-red-600 bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-800" },
     FUEL_MONEY: { label: "Fuel / Transport Fare", icon: Fuel, color: "text-amber-600 bg-amber-100 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800" },
@@ -88,21 +101,48 @@ const REASON_LABELS: Record<string, { label: string; icon: any; color: string }>
 
 export default function AdminAgentsPage() {
     const { user } = useUser();
-    const [activeTab, setActiveTab] = useState<"APPLICATIONS" | "STRIKES">("APPLICATIONS");
-    const [agents, setAgents] = useState<AgentProfile[]>([]);
+    const [activeTab, setActiveTab] = useState<"DIRECTORY" | "APPLICATIONS" | "STRIKES">("DIRECTORY");
+    const [kpis, setKpis] = useState<AgentKPIs | null>(null);
+    const [allAgents, setAllAgents] = useState<AgentProfile[]>([]);
+    const [pendingAgents, setPendingAgents] = useState<AgentProfile[]>([]);
     const [strikes, setStrikes] = useState<AgentStrikeItem[]>([]);
-    const [strikeFilter, setStrikeFilter] = useState<string>("ALL");
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    // Filters
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [cityFilter, setCityFilter] = useState("ALL");
+    const [strikeFilter, setStrikeFilter] = useState("ALL");
+
+    // Action inputs
     const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
     const [strikeNotes, setStrikeNotes] = useState<Record<string, string>>({});
 
-    const fetchAgents = async () => {
+    const fetchKPIs = async () => {
+        try {
+            const res = await api.get(`/agents/admin/kpis?clerkId=${user?.id}`);
+            if (res.data?.success) setKpis(res.data.data);
+        } catch (e) {
+            console.error("Failed to load agent KPIs", e);
+        }
+    };
+
+    const fetchAllAgents = async () => {
+        try {
+            const res = await api.get(`/agents/admin/all?clerkId=${user?.id}`);
+            if (res.data?.success) setAllAgents(res.data.data || []);
+        } catch (e) {
+            console.error("Failed to load all agents", e);
+        }
+    };
+
+    const fetchPendingAgents = async () => {
         try {
             const res = await api.get(`/agents/admin/pending?clerkId=${user?.id}`);
-            setAgents(res.data.data || []);
+            setPendingAgents(res.data.data || []);
         } catch (e) {
-            console.error(e);
+            console.error("Failed to load pending agents", e);
         }
     };
 
@@ -111,13 +151,13 @@ export default function AdminAgentsPage() {
             const res = await api.get(`/agents/admin/strikes?clerkId=${user?.id}`);
             setStrikes(res.data.data || []);
         } catch (e) {
-            console.error(e);
+            console.error("Failed to load agent strikes", e);
         }
     };
 
     const loadAll = async () => {
         setLoading(true);
-        await Promise.allSettled([fetchAgents(), fetchStrikes()]);
+        await Promise.allSettled([fetchKPIs(), fetchAllAgents(), fetchPendingAgents(), fetchStrikes()]);
         setLoading(false);
     };
 
@@ -130,7 +170,7 @@ export default function AdminAgentsPage() {
         try {
             await api.post(`/agents/admin/${agentProfileId}/approve?clerkId=${user?.id}`);
             toast.success("Agent approved! Their account is now active.");
-            fetchAgents();
+            loadAll();
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Failed to approve");
         } finally {
@@ -148,9 +188,23 @@ export default function AdminAgentsPage() {
         try {
             await api.post(`/agents/admin/${agentProfileId}/reject?clerkId=${user?.id}`, { reason });
             toast.success("Agent application rejected");
-            fetchAgents();
+            loadAll();
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Failed to reject");
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleSuspend = async (agentProfileId: string) => {
+        if (!confirm("Are you sure you want to suspend this agent partner? All active listings will be revoked.")) return;
+        setActionLoading(agentProfileId + "_suspend");
+        try {
+            await api.post(`/agents/admin/${agentProfileId}/suspend?clerkId=${user?.id}`);
+            toast.success("Agent partner suspended.");
+            loadAll();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to suspend agent");
         } finally {
             setActionLoading(null);
         }
@@ -168,20 +222,51 @@ export default function AdminAgentsPage() {
             if (action === "UPHOLD") {
                 const strikeData = res.data.data;
                 if (strikeData?.suspended) {
-                    toast.error(`⚠️ Strike applied! Agent has accumulated 3 strikes and has been automatically suspended.`);
+                    toast.error(`⚠️ Strike applied! Agent has reached 3 active strikes and has been automatically suspended.`);
                 } else {
-                    toast.warning(`Strike upheld. Agent now has ${strikeData?.strikeCount || "1"}/3 strikes.`);
+                    toast.warning(`90-Day Strike upheld. Agent now has ${strikeData?.strikeCount || "1"}/3 active strikes.`);
                 }
             } else {
                 toast.success("Report dismissed.");
             }
-            fetchStrikes();
+            loadAll();
         } catch (err: any) {
             toast.error(err.response?.data?.message || "Failed to adjudicate report");
         } finally {
             setActionLoading(null);
         }
     };
+
+    // Filtered All Agents
+    const filteredAgents = useMemo(() => {
+        return allAgents.filter((agent) => {
+            if (statusFilter !== "ALL" && agent.status !== statusFilter) return false;
+            if (cityFilter !== "ALL" && !agent.operatingCities?.includes(cityFilter)) return false;
+
+            if (searchQuery.trim()) {
+                const q = searchQuery.toLowerCase().trim();
+                const fullName = `${agent.user.firstName} ${agent.user.lastName}`.toLowerCase();
+                const business = (agent.businessName || "").toLowerCase();
+                const email = (agent.user.email || "").toLowerCase();
+                const phone = (agent.user.phone || "").toLowerCase();
+                const license = (agent.licenseNumber || "").toLowerCase();
+
+                if (!fullName.includes(q) && !business.includes(q) && !email.includes(q) && !phone.includes(q) && !license.includes(q)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }, [allAgents, statusFilter, cityFilter, searchQuery]);
+
+    // Unique cities for filter
+    const availableCities = useMemo(() => {
+        const citySet = new Set<string>();
+        allAgents.forEach((a) => {
+            a.operatingCities?.forEach((c) => citySet.add(c));
+        });
+        return Array.from(citySet).sort();
+    }, [allAgents]);
 
     const pendingStrikesCount = strikes.filter(s => s.status === "PENDING").length;
     const filteredStrikes = strikes.filter(s => strikeFilter === "ALL" || s.status === strikeFilter);
@@ -190,38 +275,101 @@ export default function AdminAgentsPage() {
         <>
             <AdminHeader
                 title="Agent Partners & Compliance"
-                description="Review applications, manage partner credentials, and enforce Zero Side-Payment strikes"
+                description="Manage partner credentials, monitor active performance KPIs, review applications, and adjudicate side-payment strikes"
             />
 
             <div className="p-6 space-y-6">
-                {/* Policy banner */}
-                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-4 text-xs text-purple-700 dark:text-purple-300 flex items-start gap-3">
-                    <ShieldAlert className="h-5 w-5 shrink-0 text-purple-600 dark:text-purple-400 mt-0.5" />
-                    <div>
-                        <strong className="font-extrabold text-sm block mb-0.5">Strict Zero Side-Payment Standard:</strong>
-                        Partner agents earn up to 5% commission, landlord-paid via escrow. Charging tenants viewing/inspection fees, fuel money, or registration form fees is strictly prohibited. Every upheld report registers a strike. <strong>3 strikes trigger automatic, permanent account suspension.</strong>
-                    </div>
+                {/* 1. Executive KPI Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                        label="Active Partners"
+                        value={kpis?.activeAgents ?? (allAgents.filter(a => a.status === "ACTIVE").length)}
+                        icon={ShieldCheck}
+                        trend={`${kpis?.completedDeals ?? 0} deals closed`}
+                        accent="green"
+                    />
+                    <StatCard
+                        label="Pending Applications"
+                        value={kpis?.pendingReview ?? pendingAgents.length}
+                        icon={Clock}
+                        trend="Awaiting verification"
+                        accent={(kpis?.pendingReview ?? pendingAgents.length) > 0 ? "orange" : "blue"}
+                    />
+                    <StatCard
+                        label="Commissions Settled"
+                        value={formatPrice(kpis?.totalCommissionPaid ?? 0)}
+                        icon={DollarSign}
+                        trend="Paid by landlords via escrow"
+                        accent="blue"
+                    />
+                    <StatCard
+                        label="Active Strikes"
+                        value={kpis?.activeStrikes ?? strikes.filter(s => s.status === "UPHELD").length}
+                        icon={AlertTriangle}
+                        trend="90-day rolling compliance"
+                        accent={(kpis?.activeStrikes ?? 0) > 0 ? "red" : "green"}
+                    />
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 border-b border-[var(--border-color)] pb-3">
+                {/* 2. Zero-Tolerance Policy Alert Banner */}
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-4 text-xs text-purple-700 dark:text-purple-300 flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex items-start gap-3">
+                        <ShieldAlert className="h-5 w-5 shrink-0 text-purple-600 dark:text-purple-400 mt-0.5" />
+                        <div>
+                            <strong className="font-extrabold text-sm block mb-0.5">Strict Zero Side-Payment Standard:</strong>
+                            Partner agents earn up to 5% commission, landlord-paid via escrow. Charging tenants viewing/inspection fees, fuel money, or registration form fees is strictly prohibited. Every upheld report registers a 90-day rolling strike. <strong>3 strikes trigger automatic suspension.</strong>
+                        </div>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadAll}
+                        disabled={loading}
+                        className="text-xs font-bold border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40"
+                    >
+                        <RotateCw className={cn("h-3.5 w-3.5 mr-1.5", loading && "animate-spin")} />
+                        Refresh Data
+                    </Button>
+                </div>
+
+                {/* 3. Navigation Tabs */}
+                <div className="flex gap-2 border-b border-[var(--border-color)] pb-3 overflow-x-auto">
                     <button
-                        onClick={() => setActiveTab("APPLICATIONS")}
+                        onClick={() => setActiveTab("DIRECTORY")}
                         className={cn(
-                            "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
-                            activeTab === "APPLICATIONS"
+                            "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0",
+                            activeTab === "DIRECTORY"
                                 ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
                                 : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
                         )}
                     >
                         <Users className="h-4 w-4" />
+                        Partner Directory
+                        <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[10px] font-black",
+                            activeTab === "DIRECTORY" ? "bg-white text-purple-700" : "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+                        )}>
+                            {allAgents.length}
+                        </span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab("APPLICATIONS")}
+                        className={cn(
+                            "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0",
+                            activeTab === "APPLICATIONS"
+                                ? "bg-amber-600 text-white shadow-md shadow-amber-600/20"
+                                : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
+                        )}
+                    >
+                        <Clock className="h-4 w-4" />
                         Pending Applications
-                        {agents.length > 0 && (
+                        {pendingAgents.length > 0 && (
                             <span className={cn(
                                 "px-2 py-0.5 rounded-full text-[10px] font-black",
-                                activeTab === "APPLICATIONS" ? "bg-white text-purple-700" : "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300"
+                                activeTab === "APPLICATIONS" ? "bg-white text-amber-700" : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
                             )}>
-                                {agents.length}
+                                {pendingAgents.length}
                             </span>
                         )}
                     </button>
@@ -229,7 +377,7 @@ export default function AdminAgentsPage() {
                     <button
                         onClick={() => setActiveTab("STRIKES")}
                         className={cn(
-                            "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer",
+                            "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0",
                             activeTab === "STRIKES"
                                 ? "bg-red-600 text-white shadow-md shadow-red-600/20"
                                 : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--hover-bg)]"
@@ -248,7 +396,231 @@ export default function AdminAgentsPage() {
                     </button>
                 </div>
 
-                {/* TAB 1: APPLICATIONS */}
+                {/* TAB 1: ALL PARTNER DIRECTORY (With Advanced Filters) */}
+                {activeTab === "DIRECTORY" && (
+                    <div className="space-y-4">
+                        {/* Search and Filters Bar */}
+                        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+                            <div className="relative flex-1 min-w-[240px]">
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by agent name, agency, phone, email, or license..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] text-xs rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {/* Status Filter */}
+                                <div className="flex items-center gap-1.5 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-xl px-3 py-1.5 text-xs">
+                                    <Filter className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                                    <span className="text-[var(--text-muted)] font-semibold">Status:</span>
+                                    <select
+                                        value={statusFilter}
+                                        onChange={(e) => setStatusFilter(e.target.value)}
+                                        className="bg-transparent text-[var(--text-primary)] font-bold text-xs focus:outline-none cursor-pointer"
+                                    >
+                                        <option value="ALL">All Statuses</option>
+                                        <option value="ACTIVE">Active Partners</option>
+                                        <option value="PENDING_REVIEW">Pending Review</option>
+                                        <option value="SUSPENDED">Suspended</option>
+                                        <option value="REJECTED">Rejected</option>
+                                    </select>
+                                </div>
+
+                                {/* City Filter */}
+                                <div className="flex items-center gap-1.5 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-xl px-3 py-1.5 text-xs">
+                                    <MapPin className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                                    <span className="text-[var(--text-muted)] font-semibold">City:</span>
+                                    <select
+                                        value={cityFilter}
+                                        onChange={(e) => setCityFilter(e.target.value)}
+                                        className="bg-transparent text-[var(--text-primary)] font-bold text-xs focus:outline-none cursor-pointer"
+                                    >
+                                        <option value="ALL">All Cities</option>
+                                        {availableCities.map((c) => (
+                                            <option key={c} value={c}>{c}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Agent Cards Grid */}
+                        {loading ? (
+                            <div className="space-y-3">
+                                {[...Array(3)].map((_, i) => (
+                                    <div key={i} className="h-40 bg-[var(--bg-muted)] rounded-2xl animate-pulse" />
+                                ))}
+                            </div>
+                        ) : filteredAgents.length === 0 ? (
+                            <div className="text-center py-16 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl">
+                                <Users className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3 opacity-40" />
+                                <p className="text-[var(--text-secondary)] font-bold">No agent partners found</p>
+                                <p className="text-[var(--text-muted)] text-xs mt-1">Try adjusting your search query or filter selection.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <p className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wider">
+                                    Showing {filteredAgents.length} of {allAgents.length} agent partners
+                                </p>
+
+                                {filteredAgents.map((agent) => {
+                                    const isSuspending = actionLoading === agent.id + "_suspend";
+                                    const isApproving = actionLoading === agent.id + "_approve";
+
+                                    return (
+                                        <div
+                                            key={agent.id}
+                                            className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 shadow-sm hover:border-purple-300 dark:hover:border-purple-800 transition-colors"
+                                        >
+                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-5">
+                                                {/* Left Profile Info */}
+                                                <div className="flex items-start gap-4 flex-1">
+                                                    <div className="h-14 w-14 rounded-2xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center shrink-0 overflow-hidden">
+                                                        {agent.user.avatar ? (
+                                                            <Image src={agent.user.avatar} alt="" width={56} height={56} className="object-cover rounded-2xl" />
+                                                        ) : (
+                                                            <span className="text-purple-600 dark:text-purple-400 font-extrabold text-lg">
+                                                                {agent.user.firstName[0]}{agent.user.lastName[0]}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h3 className="font-extrabold text-[var(--text-primary)] text-lg">
+                                                                {agent.user.firstName} {agent.user.lastName}
+                                                            </h3>
+
+                                                            {/* Status Badges */}
+                                                            {agent.status === "ACTIVE" && (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                                                    <CheckCircle2 className="h-3 w-3" /> Active Partner
+                                                                </span>
+                                                            )}
+                                                            {agent.status === "PENDING_REVIEW" && (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                                                    <Clock className="h-3 w-3" /> Pending Review
+                                                                </span>
+                                                            )}
+                                                            {agent.status === "SUSPENDED" && (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                                                    <Ban className="h-3 w-3" /> Suspended
+                                                                </span>
+                                                            )}
+                                                            {agent.status === "REJECTED" && (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                                                    <XCircle className="h-3 w-3" /> Rejected
+                                                                </span>
+                                                            )}
+
+                                                            {/* Strike badge */}
+                                                            {(agent.strikeCount ?? 0) === 0 ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                                                    0 Strikes
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                                                    ⚠️ {agent.strikeCount} Active Strikes
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {agent.businessName && (
+                                                            <p className="text-sm font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                                                                <Building2 className="h-3.5 w-3.5" />
+                                                                {agent.businessName}
+                                                            </p>
+                                                        )}
+
+                                                        <div className="flex flex-wrap gap-3 text-xs text-[var(--text-muted)]">
+                                                            {agent.user.email && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Mail className="h-3 w-3" /> {agent.user.email}
+                                                                </span>
+                                                            )}
+                                                            {agent.user.phone && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <Phone className="h-3 w-3" /> {agent.user.phone}
+                                                                </span>
+                                                            )}
+                                                            {agent.operatingCities?.length > 0 && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <MapPin className="h-3 w-3" /> {agent.operatingCities.join(", ")}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="flex flex-wrap gap-2 text-xs pt-1">
+                                                            <span className="bg-[var(--bg-muted)] text-[var(--text-secondary)] px-2.5 py-0.5 rounded-full border border-[var(--border-color)]">
+                                                                {agent.yearsOfExperience} yrs experience
+                                                            </span>
+                                                            <span className="bg-[var(--bg-muted)] text-[var(--text-secondary)] px-2.5 py-0.5 rounded-full border border-[var(--border-color)]">
+                                                                {agent.defaultCommissionPct}% commission
+                                                            </span>
+                                                            <span className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-bold border border-emerald-200 dark:border-emerald-800">
+                                                                {agent.totalClosed} deals closed
+                                                            </span>
+                                                            {agent.licenseNumber && (
+                                                                <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2.5 py-0.5 rounded-full font-mono border border-blue-200 dark:border-blue-800">
+                                                                    License: {agent.licenseNumber}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Right Action Buttons */}
+                                                <div className="md:w-56 shrink-0 space-y-2">
+                                                    {agent.status === "ACTIVE" && (
+                                                        <Button
+                                                            onClick={() => handleSuspend(agent.id)}
+                                                            disabled={isSuspending}
+                                                            variant="outline"
+                                                            className="w-full text-xs font-bold border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                                                        >
+                                                            {isSuspending ? "Suspending..." : "Suspend Partner"}
+                                                        </Button>
+                                                    )}
+
+                                                    {agent.status === "SUSPENDED" && (
+                                                        <Button
+                                                            onClick={() => handleApprove(agent.id)}
+                                                            disabled={isApproving}
+                                                            className="w-full text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                        >
+                                                            {isApproving ? "Reinstating..." : "Reinstate Partner"}
+                                                        </Button>
+                                                    )}
+
+                                                    {agent.status === "PENDING_REVIEW" && (
+                                                        <Button
+                                                            onClick={() => {
+                                                                setActiveTab("APPLICATIONS");
+                                                            }}
+                                                            className="w-full text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
+                                                        >
+                                                            Review Application →
+                                                        </Button>
+                                                    )}
+
+                                                    <p className="text-[10px] text-center text-[var(--text-muted)]">
+                                                        Joined {new Date(agent.createdAt).toLocaleDateString("en-NG", { month: "short", year: "numeric" })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* TAB 2: APPLICATIONS */}
                 {activeTab === "APPLICATIONS" && (
                     <>
                         {loading ? (
@@ -257,7 +629,7 @@ export default function AdminAgentsPage() {
                                     <div key={i} className="h-40 bg-[var(--bg-muted)] rounded-2xl animate-pulse" />
                                 ))}
                             </div>
-                        ) : agents.length === 0 ? (
+                        ) : pendingAgents.length === 0 ? (
                             <div className="text-center py-16 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl">
                                 <Users className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3 opacity-50" />
                                 <p className="text-[var(--text-secondary)] font-bold">No pending agent applications</p>
@@ -266,9 +638,9 @@ export default function AdminAgentsPage() {
                         ) : (
                             <div className="space-y-4">
                                 <p className="text-xs text-[var(--text-secondary)] font-bold uppercase tracking-wider">
-                                    {agents.length} application{agents.length !== 1 ? "s" : ""} awaiting decision
+                                    {pendingAgents.length} application{pendingAgents.length !== 1 ? "s" : ""} awaiting decision
                                 </p>
-                                {agents.map(agent => {
+                                {pendingAgents.map(agent => {
                                     const isApproving = actionLoading === agent.id + "_approve";
                                     const isRejecting = actionLoading === agent.id + "_reject";
 
@@ -374,7 +746,7 @@ export default function AdminAgentsPage() {
                     </>
                 )}
 
-                {/* TAB 2: STRIKES & REPORTS */}
+                {/* TAB 3: STRIKES & REPORTS */}
                 {activeTab === "STRIKES" && (
                     <div className="space-y-4">
                         {/* Filters */}
@@ -440,7 +812,7 @@ export default function AdminAgentsPage() {
                                                             s.status === "UPHELD" && "bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800",
                                                             s.status === "DISMISSED" && "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700"
                                                         )}>
-                                                            {s.status === "UPHELD" ? "Strike Upheld" : s.status}
+                                                            {s.status === "UPHELD" ? "Strike Upheld (90-Day Rolling)" : s.status}
                                                         </span>
 
                                                         <span className="text-[11px] text-[var(--text-muted)]">

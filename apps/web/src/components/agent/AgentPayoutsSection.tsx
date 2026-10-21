@@ -12,10 +12,12 @@ import {
     Search,
     ShieldCheck,
     RotateCw,
-    ExternalLink,
     FileText,
     Receipt,
     Home,
+    X,
+    ShieldAlert,
+    Check,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -23,6 +25,28 @@ import api from "@/lib/api";
 import { formatPrice, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
+
+export interface AgentPayoutItem {
+    id: string;
+    propertyId: string;
+    propertyTitle: string;
+    propertyAddress: string;
+    propertyImage?: string;
+    annualRent: number;
+    commissionPct: number;
+    commissionAmount: number;
+    platformGuaranteeFee?: number;
+    netLandlordProceeds?: number;
+    transactionId?: string;
+    afriExchangeRef?: string;
+    tokenType?: string;
+    status: "PENDING_LANDLORD" | "AUTHORIZED" | "REVOKED" | "COMPLETED";
+    landlordName: string;
+    landlordPhone?: string;
+    authorizedAt?: string;
+    completedAt?: string;
+    createdAt: string;
+}
 
 interface AgentPayoutData {
     settlement: {
@@ -37,26 +61,13 @@ interface AgentPayoutData {
         completedDeals: number;
         activeDeals: number;
     };
-    items: Array<{
-        id: string;
-        propertyId: string;
-        propertyTitle: string;
-        propertyAddress: string;
-        propertyImage?: string;
-        annualRent: number;
-        commissionPct: number;
-        commissionAmount: number;
-        status: "PENDING_LANDLORD" | "AUTHORIZED" | "REVOKED" | "COMPLETED";
-        landlordName: string;
-        authorizedAt?: string;
-        completedAt?: string;
-        createdAt: string;
-    }>;
+    items: AgentPayoutItem[];
 }
 
 export function AgentPayoutsSection({ dbUser, onRefreshUser }: { dbUser: any; onRefreshUser?: () => void }) {
     const { user } = useUser();
     const [data, setData] = useState<AgentPayoutData | null>(null);
+    const [selectedItem, setSelectedItem] = useState<AgentPayoutItem | null>(null);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [searchQuery, setSearchQuery] = useState("");
@@ -372,21 +383,209 @@ export function AgentPayoutsSection({ dbUser, onRefreshUser }: { dbUser: any; on
                                         </p>
                                     </div>
 
-                                    <Link href={`/properties/${item.propertyId}`}>
+                                    <div className="flex items-center gap-2">
                                         <Button
-                                            variant="outline"
+                                            variant="ghost"
                                             size="sm"
-                                            className="h-8 px-2.5 text-xs font-semibold border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]"
+                                            onClick={() => setSelectedItem(item)}
+                                            className="h-8 px-3 text-xs font-bold text-purple-600 dark:text-purple-400 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl cursor-pointer"
                                         >
-                                            View <ExternalLink className="h-3 w-3 ml-1" />
+                                            Breakdown
                                         </Button>
-                                    </Link>
+
+                                        <Link href={`/properties/${item.propertyId}`}>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 px-2.5 text-xs font-semibold border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] rounded-xl"
+                                            >
+                                                View
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+
+            {/* Detailed Commission Settlement Breakdown Modal */}
+            {selectedItem && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setSelectedItem(null)}
+                >
+                    <div
+                        className="relative bg-[var(--bg-card)] w-full max-w-lg rounded-3xl shadow-2xl border border-[var(--border-color)] p-6 space-y-5 animate-in zoom-in-95 duration-200 text-[var(--text-primary)] max-h-[90vh] overflow-y-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                                    Agent Commission Breakdown
+                                </span>
+                                <h3 className="text-lg font-black text-[var(--text-primary)] mt-0.5">
+                                    {selectedItem.propertyTitle}
+                                </h3>
+                                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                                    {selectedItem.propertyAddress}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedItem(null)}
+                                className="h-8 w-8 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)] flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        {/* Status Overview */}
+                        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[var(--bg-muted)] border border-[var(--border-color)]">
+                            <span className="text-xs font-bold text-[var(--text-secondary)]">
+                                Disbursement Status
+                            </span>
+                            {selectedItem.status === "COMPLETED" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Disbursed to AfriExchange
+                                </span>
+                            )}
+                            {selectedItem.status === "AUTHORIZED" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    Active In Pipeline
+                                </span>
+                            )}
+                            {selectedItem.status === "PENDING_LANDLORD" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                                    <Clock className="h-3.5 w-3.5" />
+                                    Awaiting Landlord Auth
+                                </span>
+                            )}
+                            {selectedItem.status === "REVOKED" && (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
+                                    <AlertCircle className="h-3.5 w-3.5" />
+                                    Delegation Revoked
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Escrow Financial Calculation Box */}
+                        <div className="space-y-3 rounded-2xl border border-[var(--border-color)] p-4 bg-[var(--bg-muted)]/50">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
+                                Escrow Accounting & Commission Math
+                            </h4>
+
+                            {/* Gross Annual Rent */}
+                            <div className="flex justify-between items-center text-xs py-1 border-b border-[var(--border-color)]/60">
+                                <span className="text-[var(--text-secondary)]">Gross Rent Paid by Tenant:</span>
+                                <span className="font-mono font-bold text-[var(--text-primary)]">
+                                    {formatPrice(selectedItem.annualRent)}
+                                </span>
+                            </div>
+
+                            {/* Agreed Commission Rate */}
+                            <div className="flex justify-between items-center text-xs py-1 border-b border-[var(--border-color)]/60">
+                                <span className="text-[var(--text-secondary)]">Agreed Landlord Commission:</span>
+                                <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
+                                    {selectedItem.commissionPct.toFixed(1)}%
+                                </span>
+                            </div>
+
+                            {/* Net Agent Payout */}
+                            <div className="flex justify-between items-center text-sm py-1 font-extrabold text-[var(--text-primary)]">
+                                <span className="text-purple-700 dark:text-purple-300">
+                                    Net Commission Payout:
+                                </span>
+                                <span className="font-mono text-base text-purple-600 dark:text-purple-400">
+                                    {formatPrice(selectedItem.commissionAmount)} {selectedItem.tokenType || "NT"}
+                                </span>
+                            </div>
+
+                            {/* Landlord Context */}
+                            <div className="rounded-xl p-3 bg-[var(--bg-card)] border border-[var(--border-color)] text-[11px] space-y-1.5 text-[var(--text-secondary)] mt-2">
+                                <div className="flex justify-between">
+                                    <span>Landlord Escrow Guarantee (2%):</span>
+                                    <span className="font-mono text-red-500">
+                                        - {formatPrice(selectedItem.platformGuaranteeFee || Math.round(selectedItem.annualRent * 0.02))}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Net Landlord Proceeds:</span>
+                                    <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                        {formatPrice(selectedItem.netLandlordProceeds || (selectedItem.annualRent - selectedItem.commissionAmount - Math.round(selectedItem.annualRent * 0.02)))}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between font-bold text-[var(--text-primary)] pt-1 border-t border-[var(--border-color)]/60">
+                                    <span>Tenant Agent Fee:</span>
+                                    <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                                        ₦0 (100% Free Guarantee)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Settlement Destination Details */}
+                        <div className="space-y-2 rounded-2xl border border-[var(--border-color)] p-4 text-xs">
+                            <h4 className="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
+                                AfriExchange Settlement Destination
+                            </h4>
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between py-1 border-b border-[var(--border-color)]/60">
+                                    <span className="text-[var(--text-secondary)]">Settlement Wallet / Email:</span>
+                                    <span className="font-mono font-bold text-[var(--text-primary)] truncate max-w-[200px]">
+                                        {data?.settlement?.accountEmail || data?.settlement?.walletAddress || "AfriExchange Linked"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between py-1 border-b border-[var(--border-color)]/60">
+                                    <span className="text-[var(--text-secondary)]">Landlord:</span>
+                                    <span className="font-bold text-[var(--text-primary)]">
+                                        {selectedItem.landlordName}
+                                    </span>
+                                </div>
+                                {selectedItem.afriExchangeRef && (
+                                    <div className="flex items-center justify-between py-1 border-b border-[var(--border-color)]/60">
+                                        <span className="text-[var(--text-secondary)]">AfriExchange Ref:</span>
+                                        <span className="font-mono font-bold text-xs text-purple-600 dark:text-purple-400">
+                                            {selectedItem.afriExchangeRef}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex items-center justify-between py-1">
+                                    <span className="text-[var(--text-secondary)]">Effective Settlement Date:</span>
+                                    <span className="font-medium text-[var(--text-primary)]">
+                                        {new Date(selectedItem.completedAt || selectedItem.authorizedAt || selectedItem.createdAt).toLocaleDateString("en-NG", {
+                                            day: "numeric", month: "short", year: "numeric"
+                                        })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Zero Side-Payment Notice */}
+                        <div className="rounded-2xl p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 text-[11px] text-purple-800 dark:text-purple-300 leading-relaxed space-y-1">
+                            <p className="font-extrabold flex items-center gap-1.5">
+                                <ShieldCheck className="h-4 w-4 shrink-0 text-purple-600 dark:text-purple-400" />
+                                Direct Platform Settlement Guarantee
+                            </p>
+                            <p className="opacity-90">
+                                Your commission is paid automatically upon escrow release. Demanding cash inspection fees, registration fees, or fuel money from tenants violates RentHub policy and results in strikes under our 90-day rolling rule.
+                            </p>
+                        </div>
+
+                        <div className="pt-1">
+                            <Button
+                                onClick={() => setSelectedItem(null)}
+                                className="w-full h-11 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                            >
+                                Close Breakdown
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
