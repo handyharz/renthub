@@ -323,6 +323,88 @@ export class AgentService {
             skip, take
         });
     }
+
+    /**
+     * Get commission payouts and settlement breakdown for an agent
+     */
+    async getAgentPayouts(agentId: string) {
+        const [user, delegations] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: agentId },
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    settlementLinkedAt: true,
+                    afriExchangeAccountEmail: true,
+                    afriExchangeWalletAddress: true,
+                    afriExchangeUserId: true,
+                }
+            }),
+            prisma.agentListing.findMany({
+                where: { agentId },
+                include: {
+                    property: {
+                        select: {
+                            id: true,
+                            title: true,
+                            address: true,
+                            city: true,
+                            state: true,
+                            pricePerYear: true,
+                            status: true,
+                            images: { take: 1, where: { isPrimary: true } }
+                        }
+                    },
+                    landlord: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            avatar: true,
+                            phone: true,
+                        }
+                    }
+                },
+                orderBy: { createdAt: "desc" }
+            })
+        ]);
+
+        const completed = delegations.filter(d => d.status === "COMPLETED");
+        const authorized = delegations.filter(d => d.status === "AUTHORIZED");
+        const totalEarned = completed.reduce((sum, d) => sum + (d.commissionAmount ?? Math.round((d.property.pricePerYear * (d.commissionPct / 100)))), 0);
+        const pendingCommission = authorized.reduce((sum, d) => sum + Math.round((d.property.pricePerYear * (d.commissionPct / 100))), 0);
+
+        return {
+            settlement: {
+                isLinked: !!(user?.settlementLinkedAt && (user?.afriExchangeAccountEmail || user?.afriExchangeWalletAddress || user?.afriExchangeUserId)),
+                accountEmail: user?.afriExchangeAccountEmail,
+                walletAddress: user?.afriExchangeWalletAddress,
+                linkedAt: user?.settlementLinkedAt,
+            },
+            summary: {
+                totalEarned,
+                pendingCommission,
+                completedDeals: completed.length,
+                activeDeals: authorized.length,
+            },
+            items: delegations.map(d => ({
+                id: d.id,
+                propertyId: d.property.id,
+                propertyTitle: d.property.title,
+                propertyAddress: `${d.property.address}, ${d.property.city}`,
+                propertyImage: d.property.images?.[0]?.url,
+                annualRent: d.property.pricePerYear,
+                commissionPct: d.commissionPct,
+                commissionAmount: d.commissionAmount ?? Math.round(d.property.pricePerYear * (d.commissionPct / 100)),
+                status: d.status,
+                landlordName: `${d.landlord.firstName} ${d.landlord.lastName}`,
+                authorizedAt: d.authorizedAt,
+                completedAt: d.completedAt,
+                createdAt: d.createdAt,
+            }))
+        };
+    }
 }
 
 export const agentService = new AgentService();

@@ -262,7 +262,7 @@ export default function ProfilePage() {
                         <ShieldCheck className="h-3.5 w-3.5" />
                         Government ID & KYC
                     </button>
-                    {isLandlord && (
+                    {(isLandlord || isAgent) && (
                         <button
                             onClick={() => setActiveSection("settlement")}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
@@ -490,10 +490,15 @@ export default function ProfilePage() {
                             </div>
                         )}
 
-                        {/* Section 3: AfriExchange Payout Settlement (Landlords Only) */}
-                        {isLandlord && (activeSection === "all" || activeSection === "settlement") && (
+                        {/* Section 3: AfriExchange Payout Settlement */}
+                        {(isLandlord || isAgent) && (activeSection === "all" || activeSection === "settlement") && (
                             <div className="space-y-4">
-                                <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchUserProfile} />
+                                <AfriExchangeLinkingCard
+                                    dbUser={dbUser}
+                                    onRefresh={fetchUserProfile}
+                                    title={isAgent ? "AfriExchange Commission Payout Settlement" : "AfriExchange Rent Payout Settlement"}
+                                    subtitle={isAgent ? "Your earned agent commissions are automatically settled directly into your linked AfriX mobile wallet or Nigerian bank account." : "Escrow releases are automatically settled directly into your linked AfriX mobile wallet."}
+                                />
                             </div>
                         )}
                     </div>

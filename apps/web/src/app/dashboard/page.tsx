@@ -75,6 +75,7 @@ import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkin
 import { LandlordPayoutHistory } from "@/components/payouts/LandlordPayoutHistory";
 import AgentDashboard from "@/components/agent/AgentDashboard";
 import { LandlordAgentDelegationsTab } from "@/components/agent/LandlordAgentDelegationsTab";
+import { AgentPayoutsSection } from "@/components/agent/AgentPayoutsSection";
 import { Rocket } from "lucide-react";
 import { Briefcase } from "lucide-react";
 import { toast } from "sonner";
@@ -334,6 +335,7 @@ function DashboardContent() {
 
     const agentTabs = [
         { id: "agent", label: "My Listings", icon: Briefcase },
+        { id: "payouts", label: "Payouts & Settlements", icon: Wallet },
         { id: "messages", label: "Messages", icon: MessageSquare },
         { id: "resources", label: "Resources", icon: BookOpen },
     ];
@@ -385,21 +387,23 @@ function DashboardContent() {
                     </div>
                 </div>
 
-                {/* Landlord Unlinked Settlement Notice Banner */}
-                {role === "LANDLORD" && dbUser && !dbUser.settlementLinkedAt && (
-                    <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-4 sm:p-5 shadow-sm">
+                {/* Unlinked Settlement Notice Banner for Landlords and Agents */}
+                {(role === "LANDLORD" || role === "AGENT") && dbUser && !dbUser.settlementLinkedAt && (
+                    <div className="mb-6 rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-950/30 p-4 sm:p-5 shadow-sm">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div className="flex items-start sm:items-center gap-3.5">
                                 <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-xs shrink-0">
                                     <Wallet className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-amber-950 text-sm sm:text-base flex items-center gap-2">
+                                    <h3 className="font-bold text-amber-950 dark:text-amber-200 text-sm sm:text-base flex items-center gap-2">
                                         AfriExchange Settlement Account Required
-                                        <Badge className="bg-amber-200 text-amber-900 border-none text-[10px] font-bold">Action Needed</Badge>
+                                        <Badge className="bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border-none text-[10px] font-bold">Action Needed</Badge>
                                     </h3>
-                                    <p className="text-xs sm:text-sm text-amber-800 mt-0.5">
-                                        Link your verified AfriExchange account to receive released rent escrow payments directly to your mobile wallet.
+                                    <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300/90 mt-0.5">
+                                        {role === "AGENT"
+                                            ? "Link your verified AfriExchange account to receive earned listing commissions automatically when escrow is released."
+                                            : "Link your verified AfriExchange account to receive released rent escrow payments directly to your mobile wallet."}
                                     </p>
                                 </div>
                             </div>
@@ -466,6 +470,9 @@ function DashboardContent() {
                                 <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchDashboardData} />
                                 <LandlordPayoutHistory />
                             </div>
+                        )}
+                        {activeTab === "payouts" && role === "AGENT" && (
+                            <AgentPayoutsSection dbUser={dbUser} onRefreshUser={fetchDashboardData} />
                         )}
                         {activeTab === "agent-delegations" && role === "LANDLORD" && <LandlordAgentDelegationsTab />}
                         {activeTab === "agent" && role === "AGENT" && <AgentDashboard />}

@@ -6,6 +6,7 @@ import {
     getAgentStats,
     requestDelegation,
     getMyDelegations,
+    getMyAgentPayouts,
     getLandlordDelegations,
     authorizeDelegation,
     revokeDelegation,
@@ -36,6 +37,8 @@ router.post("/me/submit", submitAgentForReview);
 router.get("/me/stats", getAgentStats);
 // GET  /api/agents/me/delegations - agent's listing assignments
 router.get("/me/delegations", getMyDelegations);
+// GET  /api/agents/me/payouts - agent's commission payouts & settlement
+router.get("/me/payouts", getMyAgentPayouts);
 // POST /api/agents/me/delegations - request to manage a property
 router.post("/me/delegations", requestDelegation);
 

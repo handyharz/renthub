@@ -116,6 +116,19 @@ export const getMyDelegations = async (req: Request, res: Response) => {
     }
 };
 
+/** Get commission payouts and settlement status for the logged-in agent */
+export const getMyAgentPayouts = async (req: Request, res: Response) => {
+    try {
+        const userId = await resolveDbUserId(req);
+        if (!userId) return fail(res, "Unauthorized", 401);
+
+        const payouts = await agentService.getAgentPayouts(userId);
+        return ok(res, payouts);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};
+
 /** Landlord: get all delegation requests for their properties */
 export const getLandlordDelegations = async (req: Request, res: Response) => {
     try {

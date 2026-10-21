@@ -527,14 +527,20 @@ export default function AgentDashboard() {
                         { label: "Active Listings", value: stats.authorized, icon: Building2, color: "text-blue-600 dark:text-blue-400" },
                         { label: "Awaiting Auth", value: stats.pending, icon: Clock, color: "text-amber-600 dark:text-amber-400" },
                         { label: "Closed Deals", value: stats.completed, icon: FileCheck, color: "text-emerald-600 dark:text-emerald-400" },
-                        { label: "Total Earned", value: formatPrice(stats.totalEarned), icon: Wallet, color: "text-purple-600 dark:text-purple-400" },
-                    ].map(stat => (
-                        <div key={stat.label} className="bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] p-4 shadow-sm">
-                            <stat.icon className={cn("h-5 w-5 mb-2", stat.color)} />
-                            <p className="text-xl font-extrabold text-[var(--text-primary)]">{stat.value}</p>
-                            <p className="text-xs text-[var(--text-muted)] mt-0.5">{stat.label}</p>
-                        </div>
-                    ))}
+                        { label: "Total Earned", value: formatPrice(stats.totalEarned), icon: Wallet, color: "text-purple-600 dark:text-purple-400", href: "/dashboard?tab=payouts" },
+                    ].map(stat => {
+                        const card = (
+                            <div className={cn("bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] p-4 shadow-sm", stat.href && "hover:border-purple-400 dark:hover:border-purple-600 transition-colors cursor-pointer group")}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <stat.icon className={cn("h-5 w-5", stat.color)} />
+                                    {stat.href && <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 group-hover:underline flex items-center">Payouts →</span>}
+                                </div>
+                                <p className="text-xl font-extrabold text-[var(--text-primary)]">{stat.value}</p>
+                                <p className="text-xs text-[var(--text-muted)] mt-0.5">{stat.label}</p>
+                            </div>
+                        );
+                        return stat.href ? <Link key={stat.label} href={stat.href}>{card}</Link> : <div key={stat.label}>{card}</div>;
+                    })}
                 </div>
             )}
 
