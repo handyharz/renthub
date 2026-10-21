@@ -16,6 +16,10 @@ import {
     adminApproveAgent,
     adminRejectAgent,
     adminSuspendAgent,
+    fileStrikeReport,
+    adminListStrikes,
+    adminReviewStrike,
+    getMyStrikes,
 } from "../controllers/agentController";
 
 const router: IRouter = Router();
@@ -25,6 +29,10 @@ const router: IRouter = Router();
 router.get("/", listActiveAgents);
 // GET /api/agents/profile/:userId
 router.get("/profile/:userId", getAgentPublicProfile);
+
+// ─── STRIKES & ZERO SIDE-PAYMENTS (Tenant Reporting) ─────────────────────────
+// POST /api/agents/strikes/report - Report agent for asking for cash/side fees
+router.post("/strikes/report", fileStrikeReport);
 
 // ─── AGENT (authenticated) ────────────────────────────────────────────────────
 // GET  /api/agents/me  - get or create my agent profile
@@ -39,6 +47,8 @@ router.get("/me/stats", getAgentStats);
 router.get("/me/delegations", getMyDelegations);
 // GET  /api/agents/me/payouts - agent's commission payouts & settlement
 router.get("/me/payouts", getMyAgentPayouts);
+// GET  /api/agents/me/strikes - agent's compliance and strike status
+router.get("/me/strikes", getMyStrikes);
 // POST /api/agents/me/delegations - request to manage a property
 router.post("/me/delegations", requestDelegation);
 
@@ -59,5 +69,10 @@ router.post("/admin/:id/approve", adminApproveAgent);
 router.post("/admin/:id/reject", adminRejectAgent);
 // POST /api/agents/admin/:id/suspend
 router.post("/admin/:id/suspend", adminSuspendAgent);
+// GET  /api/agents/admin/strikes - list all side-payment violation reports
+router.get("/admin/strikes", adminListStrikes);
+// POST /api/agents/admin/strikes/:id/review - uphold or dismiss strike
+router.post("/admin/strikes/:id/review", adminReviewStrike);
 
 export default router;
+

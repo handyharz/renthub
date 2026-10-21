@@ -885,6 +885,8 @@ export default function PropertyDetailsPage() {
                                 <AgentTrustBadge
                                     agent={listing.agent}
                                     agentProfile={profile}
+                                    propertyId={property.id}
+                                    propertyTitle={property.title}
                                 />
                             );
                         })()}

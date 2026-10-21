@@ -246,3 +246,78 @@ export const adminSuspendAgent = async (req: Request, res: Response) => {
         return fail(res, e.message);
     }
 };
+
+// ─── STRIKE & ZERO SIDE-PAYMENTS CONTROLLERS ─────────────────────────────────
+
+export const fileStrikeReport = async (req: Request, res: Response) => {
+    try {
+        const reporterId = await resolveDbUserId(req);
+        if (!reporterId) return fail(res, "Unauthorized: Please log in to file a report", 401);
+
+        const { agentId, propertyId, reason, description, evidenceUrls } = req.body;
+        if (!agentId) return fail(res, "Agent ID is required", 400);
+        if (!reason) return fail(res, "Violation reason is required", 400);
+        if (!description || description.trim().length < 5) {
+            return fail(res, "Please provide a brief description of the incident (min 5 chars)", 400);
+        }
+
+        const report = await agentService.fileStrikeReport(reporterId, {
+            agentId,
+            propertyId,
+            reason,
+            description,
+            evidenceUrls,
+        });
+
+        return ok(res, report, "Report submitted successfully. Our compliance team will investigate.");
+    } catch (e: any) {
+        return fail(res, e.message, 400);
+    }
+};
+
+export const adminListStrikes = async (req: Request, res: Response) => {
+    try {
+        const status = str(req.query.status);
+        const skip = parseInt(str(req.query.skip)) || 0;
+        const take = parseInt(str(req.query.take)) || 50;
+
+        const strikes = await agentService.listStrikes({
+            status: status && status !== "ALL" ? status : undefined,
+            skip,
+            take,
+        });
+
+        return ok(res, strikes);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};
+
+export const adminReviewStrike = async (req: Request, res: Response) => {
+    try {
+        const adminClerkId = ((req as any).auth?.userId as string | undefined) || str(req.query.clerkId);
+        const id = str(req.params.id);
+        const { action, adminNote } = req.body;
+
+        if (action !== "UPHOLD" && action !== "DISMISS") {
+            return fail(res, "Action must be UPHOLD or DISMISS", 400);
+        }
+
+        const result = await agentService.reviewStrike(id, adminClerkId, action, adminNote);
+        return ok(res, result, action === "UPHOLD" ? "Strike recorded and applied" : "Report dismissed");
+    } catch (e: any) {
+        return fail(res, e.message, 400);
+    }
+};
+
+export const getMyStrikes = async (req: Request, res: Response) => {
+    try {
+        const userId = await resolveDbUserId(req);
+        if (!userId) return fail(res, "Unauthorized", 401);
+
+        const data = await agentService.getAgentStrikes(userId);
+        return ok(res, data);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};

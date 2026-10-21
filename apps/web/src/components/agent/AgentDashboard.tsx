@@ -390,6 +390,12 @@ export default function AgentDashboard() {
     const [profile, setProfile] = useState<AgentProfile | null>(null);
     const [delegations, setDelegations] = useState<AgentDelegation[]>([]);
     const [stats, setStats] = useState({ authorized: 0, completed: 0, pending: 0, totalEarned: 0 });
+    const [strikesInfo, setStrikesInfo] = useState<{ strikeCount: number; strikesRemaining: number; isBanned: boolean; history: any[] }>({
+        strikeCount: 0,
+        strikesRemaining: 3,
+        isBanned: false,
+        history: [],
+    });
     const [loading, setLoading] = useState(true);
     const [showDelegationModal, setShowDelegationModal] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
@@ -399,14 +405,16 @@ export default function AgentDashboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [profileRes, delegationsRes, statsRes] = await Promise.allSettled([
+            const [profileRes, delegationsRes, statsRes, strikesRes] = await Promise.allSettled([
                 api.get(`/agents/me?clerkId=${user?.id}`),
                 api.get(`/agents/me/delegations?clerkId=${user?.id}`),
                 api.get(`/agents/me/stats?clerkId=${user?.id}`),
+                api.get(`/agents/me/strikes?clerkId=${user?.id}`),
             ]);
             if (profileRes.status === "fulfilled") setProfile(profileRes.value.data.data);
             if (delegationsRes.status === "fulfilled") setDelegations(delegationsRes.value.data.data || []);
             if (statsRes.status === "fulfilled") setStats(statsRes.value.data.data);
+            if (strikesRes.status === "fulfilled") setStrikesInfo(strikesRes.value.data.data || { strikeCount: 0, strikesRemaining: 3, isBanned: false, history: [] });
         } catch (e) {
             console.error(e);
         } finally {
@@ -544,12 +552,40 @@ export default function AgentDashboard() {
                 </div>
             )}
 
-            {/* Fee Transparency Notice */}
+            {/* Fee Transparency & Zero Side-Payment Notice */}
             {profile?.status === "ACTIVE" && (
-                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 text-sm text-emerald-800 dark:text-emerald-300">
-                    <strong>💡 Fee Policy:</strong> Your commission (up to 5%) is paid by the landlord from their rent proceeds.
-                    Tenants pay <em>zero</em> agent fee — keeping RentHub's promise intact.
-                    All payments flow through RentHub escrow — no side payments allowed.
+                <div className="space-y-3">
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4 text-xs text-emerald-800 dark:text-emerald-300">
+                        <strong>💡 Fee Policy:</strong> Your commission (up to 5%) is paid by the landlord from their rent proceeds.
+                        Tenants pay <em>zero</em> agent fee — keeping RentHub's promise intact.
+                        All payments flow through RentHub escrow — no side payments allowed.
+                    </div>
+
+                    {/* Strike & Compliance Card */}
+                    <div className={cn(
+                        "rounded-2xl p-4 border text-xs space-y-2 transition-all",
+                        strikesInfo.strikeCount === 0
+                            ? "bg-purple-50/70 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800/60 text-purple-900 dark:text-purple-200"
+                            : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 text-red-900 dark:text-red-200"
+                    )}>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="font-extrabold flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                                <ShieldCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                Platform Compliance Standing: {strikesInfo.strikeCount} / 3 Strikes
+                            </span>
+                            <span className={cn(
+                                "px-2.5 py-0.5 rounded-full font-black text-[10px] uppercase tracking-wider",
+                                strikesInfo.strikeCount === 0
+                                    ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                                    : "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
+                            )}>
+                                {strikesInfo.strikeCount === 0 ? "Good Standing (0 Violations)" : `${strikesInfo.strikesRemaining} strikes remaining before ban`}
+                            </span>
+                        </div>
+                        <p className="leading-relaxed text-[11px] opacity-85">
+                            <strong>Zero Side-Payment Rule:</strong> Demanding cash inspection fees, registration fees, or fuel money from tenants is strictly prohibited. Offenses result in strikes. Accumulating 3 strikes results in immediate, permanent suspension.
+                        </p>
+                    </div>
                 </div>
             )}
 

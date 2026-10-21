@@ -461,6 +461,190 @@ export class AgentService {
             }))
         };
     }
+
+    // ─── ZERO SIDE-PAYMENTS & STRIKE SYSTEM ────────────────────────────────────────
+
+    /**
+     * Tenant files a strike violation report against an agent
+     */
+    async fileStrikeReport(reporterId: string, data: {
+        agentId: string;
+        propertyId?: string;
+        reason: any;
+        description: string;
+        evidenceUrls?: string[];
+    }) {
+        if (reporterId === data.agentId) {
+            throw new Error("You cannot report yourself.");
+        }
+
+        const agent = await prisma.user.findUnique({
+            where: { id: data.agentId },
+            include: { agentProfile: true }
+        });
+
+        if (!agent) {
+            throw new Error("Reported agent not found.");
+        }
+
+        const strike = await prisma.agentStrike.create({
+            data: {
+                agentId: data.agentId,
+                reporterId,
+                propertyId: data.propertyId || null,
+                reason: data.reason,
+                description: data.description,
+                evidenceUrls: data.evidenceUrls || [],
+                status: "PENDING",
+            },
+            include: {
+                agent: { select: { id: true, firstName: true, lastName: true, phone: true } },
+                reporter: { select: { id: true, firstName: true, lastName: true } },
+                property: { select: { id: true, title: true, address: true } }
+            }
+        });
+
+        return strike;
+    }
+
+    /**
+     * Admin: List strikes / reports
+     */
+    async listStrikes(filters: { status?: any; skip?: number; take?: number } = {}) {
+        const { status, skip = 0, take = 50 } = filters;
+        return prisma.agentStrike.findMany({
+            where: status ? { status } : {},
+            include: {
+                agent: {
+                    select: {
+                        id: true, firstName: true, lastName: true, phone: true, email: true,
+                        agentProfile: {
+                            select: {
+                                businessName: true,
+                                strikeCount: true,
+                                status: true
+                            }
+                        }
+                    }
+                },
+                reporter: {
+                    select: { id: true, firstName: true, lastName: true, phone: true, email: true }
+                },
+                property: {
+                    select: { id: true, title: true, address: true, city: true }
+                }
+            },
+            orderBy: { createdAt: "desc" },
+            skip,
+            take,
+        });
+    }
+
+    /**
+     * Admin: Review and adjudicate a strike report
+     */
+    async reviewStrike(strikeId: string, adminClerkId: string, action: "UPHOLD" | "DISMISS", adminNote?: string) {
+        const strike = await prisma.agentStrike.findUnique({
+            where: { id: strikeId },
+            include: { agent: { include: { agentProfile: true } } }
+        });
+
+        if (!strike) {
+            throw new Error("Strike report not found.");
+        }
+
+        if (action === "DISMISS") {
+            return prisma.agentStrike.update({
+                where: { id: strikeId },
+                data: {
+                    status: "DISMISSED",
+                    reviewedBy: adminClerkId,
+                    reviewedAt: new Date(),
+                    adminNote: adminNote || "Dismissed by platform compliance team",
+                }
+            });
+        }
+
+        // Action is UPHOLD: Apply strike to agent
+        const wasAlreadyApplied = strike.strikeApplied;
+        const currentStrikes = strike.agent.agentProfile?.strikeCount || 0;
+        const nextStrikes = wasAlreadyApplied ? currentStrikes : currentStrikes + 1;
+        const shouldSuspend = nextStrikes >= 3;
+
+        const updatedStrike = await prisma.agentStrike.update({
+            where: { id: strikeId },
+            data: {
+                status: "UPHELD",
+                strikeApplied: true,
+                reviewedBy: adminClerkId,
+                reviewedAt: new Date(),
+                adminNote: adminNote || "Violation upheld. Strike registered against agent.",
+            }
+        });
+
+        if (!wasAlreadyApplied) {
+            await prisma.agentProfile.updateMany({
+                where: { userId: strike.agentId },
+                data: {
+                    strikeCount: { increment: 1 },
+                    ...(shouldSuspend ? { status: AgentStatus.SUSPENDED } : {})
+                }
+            });
+
+            // If suspended due to 3 strikes, revoke all active delegations
+            if (shouldSuspend) {
+                await prisma.agentListing.updateMany({
+                    where: { agentId: strike.agentId, status: "AUTHORIZED" },
+                    data: {
+                        status: "REVOKED",
+                        revokedAt: new Date(),
+                        landlordNote: "System revocation: Agent suspended due to platform side-payment violations (3 strikes)."
+                    }
+                });
+            }
+        }
+
+        return {
+            strike: updatedStrike,
+            strikeCount: nextStrikes,
+            suspended: shouldSuspend,
+        };
+    }
+
+    /**
+     * Agent: Get strikes and compliance history for their own profile
+     */
+    async getAgentStrikes(agentId: string) {
+        const [profile, strikes] = await Promise.all([
+            prisma.agentProfile.findUnique({
+                where: { userId: agentId },
+                select: { strikeCount: true, status: true }
+            }),
+            prisma.agentStrike.findMany({
+                where: { agentId },
+                select: {
+                    id: true,
+                    reason: true,
+                    description: true,
+                    status: true,
+                    strikeApplied: true,
+                    createdAt: true,
+                    reviewedAt: true,
+                    adminNote: true,
+                },
+                orderBy: { createdAt: "desc" }
+            })
+        ]);
+
+        return {
+            strikeCount: profile?.strikeCount ?? 0,
+            status: profile?.status,
+            maxStrikes: 3,
+            strikesRemaining: Math.max(0, 3 - (profile?.strikeCount ?? 0)),
+            isBanned: (profile?.strikeCount ?? 0) >= 3 || profile?.status === AgentStatus.SUSPENDED,
+            history: strikes,
+        };
+    }
 }
 
 export const agentService = new AgentService();

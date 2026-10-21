@@ -57,6 +57,8 @@ model User {
   agentProfile            AgentProfile?
   agentListings           AgentListing[] @relation("AgentListings")
   delegatedListings       AgentListing[] @relation("LandlordDelegations")
+  agentStrikesReceived    AgentStrike[]  @relation("AgentStrikes")
+  agentReportsFiled       AgentStrike[]  @relation("TenantAgentReports")
 
   @@index([clerkId])
   @@index([email])
@@ -124,6 +126,7 @@ model Property {
   videos        Video[]
   renewals      LeaseRenewal[]
   agentListings AgentListing[]
+  agentStrikes  AgentStrike[]
 
   @@index([landlordId])
   @@index([city, state])
@@ -688,6 +691,7 @@ model AgentProfile {
   reviewCount         Int         @default(0)
   totalListings       Int         @default(0)
   totalClosed         Int         @default(0)
+  strikeCount         Int         @default(0) // 3 strikes = permanent suspension
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
   user                User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -727,4 +731,46 @@ model AgentListing {
   @@index([landlordId])
   @@index([status])
   @@map("agent_listings")
+}
+
+enum AgentStrikeReason {
+  INSPECTION_FEE          // Demanding ₦5k inspection/viewing fee
+  FUEL_MONEY              // Demanding fuel money/transport fare
+  REGISTRATION_FORM_FEE   // Demanding paper registration or form fee
+  OFF_PLATFORM_CASH       // Demanding cash or direct bank transfer
+  OTHER                   // Other side payments or extortion
+}
+
+enum AgentStrikeStatus {
+  PENDING
+  UPHELD      // Strike verified and counted against agent
+  DISMISSED   // Rejected by admin
+}
+
+// Zero Side-Payment Strike System — tenant reports & strike enforcement
+model AgentStrike {
+  id              String            @id @default(cuid())
+  agentId         String
+  reporterId      String            // Tenant user id
+  propertyId      String?
+  reason          AgentStrikeReason
+  description     String
+  evidenceUrls    String[]          @default([])
+  strikeApplied   Boolean           @default(false)
+  status          AgentStrikeStatus @default(PENDING)
+  adminNote       String?
+  reviewedBy      String?           // Admin clerkId
+  reviewedAt      DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  agent           User              @relation("AgentStrikes", fields: [agentId], references: [id], onDelete: Cascade)
+  reporter        User              @relation("TenantAgentReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  property        Property?         @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([agentId])
+  @@index([reporterId])
+  @@index([propertyId])
+  @@index([status])
+  @@map("agent_strikes")
 }

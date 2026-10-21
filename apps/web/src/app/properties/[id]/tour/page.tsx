@@ -30,13 +30,16 @@ import {
     Check,
     Sparkles,
     User,
-    Calendar
+    Calendar,
+    Flag,
 } from "lucide-react";
+import { ReportAgentModal } from "@/components/agent/ReportAgentModal";
 
 export default function ScheduleTourPage() {
     const { id } = useParams();
     const router = useRouter();
     const { user } = useUser();
+    const [reportModalOpen, setReportModalOpen] = useState(false);
 
     const [property, setProperty] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -715,15 +718,46 @@ export default function ScheduleTourPage() {
                             </Button>
 
                             {/* Trust & Escrow Guarantee Box */}
-                            <div className="bg-[var(--bg-muted)] rounded-2xl p-4 border border-[var(--border-color)] space-y-2">
-                                <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]">
-                                    <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
-                                    <span>RentHub Safety Standard</span>
-                                </div>
-                                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
-                                    Never pay viewing or agency inspection fees. Complete your physical inspection first. When ready to rent, pay securely via RentHub Escrow.
-                                </p>
-                            </div>
+                            {(() => {
+                                const agentListing = property?.agentListings?.[0];
+                                const agent = agentListing?.agent;
+                                const agentName = agent?.agentProfile?.businessName || (agent ? `${agent.firstName} ${agent.lastName}` : "");
+
+                                return (
+                                    <div className="bg-[var(--bg-muted)] rounded-2xl p-4 border border-[var(--border-color)] space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 font-bold text-xs text-[var(--text-primary)]">
+                                                <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
+                                                <span>Zero Side-Payment Policy</span>
+                                            </div>
+                                            {agent && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setReportModalOpen(true)}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-black text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline cursor-pointer transition-colors"
+                                                >
+                                                    <Flag className="h-3 w-3" />
+                                                    Report Agent Fee
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
+                                            Never pay viewing or agency inspection fees. Complete your physical inspection first. Any partner agent demanding cash inspection fees, registration fees, or fuel money faces an immediate strike and ban.
+                                        </p>
+
+                                        {agent && (
+                                            <ReportAgentModal
+                                                isOpen={reportModalOpen}
+                                                onClose={() => setReportModalOpen(false)}
+                                                agentId={agent.id}
+                                                agentName={agentName}
+                                                propertyId={property?.id}
+                                                propertyTitle={property?.title}
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
