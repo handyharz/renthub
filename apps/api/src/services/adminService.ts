@@ -61,9 +61,15 @@ export class AdminService {
             pendingPayoutsCount,
             completedPayoutsCount,
             completedPayoutsVolumeAgg,
+            completedPayoutsFeesAgg,
             actionablePayoutsCount,
             propertiesByStatus,
             usersByRole,
+            agentTotal,
+            agentActive,
+            agentPending,
+            agentStrikes,
+            agentCommissionAgg,
         ] = await Promise.all([
             prisma.property.count({ where: { status: PropertyStatus.PENDING_REVIEW, deletedAt: null } }),
             prisma.transaction.count({ where: { disputed: true } }),
@@ -90,7 +96,7 @@ export class AdminService {
                 },
             }),
             prisma.transaction.aggregate({
-                _sum: { totalAmount: true, rentAmount: true },
+                _sum: { totalAmount: true, rentAmount: true, platformFee: true },
                 where: {
                     status: TransactionStatus.RELEASED,
                 },
@@ -111,6 +117,12 @@ export class AdminService {
                     status: "COMPLETED",
                 },
             }),
+            prisma.landlordPayout.aggregate({
+                _sum: { platformFee: true },
+                where: {
+                    status: "COMPLETED",
+                },
+            }),
             prisma.landlordPayout.count({
                 where: {
                     status: { in: ["FAILED", "SKIPPED", "PENDING"] },
@@ -126,22 +138,48 @@ export class AdminService {
                 where: { deletedAt: null },
                 _count: { id: true },
             }),
+            prisma.agentProfile.count(),
+            prisma.agentProfile.count({ where: { status: "ACTIVE" } }),
+            prisma.agentProfile.count({ where: { status: "PENDING_REVIEW" } }),
+            prisma.agentStrike.count({ where: { status: "UPHELD", strikeApplied: true } }),
+            prisma.agentListing.aggregate({
+                _sum: { commissionAmount: true },
+                where: { status: "COMPLETED" },
+            }),
         ]);
+
+        const tenantFees = settledEscrowVolumeAgg._sum.platformFee || 0;
+        const landlordFees = completedPayoutsFeesAgg._sum.platformFee || 0;
+        const platformRevenueTotal = tenantFees + landlordFees;
+
+        const totalTrackedTx = settledEscrowCount + escrowHeldCount + activeDisputes;
+        const disputeRate = totalTrackedTx > 0 ? Number(((activeDisputes / totalTrackedTx) * 100).toFixed(1)) : 0;
 
         return {
             pendingVerifications,
             activeDisputes,
+            disputeRate,
             totalUsers,
             totalProperties,
             escrowHeld: escrowHeldCount,
             escrowHeldCount,
             escrowHeldAmount: escrowHeldVolumeAgg._sum.totalAmount || escrowHeldVolumeAgg._sum.rentAmount || 0,
             settledEscrowCount,
-            settledEscrowAmount: settledEscrowVolumeAgg._sum.rentAmount || settledEscrowVolumeAgg._sum.totalAmount || 0,
+            settledEscrowAmount: settledEscrowVolumeAgg._sum.totalAmount || settledEscrowVolumeAgg._sum.rentAmount || 0,
             pendingPayoutsCount,
             completedPayoutsCount,
             completedPayoutsAmount: completedPayoutsVolumeAgg._sum.netAmount || 0,
             actionablePayoutsCount,
+            platformRevenueTotal,
+            tenantFees,
+            landlordFees,
+            agentStats: {
+                totalProfiles: agentTotal,
+                activeAgents: agentActive,
+                pendingReview: agentPending,
+                activeStrikes: agentStrikes,
+                totalCommissionPaid: agentCommissionAgg._sum.commissionAmount || 0,
+            },
             propertiesSummary: propertiesByStatus.reduce((acc, curr) => {
                 acc[curr.status] = curr._count.id;
                 return acc;

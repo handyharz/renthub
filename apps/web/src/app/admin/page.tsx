@@ -20,6 +20,7 @@ import { formatPrice } from "@/lib/utils";
 interface AdminStats {
     pendingVerifications: number;
     activeDisputes: number;
+    disputeRate?: number;
     totalUsers: number;
     totalProperties: number;
     escrowHeld: number;
@@ -31,6 +32,16 @@ interface AdminStats {
     completedPayoutsCount: number;
     completedPayoutsAmount: number;
     actionablePayoutsCount: number;
+    platformRevenueTotal?: number;
+    tenantFees?: number;
+    landlordFees?: number;
+    agentStats?: {
+        totalProfiles: number;
+        activeAgents: number;
+        pendingReview: number;
+        activeStrikes: number;
+        totalCommissionPaid: number;
+    };
     propertiesSummary?: Record<string, number>;
     usersSummary?: Record<string, number>;
 }
@@ -103,7 +114,7 @@ export default function AdminOverviewPage() {
             label: "User Management",
             desc: "Manage tenants, landlords & staff accounts",
             icon: Users,
-            badge: `${stats?.totalUsers ?? 0} Registered Accounts`,
+            badge: `${stats?.totalUsers ?? 0} Accounts (${stats?.usersSummary?.TENANT ?? 0} tenants · ${stats?.usersSummary?.LANDLORD ?? 0} landlords)`,
             badgeVariant: "neutral",
             accent: "border-[var(--color-brand-blue)]/30 hover:border-[var(--color-brand-blue)]/60",
         },
@@ -112,8 +123,10 @@ export default function AdminOverviewPage() {
             label: "Agent Partners",
             desc: "Review & approve verified agent applications",
             icon: BadgeAlert,
-            badge: "Review Queue",
-            badgeVariant: "warning",
+            badge: (stats?.agentStats?.pendingReview ?? 0) > 0
+                ? `${stats?.agentStats?.pendingReview} Pending Review`
+                : `${stats?.agentStats?.activeAgents ?? 0} Active Agents`,
+            badgeVariant: (stats?.agentStats?.pendingReview ?? 0) > 0 ? "warning" : "success",
             accent: "border-purple-500/40 hover:border-purple-500/70",
         },
     ];
@@ -135,97 +148,137 @@ export default function AdminOverviewPage() {
         <>
             <AdminHeader
                 title="Overview"
-                description="Platform health, escrow volume, and operational queue at a glance"
+                description="Platform revenue, escrow liquidity, partner network health, and operational workflows"
             />
             <div className="flex-1 p-6 space-y-8 overflow-auto">
-                {/* Stat cards — Financial and Operational KPI row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <StatCard
-                        label="Landlord Payouts Settled"
-                        value={loading ? "—" : `${formatPrice(stats?.completedPayoutsAmount ?? 0)} NT`}
-                        icon={Banknote}
-                        accent="green"
-                        trend={
-                            loading
-                                ? "Loading..."
-                                : `${stats?.completedPayoutsCount ?? 0} payouts disbursed via AfriExchange`
-                        }
-                    />
-                    <StatCard
-                        label="Payouts Needing Attention"
-                        value={loading ? "—" : stats?.actionablePayoutsCount ?? 0}
-                        icon={AlertTriangle}
-                        accent={(stats?.actionablePayoutsCount ?? 0) > 0 ? "orange" : "green"}
-                        trend={
-                            (stats?.actionablePayoutsCount ?? 0) > 0
-                                ? "Failed / skipped payouts awaiting retry"
-                                : "All landlord disbursements up to date"
-                        }
-                    />
-                    <StatCard
-                        label="Escrow Settled Volume"
-                        value={
-                            loading
-                                ? "—"
-                                : stats?.escrowHeldAmount && stats.escrowHeldAmount > 0
-                                ? `${formatPrice(stats.escrowHeldAmount)} NT`
-                                : `${formatPrice(stats?.settledEscrowAmount ?? 0)} NT`
-                        }
-                        icon={Lock}
-                        accent="blue"
-                        trend={
-                            stats?.escrowHeldAmount && stats.escrowHeldAmount > 0
-                                ? `${stats?.escrowHeldCount ?? 0} funded transactions in escrow`
-                                : `${stats?.settledEscrowCount ?? 0} completed lease transactions`
-                        }
-                    />
-                    <StatCard
-                        label="Platform Properties"
-                        value={loading ? "—" : stats?.totalProperties ?? 0}
-                        icon={Building2}
-                        accent="blue"
-                        trend={
-                            loading
-                                ? "Loading inventory..."
-                                : `${stats?.propertiesSummary?.AVAILABLE ?? 45} available · ${
-                                      stats?.propertiesSummary?.RENTED ?? 6
-                                  } rented`
-                        }
-                    />
-                    <StatCard
-                        label="Registered Users"
-                        value={loading ? "—" : stats?.totalUsers ?? 0}
-                        icon={Users}
-                        accent="blue"
-                        trend={
-                            loading
-                                ? "Loading accounts..."
-                                : `${stats?.usersSummary?.TENANT ?? 5} tenants · ${
-                                      stats?.usersSummary?.LANDLORD ?? 2
-                                  } landlords · ${stats?.usersSummary?.ADMIN ?? 1} admin`
-                        }
-                    />
-                    <StatCard
-                        label="Pending Verifications"
-                        value={loading ? "—" : stats?.pendingVerifications ?? 0}
-                        icon={ShieldCheck}
-                        accent={(stats?.pendingVerifications ?? 0) > 0 ? "orange" : "green"}
-                        trend={
-                            (stats?.pendingVerifications ?? 0) > 0
-                                ? "Properties awaiting physical inspection"
-                                : "Queue clean — all properties verified"
-                        }
-                    />
-                </div>
+                {/* Section 1: Financial & Escrow Liquidity */}
+                <section className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-2">
+                            <Banknote className="h-4 w-4 text-[var(--color-brand-green)]" />
+                            Financial & Escrow Liquidity
+                        </h2>
+                        <span className="text-xs text-[var(--text-muted)]">
+                            Settled on AfriExchange
+                        </span>
+                    </div>
 
-                {/* Quick actions — 6 balanced admin destination cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <StatCard
+                            label="Net Platform Revenue"
+                            value={loading ? "—" : `${formatPrice(stats?.platformRevenueTotal ?? 0)} NT`}
+                            icon={Banknote}
+                            accent="green"
+                            trend={
+                                loading
+                                    ? "Calculating fees..."
+                                    : `4% Fee Split: ${formatPrice(stats?.tenantFees ?? 0)} tenant · ${formatPrice(stats?.landlordFees ?? 0)} landlord`
+                            }
+                        />
+                        <StatCard
+                            label="Active Escrow Float"
+                            value={loading ? "—" : `${formatPrice(stats?.escrowHeldAmount ?? 0)} NT`}
+                            icon={Lock}
+                            accent="blue"
+                            trend={
+                                loading
+                                    ? "Loading float..."
+                                    : `${stats?.escrowHeldCount ?? 0} lease deposits held awaiting inspection OTP`
+                            }
+                        />
+                        <StatCard
+                            label="Cumulative Settled GMV"
+                            value={loading ? "—" : `${formatPrice(stats?.settledEscrowAmount ?? 0)} NT`}
+                            icon={ShieldCheck}
+                            accent="blue"
+                            trend={
+                                loading
+                                    ? "Loading volume..."
+                                    : `${stats?.settledEscrowCount ?? 0} transactions released to landlords`
+                            }
+                        />
+                        <StatCard
+                            label="Dispute & Risk Rate"
+                            value={loading ? "—" : `${stats?.disputeRate ?? 0}%`}
+                            icon={AlertTriangle}
+                            accent={(stats?.activeDisputes ?? 0) > 0 ? "red" : "green"}
+                            trend={
+                                (stats?.activeDisputes ?? 0) > 0
+                                    ? `⚠️ ${stats?.activeDisputes} active dispute(s) pending mediation`
+                                    : "Zero active disputes · Clean escrow pipeline"
+                            }
+                        />
+                    </div>
+                </section>
+
+                {/* Section 2: Marketplace & Partner Operations */}
+                <section className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-2">
+                            <Users className="h-4 w-4 text-[var(--color-brand-blue)]" />
+                            Marketplace & Partner Operations
+                        </h2>
+                        <span className="text-xs text-[var(--text-muted)]">
+                            Platform queues & partner network
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <StatCard
+                            label="Landlord Payouts Settled"
+                            value={loading ? "—" : `${formatPrice(stats?.completedPayoutsAmount ?? 0)} NT`}
+                            icon={Banknote}
+                            accent={(stats?.actionablePayoutsCount ?? 0) > 0 ? "orange" : "green"}
+                            trend={
+                                (stats?.actionablePayoutsCount ?? 0) > 0
+                                    ? `⚠️ ${stats?.actionablePayoutsCount} failed/skipped payout(s) need retry`
+                                    : `${stats?.completedPayoutsCount ?? 0} payouts successfully disbursed`
+                            }
+                        />
+                        <StatCard
+                            label="Agent Partner Network"
+                            value={loading ? "—" : `${stats?.agentStats?.activeAgents ?? 0} Active`}
+                            icon={BadgeAlert}
+                            accent={(stats?.agentStats?.activeStrikes ?? 0) > 0 ? "orange" : "purple"}
+                            trend={
+                                loading
+                                    ? "Loading network..."
+                                    : `${stats?.agentStats?.pendingReview ?? 0} pending review · ${stats?.agentStats?.activeStrikes ?? 0} strike(s) active`
+                            }
+                        />
+                        <StatCard
+                            label="Platform Properties"
+                            value={loading ? "—" : stats?.totalProperties ?? 0}
+                            icon={Building2}
+                            accent="blue"
+                            trend={
+                                loading
+                                    ? "Loading inventory..."
+                                    : `${stats?.propertiesSummary?.AVAILABLE ?? 0} available · ${stats?.propertiesSummary?.RENTED ?? 0} rented · ${stats?.propertiesSummary?.PENDING_REVIEW ?? 0} in review`
+                            }
+                        />
+                        <StatCard
+                            label="Inspection Queue"
+                            value={loading ? "—" : stats?.pendingVerifications ?? 0}
+                            icon={ShieldCheck}
+                            accent={(stats?.pendingVerifications ?? 0) > 0 ? "orange" : "green"}
+                            trend={
+                                (stats?.pendingVerifications ?? 0) > 0
+                                    ? `${stats?.pendingVerifications} properties awaiting physical inspection`
+                                    : "Queue clean — all properties verified"
+                            }
+                        />
+                    </div>
+                </section>
+
+                {/* Quick actions — Admin destination cards */}
                 <section>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--text-muted)]">
                             Quick Actions & Workflows
                         </h2>
                         <span className="text-xs text-[var(--text-muted)]">
-                            Direct access to all 6 platform administration modules
+                            Direct access to all 7 platform administration modules
                         </span>
                     </div>
 

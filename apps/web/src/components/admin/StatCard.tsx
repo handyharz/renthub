@@ -6,7 +6,7 @@ interface StatCardProps {
     value: number | string;
     icon: LucideIcon;
     trend?: string;
-    accent?: "green" | "orange" | "blue" | "red";
+    accent?: "green" | "orange" | "blue" | "red" | "purple";
 }
 
 const accentMap = {
@@ -14,6 +14,7 @@ const accentMap = {
     orange: "text-[var(--color-brand-orange)] bg-[var(--color-brand-orange)]/10 border-[var(--color-brand-orange)]/20",
     blue: "text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10 border-[var(--color-brand-blue)]/20",
     red: "text-red-500 bg-red-500/10 border-red-500/20",
+    purple: "text-purple-400 bg-purple-500/10 border-purple-500/20",
 };
 
 export function StatCard({ label, value, icon: Icon, trend, accent = "green" }: StatCardProps) {
