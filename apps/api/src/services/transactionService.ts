@@ -193,7 +193,7 @@ export class TransactionService {
         id: string,
         releaseReason: string
     ): Promise<Transaction> {
-        return await prisma.transaction.update({
+        const released = await prisma.transaction.update({
             where: { id },
             data: {
                 status: TransactionStatus.RELEASED,
@@ -202,6 +202,35 @@ export class TransactionService {
                 releaseReason,
             },
         });
+
+        await this.completeAgentListingForTransaction(released.propertyId, released.rentAmount);
+
+        return released;
+    }
+
+    private async completeAgentListingForTransaction(propertyId: string, rentAmount: number) {
+        try {
+            const agentListing = await prisma.agentListing.findFirst({
+                where: { propertyId, status: "AUTHORIZED" }
+            });
+            if (agentListing) {
+                const commissionAmount = Math.round(rentAmount * (agentListing.commissionPct / 100));
+                await prisma.agentListing.update({
+                    where: { id: agentListing.id },
+                    data: {
+                        status: "COMPLETED",
+                        commissionAmount,
+                        completedAt: new Date(),
+                    }
+                });
+                await prisma.agentProfile.updateMany({
+                    where: { userId: agentListing.agentId },
+                    data: { totalClosed: { increment: 1 } }
+                });
+            }
+        } catch (e) {
+            console.warn("[TransactionService] Failed to complete agent listing for property:", propertyId, e);
+        }
     }
 
     /**
@@ -385,6 +414,8 @@ export class TransactionService {
             where: { id: transaction.propertyId },
             data: { status: "RENTED" }
         });
+
+        await this.completeAgentListingForTransaction(transaction.propertyId, transaction.rentAmount);
 
         // 🔥 Trigger automated AfriExchange landlord payout (fire-and-forget)
         afriExchangePayoutService.disburseLandlordPayout(transactionId).catch((err) =>

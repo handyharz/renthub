@@ -282,9 +282,63 @@ export class AgentService {
         });
     }
 
-    // ─── STATS ────────────────────────────────────────────────────────────────────
+    // ─── RECONCILIATION & STATS ──────────────────────────────────────────────────
+
+    async reconcileCompletedAgentListings(agentId?: string) {
+        try {
+            const authorizedListings = await prisma.agentListing.findMany({
+                where: {
+                    status: "AUTHORIZED",
+                    ...(agentId ? { agentId } : {}),
+                },
+                include: {
+                    property: {
+                        select: {
+                            id: true,
+                            status: true,
+                            pricePerYear: true,
+                            transactions: {
+                                where: {
+                                    OR: [{ status: "RELEASED" }, { escrowReleased: true }]
+                                },
+                                take: 1,
+                                orderBy: { createdAt: "desc" }
+                            }
+                        }
+                    }
+                }
+            });
+
+            for (const al of authorizedListings) {
+                const tx = al.property.transactions?.[0];
+                const isRented = al.property.status === "RENTED" || tx != null;
+                if (isRented) {
+                    const rentAmount = tx?.rentAmount || al.property.pricePerYear;
+                    const commissionAmount = Math.round(rentAmount * (al.commissionPct / 100));
+                    await prisma.agentListing.update({
+                        where: { id: al.id },
+                        data: {
+                            status: "COMPLETED",
+                            commissionAmount,
+                            completedAt: tx?.createdAt || new Date(),
+                        }
+                    });
+                    await prisma.agentProfile.updateMany({
+                        where: { userId: al.agentId },
+                        data: {
+                            totalClosed: { increment: 1 }
+                        }
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn("[AgentService] Reconcile completed agent listings warning:", e);
+        }
+    }
 
     async getAgentStats(agentId: string) {
+        await this.reconcileCompletedAgentListings(agentId);
+
         const [delegations, profile] = await Promise.all([
             prisma.agentListing.findMany({
                 where: { agentId },
@@ -328,6 +382,8 @@ export class AgentService {
      * Get commission payouts and settlement breakdown for an agent
      */
     async getAgentPayouts(agentId: string) {
+        await this.reconcileCompletedAgentListings(agentId);
+
         const [user, delegations] = await Promise.all([
             prisma.user.findUnique({
                 where: { id: agentId },
