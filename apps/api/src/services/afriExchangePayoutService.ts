@@ -258,24 +258,31 @@ export class AfriExchangePayoutService {
      * Summary of all payouts for admin overview
      */
     async getPayoutSummary() {
-        const [total, pending, processing, completed, failed, skipped] = await Promise.all([
+        const [total, pending, processing, completed, failed, skipped, grossAgg, skippedNoWallet] = await Promise.all([
             prisma.landlordPayout.count(),
             prisma.landlordPayout.count({ where: { status: "PENDING" } }),
             prisma.landlordPayout.count({ where: { status: "PROCESSING" } }),
             prisma.landlordPayout.count({ where: { status: "COMPLETED" } }),
             prisma.landlordPayout.count({ where: { status: "FAILED" } }),
             prisma.landlordPayout.count({ where: { status: "SKIPPED" } }),
+            prisma.landlordPayout.aggregate({
+                _sum: { grossAmount: true, netAmount: true, platformFee: true },
+                where: { status: "COMPLETED" },
+            }),
+            // Skipped because landlord has no wallet linked
+            prisma.landlordPayout.count({
+                where: {
+                    status: "SKIPPED",
+                    landlord: { afriExchangeWalletAddress: null },
+                },
+            }),
         ]);
 
-        const totalNetPaid = await prisma.landlordPayout.aggregate({
-            _sum: { netAmount: true },
-            where: { status: "COMPLETED" },
-        });
-
-        const totalPlatformFee = await prisma.landlordPayout.aggregate({
-            _sum: { platformFee: true },
-            where: { status: "COMPLETED" },
-        });
+        const netPaid = grossAgg._sum.netAmount || 0;
+        const grossDisbursed = grossAgg._sum.grossAmount || 0;
+        const platformFees = grossAgg._sum.platformFee || 0;
+        const successRate = total > 0 ? Number(((completed / total) * 100).toFixed(1)) : 0;
+        const actionableCount = failed + skipped;
 
         return {
             totalPayouts: total,
@@ -284,12 +291,17 @@ export class AfriExchangePayoutService {
             processingPayouts: processing,
             failedPayouts: failed,
             skippedPayouts: skipped,
-            totalDisbursedAmount: totalNetPaid._sum.netAmount || 0,
-            totalPlatformFees: totalPlatformFee._sum.platformFee || 0,
+            skippedNoWallet,
+            totalDisbursedAmount: netPaid,
+            grossDisbursedAmount: grossDisbursed,
+            totalPlatformFees: platformFees,
+            successRate,
+            actionableCount,
             counts: { total, pending, processing, completed, failed, skipped },
             totals: {
-                netPaidToLandlords: totalNetPaid._sum.netAmount || 0,
-                platformFeesCollected: totalPlatformFee._sum.platformFee || 0,
+                netPaidToLandlords: netPaid,
+                grossEscrowReleased: grossDisbursed,
+                platformFeesCollected: platformFees,
             },
         };
     }

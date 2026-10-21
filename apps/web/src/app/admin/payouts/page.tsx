@@ -87,8 +87,12 @@ interface PayoutSummary {
     processingPayouts?: number;
     failedPayouts: number;
     skippedPayouts: number;
+    skippedNoWallet?: number;
     totalDisbursedAmount: number;
+    grossDisbursedAmount?: number;
     totalPlatformFees: number;
+    successRate?: number;
+    actionableCount?: number;
     counts?: {
         total: number;
         pending: number;
@@ -99,6 +103,7 @@ interface PayoutSummary {
     };
     totals?: {
         netPaidToLandlords: number;
+        grossEscrowReleased?: number;
         platformFeesCollected: number;
     };
 }
@@ -127,8 +132,12 @@ export default function AdminPayoutsPage() {
                     processingPayouts: data.processingPayouts ?? data.counts?.processing ?? 0,
                     failedPayouts: data.failedPayouts ?? data.counts?.failed ?? 0,
                     skippedPayouts: data.skippedPayouts ?? data.counts?.skipped ?? 0,
+                    skippedNoWallet: data.skippedNoWallet ?? 0,
                     totalDisbursedAmount: data.totalDisbursedAmount ?? data.totals?.netPaidToLandlords ?? 0,
+                    grossDisbursedAmount: data.grossDisbursedAmount ?? data.totals?.grossEscrowReleased ?? 0,
                     totalPlatformFees: data.totalPlatformFees ?? data.totals?.platformFeesCollected ?? 0,
+                    successRate: data.successRate ?? 0,
+                    actionableCount: data.actionableCount ?? 0,
                 });
             }
         } catch (error) {
@@ -308,42 +317,51 @@ export default function AdminPayoutsPage() {
             />
 
             <div className="flex-1 p-6 space-y-6 overflow-auto">
-                {/* 5 KPI Cards (Inspired by Kaalis AdminPayouts.vue) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* KPI Cards — Financial Pipeline Health */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
-                        label="Total Escrow Disbursed"
-                        value={formatPrice(summary?.totalDisbursedAmount || 0)}
+                        label="Gross Escrow Released"
+                        value={loading ? "—" : `${formatPrice(summary?.grossDisbursedAmount || 0)} NT`}
                         icon={Banknote}
                         accent="green"
-                        trend={`${summary?.completedPayouts || 0} completed transfers`}
+                        trend={`${summary?.completedPayouts || 0} leases settled · ${formatPrice(summary?.totalPlatformFees || 0)} NT platform fee`}
                     />
                     <StatCard
-                        label="Pending Payouts"
-                        value={summary?.pendingPayouts ?? (loading ? "—" : 0)}
-                        icon={Clock}
-                        accent="orange"
-                        trend="Awaiting admin dispatch"
+                        label="Net Paid to Landlords"
+                        value={loading ? "—" : `${formatPrice(summary?.totalDisbursedAmount || 0)} NT`}
+                        icon={Wallet}
+                        accent="green"
+                        trend={`After 2% RentHub fee deduction`}
                     />
                     <StatCard
-                        label="Platform Revenue (2%)"
-                        value={formatPrice(summary?.totalPlatformFees || 0)}
+                        label="Pipeline Health"
+                        value={loading ? "—" : `${summary?.successRate ?? 0}%`}
                         icon={ShieldCheck}
-                        accent="blue"
-                        trend="RentHub commission earned"
+                        accent={(summary?.successRate ?? 0) >= 80 ? "green" : "orange"}
+                        trend={
+                            (summary?.processingPayouts ?? 0) > 0
+                                ? `${summary?.processingPayouts} in-flight on AfriExchange · ${summary?.pendingPayouts ?? 0} pending`
+                                : `${summary?.completedPayouts ?? 0} of ${summary?.totalPayouts ?? 0} payouts completed`
+                        }
                     />
                     <StatCard
-                        label="Attention Needed"
+                        label="Pending Dispatch"
+                        value={loading ? "—" : (summary?.pendingPayouts ?? 0) + (summary?.processingPayouts ?? 0)}
+                        icon={Clock}
+                        accent={(summary?.pendingPayouts ?? 0) > 0 ? "orange" : "blue"}
+                        trend={`${summary?.pendingPayouts ?? 0} ready · ${summary?.processingPayouts ?? 0} processing on AfriExchange`}
+                    />
+                    <StatCard
+                        label="Needs Attention"
                         value={
-                            summary
-                                ? (summary.failedPayouts || 0) + (summary.skippedPayouts || 0)
-                                : (loading ? "—" : 0)
+                            loading ? "—" : (summary?.failedPayouts || 0) + (summary?.skippedPayouts || 0)
                         }
                         icon={AlertCircle}
-                        accent="red"
+                        accent={((summary?.failedPayouts || 0) + (summary?.skippedPayouts || 0)) > 0 ? "red" : "green"}
                         trend={
-                            summary && ((summary.skippedPayouts || 0) > 0 || (summary.failedPayouts || 0) > 0)
-                                ? `${summary.skippedPayouts || 0} skipped, ${summary.failedPayouts || 0} failed`
-                                : "Eligible for retry"
+                            ((summary?.failedPayouts || 0) + (summary?.skippedPayouts || 0)) > 0
+                                ? `${summary?.failedPayouts || 0} failed · ${summary?.skippedNoWallet ?? 0} wallet-blocked`
+                                : "All payouts processed cleanly"
                         }
                     />
                 </div>
