@@ -18,6 +18,7 @@ import {
     Mail,
     Calendar,
     ArrowUpRight,
+    BadgeAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminHeader } from "@/components/admin/AdminHeader";
@@ -33,7 +34,7 @@ interface UserRow {
     lastName: string;
     email: string;
     phone: string;
-    role: "TENANT" | "LANDLORD" | "ADMIN";
+    role: "TENANT" | "LANDLORD" | "AGENT" | "ADMIN";
     status: string;
     verified: boolean;
     createdAt: string;
@@ -49,10 +50,15 @@ interface UserRow {
 
 interface UserStats {
     totalUsers: number;
+    filteredTotal?: number;
     tenants: number;
     landlords: number;
+    agents: number;
     admins: number;
     verifiedCount: number;
+    verificationRate?: number;
+    landlordsWalletLinked?: number;
+    landlordsWalletRate?: number;
 }
 
 export default function AdminUsersPage() {
@@ -61,6 +67,7 @@ export default function AdminUsersPage() {
         totalUsers: 0,
         tenants: 0,
         landlords: 0,
+        agents: 0,
         admins: 0,
         verifiedCount: 0,
     });
@@ -117,6 +124,8 @@ export default function AdminUsersPage() {
     const roleBadgeColor = (role: string) => {
         switch (role) {
             case "ADMIN":
+                return "border-indigo-500/40 text-indigo-400 bg-indigo-500/10";
+            case "AGENT":
                 return "border-purple-500/40 text-purple-400 bg-purple-500/10";
             case "LANDLORD":
                 return "border-[var(--color-brand-blue)]/40 text-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/10";
@@ -148,13 +157,13 @@ export default function AdminUsersPage() {
 
             <div className="flex-1 p-6 space-y-6 overflow-auto">
                 {/* KPI Stat Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
-                        label="Registered Users"
+                        label="Total Accounts"
                         value={stats.totalUsers}
                         icon={Users}
                         accent="blue"
-                        trend={`${stats.verifiedCount} verified platform accounts`}
+                        trend={`${stats.admins} staff admin accounts`}
                     />
                     <StatCard
                         label="Tenants"
@@ -167,15 +176,22 @@ export default function AdminUsersPage() {
                         label="Landlords"
                         value={stats.landlords}
                         icon={Building2}
-                        accent="blue"
-                        trend="Property owners & payout beneficiaries"
+                        accent={(stats.landlordsWalletRate ?? 100) < 50 ? "orange" : "blue"}
+                        trend={`${stats.landlordsWalletLinked ?? 0}/${stats.landlords} wallet-ready (${stats.landlordsWalletRate ?? 0}%)`}
                     />
                     <StatCard
-                        label="Platform Admins"
-                        value={stats.admins}
-                        icon={Shield}
-                        accent="blue"
-                        trend="System operators & staff moderators"
+                        label="Agent Partners"
+                        value={stats.agents}
+                        icon={BadgeAlert}
+                        accent="purple"
+                        trend="Verified field agents & brokers"
+                    />
+                    <StatCard
+                        label="KYC Verification"
+                        value={`${stats.verificationRate ?? 0}%`}
+                        icon={ShieldCheck}
+                        accent={(stats.verificationRate ?? 0) >= 70 ? "green" : "orange"}
+                        trend={`${stats.verifiedCount} of ${stats.totalUsers} accounts verified`}
                     />
                 </div>
 
@@ -211,6 +227,7 @@ export default function AdminUsersPage() {
                                     <option value="">All Roles ({stats.totalUsers})</option>
                                     <option value="TENANT">Tenants ({stats.tenants})</option>
                                     <option value="LANDLORD">Landlords ({stats.landlords})</option>
+                                    <option value="AGENT">Agents ({stats.agents})</option>
                                     <option value="ADMIN">Admins ({stats.admins})</option>
                                 </select>
                                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
@@ -339,6 +356,8 @@ export default function AdminUsersPage() {
                                                     </div>
                                                 ) : user.role === "LANDLORD" ? (
                                                     <span className="text-xs text-amber-400/80">⚠️ Wallet unlinked</span>
+                                                ) : user.role === "AGENT" ? (
+                                                    <span className="text-xs text-purple-400/80">Commission wallet</span>
                                                 ) : (
                                                     <span className="text-xs text-[var(--text-muted)]">—</span>
                                                 )}
@@ -347,6 +366,8 @@ export default function AdminUsersPage() {
                                             <td className="px-6 py-4 whitespace-nowrap text-xs text-[var(--text-secondary)]">
                                                 {user.role === "LANDLORD" ? (
                                                     <span>{user._count?.propertiesOwned ?? 0} properties listed</span>
+                                                ) : user.role === "AGENT" ? (
+                                                    <span className="text-purple-400 font-medium">Verified field agent</span>
                                                 ) : (
                                                     <span>{user._count?.transactions ?? 0} lease transactions</span>
                                                 )}
@@ -492,9 +513,17 @@ export default function AdminUsersPage() {
                                         </div>
                                     )}
                                 </div>
-                            ) : (
+                            ) : selectedUser.role === "LANDLORD" ? (
                                 <p className="text-xs text-amber-400">
                                     ⚠️ No AfriExchange account linked. Landlord payouts will be skipped until an account is attached.
+                                </p>
+                            ) : selectedUser.role === "AGENT" ? (
+                                <p className="text-xs text-purple-400">
+                                    Optional: Agent commission wallet can be linked for automated on-chain payouts.
+                                </p>
+                            ) : (
+                                <p className="text-xs text-[var(--text-muted)]">
+                                    No settlement account required for standard tenant accounts.
                                 </p>
                             )}
                         </div>

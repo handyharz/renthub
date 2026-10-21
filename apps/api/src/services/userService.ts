@@ -132,7 +132,7 @@ export class UserService {
             }),
         };
 
-        const [users, total, countsByRole, verifiedCount] = await Promise.all([
+        const [users, total, totalPlatformUsers, countsByRole, verifiedCount, landlordsWalletLinkedCount] = await Promise.all([
             prisma.user.findMany({
                 where,
                 select: {
@@ -163,6 +163,7 @@ export class UserService {
                 skip: offset,
             }),
             prisma.user.count({ where }),
+            prisma.user.count({ where: { deletedAt: null } }),
             prisma.user.groupBy({
                 by: ["role"],
                 where: { deletedAt: null },
@@ -171,6 +172,13 @@ export class UserService {
             prisma.user.count({
                 where: { verified: true, deletedAt: null },
             }),
+            prisma.user.count({
+                where: {
+                    role: "LANDLORD",
+                    afriExchangeWalletAddress: { not: null },
+                    deletedAt: null,
+                },
+            }),
         ]);
 
         const roleCounts = countsByRole.reduce((acc, curr) => {
@@ -178,15 +186,28 @@ export class UserService {
             return acc;
         }, {} as Record<string, number>);
 
+        const totalLandlords = roleCounts["LANDLORD"] || 0;
+        const landlordsWalletRate = totalLandlords > 0
+            ? Number(((landlordsWalletLinkedCount / totalLandlords) * 100).toFixed(0))
+            : 0;
+        const verificationRate = totalPlatformUsers > 0
+            ? Number(((verifiedCount / totalPlatformUsers) * 100).toFixed(1))
+            : 0;
+
         return {
             users,
             total,
             stats: {
-                totalUsers: total,
+                totalUsers: totalPlatformUsers,
+                filteredTotal: total,
                 tenants: roleCounts["TENANT"] || 0,
-                landlords: roleCounts["LANDLORD"] || 0,
+                landlords: totalLandlords,
+                agents: roleCounts["AGENT"] || 0,
                 admins: roleCounts["ADMIN"] || 0,
                 verifiedCount,
+                verificationRate,
+                landlordsWalletLinked: landlordsWalletLinkedCount,
+                landlordsWalletRate,
             },
             limit,
             offset,
