@@ -273,7 +273,7 @@ export class AgentService {
                     select: {
                         id: true, firstName: true, lastName: true, avatar: true, phone: true,
                         agentProfile: {
-                            select: { businessName: true, avgRating: true, reviewCount: true, totalClosed: true, status: true }
+                            select: { businessName: true, avgRating: true, reviewCount: true, totalClosed: true, status: true, strikeCount: true }
                         }
                     }
                 }
@@ -565,57 +565,86 @@ export class AgentService {
             });
         }
 
-        // Action is UPHOLD: Apply strike to agent
-        const wasAlreadyApplied = strike.strikeApplied;
-        const currentStrikes = strike.agent.agentProfile?.strikeCount || 0;
-        const nextStrikes = wasAlreadyApplied ? currentStrikes : currentStrikes + 1;
-        const shouldSuspend = nextStrikes >= 3;
+        // Action is UPHOLD: Apply 90-day rolling strike to agent
+        const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days from now
 
         const updatedStrike = await prisma.agentStrike.update({
             where: { id: strikeId },
             data: {
                 status: "UPHELD",
                 strikeApplied: true,
+                expiresAt,
                 reviewedBy: adminClerkId,
                 reviewedAt: new Date(),
-                adminNote: adminNote || "Violation upheld. Strike registered against agent.",
+                adminNote: adminNote || "Violation upheld. 90-day rolling strike registered against partner agent.",
             }
         });
 
-        if (!wasAlreadyApplied) {
+        const { strikeCount, activeStrikes } = await this.syncActiveStrikes(strike.agentId);
+        const shouldSuspend = strikeCount >= 3;
+
+        if (shouldSuspend) {
             await prisma.agentProfile.updateMany({
                 where: { userId: strike.agentId },
-                data: {
-                    strikeCount: { increment: 1 },
-                    ...(shouldSuspend ? { status: AgentStatus.SUSPENDED } : {})
-                }
+                data: { status: AgentStatus.SUSPENDED, strikeCount }
             });
 
-            // If suspended due to 3 strikes, revoke all active delegations
-            if (shouldSuspend) {
-                await prisma.agentListing.updateMany({
-                    where: { agentId: strike.agentId, status: "AUTHORIZED" },
-                    data: {
-                        status: "REVOKED",
-                        revokedAt: new Date(),
-                        landlordNote: "System revocation: Agent suspended due to platform side-payment violations (3 strikes)."
-                    }
-                });
-            }
+            // If suspended due to 3 active strikes, revoke all active delegations
+            await prisma.agentListing.updateMany({
+                where: { agentId: strike.agentId, status: "AUTHORIZED" },
+                data: {
+                    status: "REVOKED",
+                    revokedAt: new Date(),
+                    landlordNote: "System revocation: Agent suspended due to platform side-payment violations (3 strikes accumulated)."
+                }
+            });
         }
 
         return {
             strike: updatedStrike,
-            strikeCount: nextStrikes,
+            strikeCount,
+            expiresAt,
             suspended: shouldSuspend,
         };
+    }
+
+    /**
+     * Calculate active non-expired strikes and sync strikeCount for an agent
+     */
+    async syncActiveStrikes(agentId: string) {
+        const now = new Date();
+        const allStrikes = await prisma.agentStrike.findMany({
+            where: { agentId, status: "UPHELD", strikeApplied: true }
+        });
+
+        const activeStrikes = allStrikes.filter(s => !s.expiresAt || s.expiresAt > now);
+        const expiredStrikes = allStrikes.filter(s => s.expiresAt && s.expiresAt <= now);
+        const strikeCount = activeStrikes.length;
+
+        const profile = await prisma.agentProfile.findUnique({
+            where: { userId: agentId },
+            select: { status: true, strikeCount: true }
+        });
+
+        if (profile && profile.status !== AgentStatus.SUSPENDED) {
+            if (profile.strikeCount !== strikeCount) {
+                await prisma.agentProfile.update({
+                    where: { userId: agentId },
+                    data: { strikeCount }
+                });
+            }
+        }
+
+        return { strikeCount, activeStrikes, expiredStrikes };
     }
 
     /**
      * Agent: Get strikes and compliance history for their own profile
      */
     async getAgentStrikes(agentId: string) {
-        const [profile, strikes] = await Promise.all([
+        const { strikeCount, activeStrikes, expiredStrikes } = await this.syncActiveStrikes(agentId);
+
+        const [profile, history] = await Promise.all([
             prisma.agentProfile.findUnique({
                 where: { userId: agentId },
                 select: { strikeCount: true, status: true }
@@ -628,6 +657,7 @@ export class AgentService {
                     description: true,
                     status: true,
                     strikeApplied: true,
+                    expiresAt: true,
                     createdAt: true,
                     reviewedAt: true,
                     adminNote: true,
@@ -637,12 +667,15 @@ export class AgentService {
         ]);
 
         return {
-            strikeCount: profile?.strikeCount ?? 0,
+            strikeCount,
+            expiredCount: expiredStrikes.length,
             status: profile?.status,
             maxStrikes: 3,
-            strikesRemaining: Math.max(0, 3 - (profile?.strikeCount ?? 0)),
-            isBanned: (profile?.strikeCount ?? 0) >= 3 || profile?.status === AgentStatus.SUSPENDED,
-            history: strikes,
+            strikesRemaining: Math.max(0, 3 - strikeCount),
+            isBanned: strikeCount >= 3 || profile?.status === AgentStatus.SUSPENDED,
+            activeHistory: activeStrikes,
+            expiredHistory: expiredStrikes,
+            history,
         };
     }
 }

@@ -583,8 +583,14 @@ export default function AgentDashboard() {
                             </span>
                         </div>
                         <p className="leading-relaxed text-[11px] opacity-85">
-                            <strong>Zero Side-Payment Rule:</strong> Demanding cash inspection fees, registration fees, or fuel money from tenants is strictly prohibited. Offenses result in strikes. Accumulating 3 strikes results in immediate, permanent suspension.
+                            <strong>Rolling 90-Day Policy:</strong> Demanding cash inspection fees, registration fees, or fuel money from tenants is strictly prohibited. Offenses result in strikes that remain active for 90 days. If you maintain clean compliance for 90 days, active strikes expire. Accumulating 3 strikes results in permanent suspension.
                         </p>
+                        {Boolean((strikesInfo as any).expiredCount) && (
+                            <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                {(strikesInfo as any).expiredCount} past strike(s) have successfully expired and faded after 90 days of good compliance.
+                            </p>
+                        )}
                     </div>
                 </div>
             )}

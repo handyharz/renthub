@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
     Users, MapPin, Star, CheckCircle2, Clock, XCircle,
-    Phone, AlertCircle, Building2, ShieldCheck, Home
+    Phone, AlertCircle, Building2, ShieldCheck, Home, AlertTriangle
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -41,6 +41,7 @@ interface AgentDelegation {
             avgRating?: number;
             reviewCount: number;
             totalClosed: number;
+            strikeCount?: number;
             status: string;
         };
     };
@@ -221,19 +222,32 @@ export function LandlordAgentDelegationsTab() {
                                                     {agentProfile?.businessName && (
                                                         <p className="text-xs text-[var(--text-muted)]">{agentProfile.businessName}</p>
                                                     )}
-                                                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                                        {/* Compliance & Strike Standing Badge */}
+                                                        {(agentProfile?.strikeCount ?? 0) === 0 ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                                                <ShieldCheck className="h-3 w-3" />
+                                                                Clean Record (0 Strikes)
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800" title="Agent has received side-payment violation strike(s). Strikes expire after 90 days.">
+                                                                <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                                                {agentProfile?.strikeCount} {agentProfile?.strikeCount === 1 ? "Strike" : "Strikes"} on Record
+                                                            </span>
+                                                        )}
+
                                                         {agentProfile?.avgRating && (
-                                                            <span className="text-xs flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
+                                                            <span className="text-xs flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-semibold">
                                                                 <Star className="h-3 w-3 fill-current" />
                                                                 {agentProfile.avgRating.toFixed(1)} ({agentProfile.reviewCount})
                                                             </span>
                                                         )}
                                                         {agentProfile?.totalClosed ? (
-                                                            <span className="text-xs text-[var(--text-muted)]">
+                                                            <span className="text-xs text-[var(--text-muted)] font-medium">
                                                                 {agentProfile.totalClosed} deals closed
                                                             </span>
                                                         ) : null}
-                                                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
                                                             {d.commissionPct}% commission
                                                         </span>
                                                     </div>
