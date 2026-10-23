@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getCleanAfriExchangeUrl, getAfriExchangeApiKey } from "../config/afriExchange";
 
 export interface AccountVerificationParams {
     afriExchangeUserId?: string;
@@ -34,8 +35,9 @@ export class AfriExchangeAccountVerificationService {
     private readonly enabled: boolean;
 
     constructor() {
-        this.baseUrl = (process.env.AFRIEXCHANGE_API_URL || "https://afri-x.vercel.app").replace(/\/$/, "");
-        this.apiKey = process.env.RENTHUB_AFRIEXCHANGE_API_KEY || "";
+        // Use the centralised URL helper — same live endpoint used by payment & payout services
+        this.baseUrl = getCleanAfriExchangeUrl();
+        this.apiKey = getAfriExchangeApiKey();
         this.enabled = !!(this.baseUrl && this.apiKey);
     }
 

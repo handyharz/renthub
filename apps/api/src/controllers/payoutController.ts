@@ -78,6 +78,18 @@ export class PayoutController {
                 code
             );
 
+            // Guard: AfriExchange must return a verified user + wallet — surface a clean 400 if not
+            if (!result?.user?.id || !result?.wallet?.blockchain_address) {
+                console.error(
+                    `[payoutController] confirmLinkVerification returned unexpected shape:`,
+                    JSON.stringify(result)
+                );
+                return res.status(400).json({
+                    success: false,
+                    message: "AfriExchange could not verify the account. Please check your details and try again.",
+                });
+            }
+
             const updated = await prisma.user.update({
                 where: { id: userId },
                 data: {
@@ -124,12 +136,14 @@ export class PayoutController {
                 },
             });
         } catch (error: any) {
+            console.error("[payoutController] confirmLinkVerification error:", error.message);
             return res.status(400).json({
                 success: false,
                 message: error.message || "Failed to confirm verification code",
             });
         }
     }
+
 
     // ─────────────────────────────────────────────
     // LANDLORD: Unlink AfriExchange Account
