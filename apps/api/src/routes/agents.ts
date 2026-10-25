@@ -23,62 +23,38 @@ import {
     adminGetAgentKPIs,
     adminListAllAgents,
 } from "../controllers/agentController";
+import { requireAuth, requireDbUser, requireRole } from "../middleware/auth";
 
 const router: IRouter = Router();
 
-// ─── PUBLIC ──────────────────────────────────────────────────────────────────
-// GET /api/agents?city=Lagos
 router.get("/", listActiveAgents);
-// GET /api/agents/profile/:userId
 router.get("/profile/:userId", getAgentPublicProfile);
 
-// ─── STRIKES & ZERO SIDE-PAYMENTS (Tenant Reporting) ─────────────────────────
-// POST /api/agents/strikes/report - Report agent for asking for cash/side fees
-router.post("/strikes/report", fileStrikeReport);
+router.post("/strikes/report", requireAuth, requireDbUser, fileStrikeReport);
 
-// ─── AGENT (authenticated) ────────────────────────────────────────────────────
-// GET  /api/agents/me  - get or create my agent profile
-router.get("/me", getMyAgentProfile);
-// PATCH /api/agents/me - update profile fields
-router.patch("/me", updateMyAgentProfile);
-// POST /api/agents/me/submit - submit profile for admin review
-router.post("/me/submit", submitAgentForReview);
-// GET  /api/agents/me/stats
-router.get("/me/stats", getAgentStats);
-// GET  /api/agents/me/delegations - agent's listing assignments
-router.get("/me/delegations", getMyDelegations);
-// GET  /api/agents/me/payouts - agent's commission payouts & settlement
-router.get("/me/payouts", getMyAgentPayouts);
-// GET  /api/agents/me/strikes - agent's compliance and strike status
-router.get("/me/strikes", getMyStrikes);
-// POST /api/agents/me/delegations - request to manage a property
-router.post("/me/delegations", requestDelegation);
+router.get("/me", requireAuth, requireDbUser, getMyAgentProfile);
+router.patch("/me", requireAuth, requireDbUser, updateMyAgentProfile);
+router.post("/me/submit", requireAuth, requireDbUser, submitAgentForReview);
+router.get("/me/stats", requireAuth, requireDbUser, getAgentStats);
+router.get("/me/delegations", requireAuth, requireDbUser, getMyDelegations);
+router.get("/me/payouts", requireAuth, requireDbUser, getMyAgentPayouts);
+router.get("/me/strikes", requireAuth, requireDbUser, getMyStrikes);
+router.post("/me/delegations", requireAuth, requireDbUser, requestDelegation);
 
-// ─── LANDLORD ─────────────────────────────────────────────────────────────────
-// GET  /api/agents/landlord/delegations - see all requests for landlord's properties
-router.get("/landlord/delegations", getLandlordDelegations);
-// PATCH /api/agents/delegations/:id/authorize
-router.patch("/delegations/:id/authorize", authorizeDelegation);
-// PATCH /api/agents/delegations/:id/revoke
-router.patch("/delegations/:id/revoke", revokeDelegation);
+router.get("/landlord/delegations", requireAuth, requireDbUser, getLandlordDelegations);
+router.patch("/delegations/:id/authorize", requireAuth, requireDbUser, authorizeDelegation);
+router.patch("/delegations/:id/revoke", requireAuth, requireDbUser, revokeDelegation);
 
-// ─── ADMIN ────────────────────────────────────────────────────────────────────
-// GET  /api/agents/admin/kpis - KPI stat cards summary for admin
-router.get("/admin/kpis", adminGetAgentKPIs);
-// GET  /api/agents/admin/all - filterable directory of all agents
-router.get("/admin/all", adminListAllAgents);
-// GET  /api/agents/admin/pending
-router.get("/admin/pending", adminListPendingAgents);
-// POST /api/agents/admin/:id/approve
-router.post("/admin/:id/approve", adminApproveAgent);
-// POST /api/agents/admin/:id/reject
-router.post("/admin/:id/reject", adminRejectAgent);
-// POST /api/agents/admin/:id/suspend
-router.post("/admin/:id/suspend", adminSuspendAgent);
-// GET  /api/agents/admin/strikes - list all side-payment violation reports
-router.get("/admin/strikes", adminListStrikes);
-// POST /api/agents/admin/strikes/:id/review - uphold or dismiss strike
-router.post("/admin/strikes/:id/review", adminReviewStrike);
+const adminRouter: IRouter = Router();
+adminRouter.use(requireAuth, requireRole("ADMIN"));
+adminRouter.get("/kpis", adminGetAgentKPIs);
+adminRouter.get("/all", adminListAllAgents);
+adminRouter.get("/pending", adminListPendingAgents);
+adminRouter.post("/:id/approve", adminApproveAgent);
+adminRouter.post("/:id/reject", adminRejectAgent);
+adminRouter.post("/:id/suspend", adminSuspendAgent);
+adminRouter.get("/strikes", adminListStrikes);
+adminRouter.post("/strikes/:id/review", adminReviewStrike);
+router.use("/admin", adminRouter);
 
 export default router;
-

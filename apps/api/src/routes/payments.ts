@@ -1,18 +1,17 @@
 import { Router } from "express";
 import { paymentController } from "../controllers/paymentController";
-
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireDbUser } from "../middleware/auth";
 
 const router: Router = Router();
 
-// Initialize payment with Paystack
-router.post("/initialize", requireAuth, paymentController.initializePayment.bind(paymentController));
-
-// Pay into escrow with AfriExchange
-router.post("/afriexchange/pay", requireAuth, paymentController.payWithAfriExchange.bind(paymentController));
-router.get("/afriexchange/verify/:reference", paymentController.verifyAfriExchangePayment.bind(paymentController));
-
-// Verify payment
-router.get("/verify/:reference", paymentController.verifyPayment.bind(paymentController));
+router.post("/initialize", requireAuth, requireDbUser, paymentController.initializePayment.bind(paymentController));
+router.post("/afriexchange/pay", requireAuth, requireDbUser, paymentController.payWithAfriExchange.bind(paymentController));
+router.get(
+    "/afriexchange/verify/:reference",
+    requireAuth,
+    requireDbUser,
+    paymentController.verifyAfriExchangePayment.bind(paymentController)
+);
+router.get("/verify/:reference", requireAuth, requireDbUser, paymentController.verifyPayment.bind(paymentController));
 
 export default router;

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { userService } from "../services/userService";
 import { UserRole, UserStatus } from "@prisma/client";
+import { sanitizeSelfServiceRole } from "../utils/identity";
 
 export class UserController {
     /**
@@ -9,8 +10,7 @@ export class UserController {
      */
     async getCurrentUser(req: Request, res: Response) {
         try {
-            // Get clerkId from req.user, authenticated auth token, or query param fallback
-            const clerkId = req.user?.clerkId || (req as any).auth?.userId || (req.query.clerkId as string);
+            const clerkId = req.user?.clerkId || req.auth?.userId;
 
             if (!clerkId) {
                 return res.status(401).json({
@@ -99,7 +99,7 @@ export class UserController {
      */
     async updateCurrentUser(req: Request, res: Response) {
         try {
-            const clerkId = req.user?.clerkId || (req as any).auth?.userId || (req.query.clerkId as string);
+            const clerkId = req.user?.clerkId || req.auth?.userId;
 
             if (!clerkId) {
                 return res.status(401).json({
@@ -108,7 +108,7 @@ export class UserController {
                 });
             }
 
-            const { firstName, lastName, avatar, phone, role, idType, idNumber } = req.body;
+            const { firstName, lastName, avatar, phone, idType, idNumber } = req.body;
 
             // Fetch current user to check if phone changed
             const currentUser = await userService.getUserByClerkId(clerkId);
@@ -123,11 +123,10 @@ export class UserController {
                 ...(lastName && { lastName }),
                 ...(avatar && { avatar }),
                 ...(phone && { phone }),
-                ...(role && { role }),
                 ...(idType && { idType }),
                 ...(idNumber && { idNumber }),
                 ...(isPhoneChanged && { phoneVerified: false }),
-                onboardingCompleted: true, // Mark onboarding as completed on any profile update
+                onboardingCompleted: true,
             });
 
             return res.status(200).json({
@@ -151,22 +150,20 @@ export class UserController {
      */
     async createUser(req: Request, res: Response) {
         try {
-            console.log("Creating user with body:", JSON.stringify(req.body, null, 2));
+            const clerkId = req.auth?.userId;
             const {
-                clerkId,
                 email,
                 phone,
                 firstName,
                 lastName,
                 avatar,
-                role = UserRole.TENANT,
             } = req.body;
+            const role = sanitizeSelfServiceRole(req.body.role) || UserRole.TENANT;
 
-            // Validation - clerkId is absolute minimum
             if (!clerkId) {
-                return res.status(400).json({
+                return res.status(401).json({
                     success: false,
-                    message: "Clerk ID is required",
+                    message: "Unauthorized",
                 });
             }
 
@@ -180,7 +177,7 @@ export class UserController {
             if (existingUser) {
                 // If a different role or onboardingCompleted is provided, update it
                 if (req.body.role || req.body.onboardingCompleted !== undefined) {
-                    const newRole = (req.body.role as UserRole) || existingUser.role;
+                    const newRole = sanitizeSelfServiceRole(req.body.role) || existingUser.role;
                     const markOnboarded = req.body.onboardingCompleted ??
                         (newRole === UserRole.LANDLORD || newRole === UserRole.AGENT || existingUser.onboardingCompleted);
 
@@ -269,6 +266,9 @@ export class UserController {
     async getUserStats(req: Request, res: Response) {
         try {
             const id = req.params.id as string;
+            if (req.user?.id !== id && req.user?.role !== "ADMIN") {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
 
             const stats = await userService.getUserStats(id);
 
@@ -300,6 +300,9 @@ export class UserController {
     async getUserActivity(req: Request, res: Response) {
         try {
             const id = req.params.id as string;
+            if (req.user?.id !== id && req.user?.role !== "ADMIN") {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
 
             const activity = await userService.getUserActivity(id);
 

@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { ServiceTransactionService } from "../services/serviceTransaction.service";
 import { ServiceType } from "@prisma/client";
-import { prisma } from "../config/database";
 
 const serviceTransactionService = new ServiceTransactionService();
 
@@ -13,13 +12,7 @@ export class ServiceTransactionController {
      */
     async initiate(req: Request, res: Response): Promise<void> {
         try {
-            let userId = (req as any).user?.id;
-            const clerkId = req.query.clerkId || req.body.clerkId || (req as any).auth?.userId;
-
-            if (!userId && clerkId) {
-                const u = await prisma.user.findUnique({ where: { clerkId: String(clerkId) } });
-                userId = u?.id;
-            }
+            const userId = req.user?.id;
 
             if (!userId) {
                 res.status(401).json({ error: "Unauthorized: User not found" });
@@ -60,13 +53,7 @@ export class ServiceTransactionController {
      */
     async initiateAfriExchange(req: Request, res: Response): Promise<void> {
         try {
-            let userId = (req as any).user?.id;
-            const clerkId = req.query.clerkId || req.body.clerkId || (req as any).auth?.userId;
-
-            if (!userId && clerkId) {
-                const u = await prisma.user.findUnique({ where: { clerkId: String(clerkId) } });
-                userId = u?.id;
-            }
+            const userId = req.user?.id;
 
             if (!userId) {
                 res.status(401).json({ error: "Unauthorized: User not found" });

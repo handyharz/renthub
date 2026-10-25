@@ -1,19 +1,12 @@
 import { Request, Response } from "express";
 import { renewalService } from "../services/renewalService";
-import { prisma } from "../config/database";
 
 export class RenewalController {
     /**
-     * Helper to resolve userId from req.user or clerkId query/body
+     * Identity comes from the verified Clerk JWT only.
      */
     private async resolveUserId(req: Request): Promise<string | null> {
-        if (req.user?.id) return req.user.id;
-        const clerkId = (req.query.clerkId as string) || req.body?.clerkId;
-        if (clerkId && typeof clerkId === "string") {
-            const user = await prisma.user.findUnique({ where: { clerkId } });
-            return user?.id || null;
-        }
-        return null;
+        return req.user?.id || null;
     }
 
     /**

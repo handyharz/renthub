@@ -22,6 +22,7 @@ declare global {
                 lastName: string;
                 role: string;
             };
+            rawBody?: Buffer;
         }
     }
 }
@@ -101,7 +102,6 @@ export async function requireAuth(
             return res.status(401).json({
                 success: false,
                 message: "Token verification failed",
-                error: clerkError.message,
             });
         }
     } catch (error: any) {
@@ -109,9 +109,19 @@ export async function requireAuth(
         return res.status(500).json({
             success: false,
             message: "Authentication error",
-            error: error.message,
         });
     }
+}
+
+/** JWT is valid but the user must already exist in Postgres. */
+export function requireDbUser(req: Request, res: Response, next: NextFunction) {
+    if (!req.user) {
+        return res.status(403).json({
+            success: false,
+            message: "Account not found. Sync your profile first.",
+        });
+    }
+    next();
 }
 
 /**
@@ -155,16 +165,32 @@ export async function optionalAuth(
 
     try {
         const token = authHeader.substring(7);
-        const session = await clerkClient.sessions.verifySession(token, token);
+        const payload = await verifyToken(token, {
+            secretKey: process.env.CLERK_SECRET_KEY,
+        });
 
-        if (session) {
+        if (payload?.sub) {
             req.auth = {
-                userId: session.userId,
-                sessionId: session.id,
+                userId: payload.sub,
+                sessionId: (payload.sid as string) || "",
             };
+            const { prisma: dbPrisma } = require("../config/database");
+            const user = await dbPrisma.user.findUnique({
+                where: { clerkId: payload.sub },
+            });
+            if (user && user.status !== "SUSPENDED" && user.status !== "BANNED") {
+                req.user = {
+                    id: user.id,
+                    clerkId: user.clerkId,
+                    email: user.email,
+                    phone: user.phone,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role,
+                };
+            }
         }
     } catch (error) {
-        // Token invalid, but we don't fail - just continue without auth
         console.warn("Optional auth failed:", error);
     }
 

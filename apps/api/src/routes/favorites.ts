@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { favoritesController } from "../controllers/favoritesController";
+import { requireAuth, requireDbUser } from "../middleware/auth";
 
 const router: Router = Router();
 
-// Toggle favorite
-router.post("/:propertyId", favoritesController.toggleFavorite);
+router.use(requireAuth, requireDbUser);
 
-// Get my favorites
+router.post("/:propertyId", favoritesController.toggleFavorite);
 router.get("/me", favoritesController.getMyFavorites);
 
 export default router;

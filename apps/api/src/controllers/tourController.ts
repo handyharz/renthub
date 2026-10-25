@@ -6,24 +6,20 @@ import { prisma } from "../config/database";
 export class TourController {
     async createTourRequest(req: Request, res: Response) {
         try {
-            const { propertyId, preferredDate, preferredTime, message, clerkId } = req.body;
+            const { propertyId, preferredDate, preferredTime, message } = req.body;
+            const tenant = req.user;
 
-            if (!propertyId || !preferredDate || !preferredTime || !clerkId) {
+            if (!propertyId || !preferredDate || !preferredTime) {
                 return res.status(400).json({
                     success: false,
                     message: "Missing required fields",
                 });
             }
 
-            // Find tenant by clerkId
-            const tenant = await prisma.user.findUnique({
-                where: { clerkId },
-            });
-
             if (!tenant) {
-                return res.status(404).json({
+                return res.status(401).json({
                     success: false,
-                    message: "Tenant not found",
+                    message: "Unauthorized",
                 });
             }
 
@@ -72,15 +68,8 @@ export class TourController {
 
     async getTourRequests(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            let userRole: string | undefined = req.user?.role || (req.query.role as string);
-            const { clerkId } = req.query;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const user = await prisma.user.findUnique({ where: { clerkId } });
-                userId = user?.id;
-                userRole = userRole || user?.role;
-            }
+            const userId = req.user?.id;
+            const userRole = req.user?.role;
 
             if (!userId || !userRole) {
                 return res.status(401).json({
@@ -112,12 +101,33 @@ export class TourController {
         try {
             const { id } = req.params;
             const { status } = req.body;
+            const userId = req.user?.id;
+            const role = req.user?.role;
+
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
 
             if (!status || !Object.values(TourStatus).includes(status)) {
                 return res.status(400).json({
                     success: false,
                     message: "Invalid status",
                 });
+            }
+
+            const existing = await prisma.tourRequest.findUnique({ where: { id: id as string } });
+            if (!existing) {
+                return res.status(404).json({ success: false, message: "Tour not found" });
+            }
+
+            const isLandlord = existing.landlordId === userId;
+            const isTenant = existing.tenantId === userId;
+            const isAdmin = role === "ADMIN";
+            if (!isLandlord && !isTenant && !isAdmin) {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
+            if (isTenant && !isAdmin && status !== TourStatus.CANCELLED && status !== "CANCELLED") {
+                return res.status(403).json({ success: false, message: "Tenants can only cancel a tour" });
             }
 
             const tour = await tourService.updateTourStatus(id as string, status as TourStatus);

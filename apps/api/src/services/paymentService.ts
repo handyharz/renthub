@@ -125,11 +125,15 @@ export class PaymentService {
      * Verify Paystack webhook signature
      */
     verifyWebhookSignature(payload: string, signature: string): boolean {
+        if (!this.paystackSecretKey || !signature) return false;
         const hash = crypto
             .createHmac("sha512", this.paystackSecretKey)
             .update(payload)
             .digest("hex");
-        return hash === signature;
+        const left = Buffer.from(hash);
+        const right = Buffer.from(signature);
+        if (left.length !== right.length) return false;
+        return crypto.timingSafeEqual(left, right);
     }
 
     /**

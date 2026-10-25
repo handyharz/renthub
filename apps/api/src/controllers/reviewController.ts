@@ -3,7 +3,12 @@ import { prisma } from '../config/database';
 
 export const createReview = async (req: Request, res: Response) => {
     try {
-        const { rating, locationRating, valueRating, landlordRating, comment, propertyId, reviewerId } = req.body;
+        const reviewerId = req.user?.id;
+        const { rating, locationRating, valueRating, landlordRating, comment, propertyId } = req.body;
+
+        if (!reviewerId) {
+            return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        }
 
         // Verify transaction exists and is RELEASED (ensure user actually rented it)
         const transaction = await prisma.transaction.findFirst({
@@ -22,7 +27,11 @@ export const createReview = async (req: Request, res: Response) => {
             }
         });
 
-        const isVerified = !!transaction;
+        if (!transaction) {
+            return res.status(403).json({ status: 'error', message: 'Only completed tenancies can leave a review' });
+        }
+
+        const isVerified = true;
 
         // Check if review already exists
         const existingReview = await prisma.review.findUnique({

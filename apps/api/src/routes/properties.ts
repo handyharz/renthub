@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { propertyController } from "../controllers/propertyController";
 
-import { requireAuth } from "../middleware/auth";
+import { optionalAuth, requireAuth, requireDbUser } from "../middleware/auth";
 
 const router: Router = Router();
 
@@ -13,10 +13,10 @@ router.get("/locations", propertyController.getLocations.bind(propertyController
 router.get("/landlord/:landlordId", propertyController.getPropertiesByLandlord.bind(propertyController));
 
 // CRUD routes
-router.post("/", requireAuth, propertyController.createProperty.bind(propertyController));
+router.post("/", requireAuth, requireDbUser, propertyController.createProperty.bind(propertyController));
 router.get("/", propertyController.getProperties.bind(propertyController));
-router.get("/:id", propertyController.getPropertyById.bind(propertyController));
-router.patch("/:id", requireAuth, propertyController.updateProperty.bind(propertyController));
-router.delete("/:id", requireAuth, propertyController.deleteProperty.bind(propertyController));
+router.get("/:id", optionalAuth, propertyController.getPropertyById.bind(propertyController));
+router.patch("/:id", requireAuth, requireDbUser, propertyController.updateProperty.bind(propertyController));
+router.delete("/:id", requireAuth, requireDbUser, propertyController.deleteProperty.bind(propertyController));
 
 export default router;

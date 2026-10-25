@@ -36,7 +36,6 @@ export class AfriExchangePaymentService {
         afriExchangeWalletAddress,
         afriExchangeUserId,
         tokenType = "NT",
-        amountInToken,
     }: {
         transactionId: string;
         tenantId: string;
@@ -104,9 +103,7 @@ export class AfriExchangePaymentService {
         // CT: 1 CT ≈ 2.70 NGN (0.37 CT per 1 NGN)
         // USDT: 1 USDT ≈ 1,500 NGN (0.00067 USDT per 1 NGN)
         let resolvedTokenAmount: number;
-        if (amountInToken && amountInToken > 0) {
-            resolvedTokenAmount = amountInToken;
-        } else if (tokenType === "USDT") {
+        if (tokenType === "USDT") {
             resolvedTokenAmount = Math.round((transaction.totalAmount / 1500) * 100) / 100;
         } else if (tokenType === "CT") {
             resolvedTokenAmount = Math.round((transaction.totalAmount / 2.7) * 100) / 100;
@@ -265,14 +262,12 @@ export class AfriExchangePaymentService {
         transactionId,
         tenantId,
         tokenType = "NT",
-        amountInToken,
         customerEmail,
         returnUrl,
     }: {
         transactionId: string;
         tenantId: string;
         tokenType?: "NT" | "CT" | "USDT";
-        amountInToken?: number;
         customerEmail?: string;
         returnUrl?: string;
     }) {
@@ -305,9 +300,7 @@ export class AfriExchangePaymentService {
 
         // Calculate converted token amount if not provided
         let resolvedTokenAmount: number;
-        if (amountInToken && amountInToken > 0) {
-            resolvedTokenAmount = amountInToken;
-        } else if (tokenType === "USDT") {
+        if (tokenType === "USDT") {
             resolvedTokenAmount = Math.round((transaction.totalAmount / 1500) * 100) / 100;
         } else if (tokenType === "CT") {
             resolvedTokenAmount = Math.round((transaction.totalAmount / 2.7) * 100) / 100;
@@ -477,7 +470,10 @@ export class AfriExchangePaymentService {
             return { success: true, verified: false, status: result.status, transaction };
         }
 
-        // In simulation mode: mark escrowed
+        if (process.env.NODE_ENV === "production" || process.env.AFRIEXCHANGE_SIMULATION !== "true") {
+            throw new Error("AfriExchange payment could not be verified");
+        }
+
         const updated = await prisma.transaction.update({
             where: { id: transaction.id },
             data: {

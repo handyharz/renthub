@@ -14,13 +14,12 @@ const fail = (res: Response, message: string, status = 400) =>
 const str = (v: unknown): string =>
     Array.isArray(v) ? String(v[0] ?? "") : String(v ?? "");
 
-/** Get clerkId from query or auth context */
 function getClerkId(req: Request): string {
-    return str(req.query.clerkId) || ((req as any).auth?.userId ?? "");
+    return req.auth?.userId ?? req.user?.clerkId ?? "";
 }
 
-/** Resolve the DB user.id from a clerkId query param or Bearer token */
 async function resolveDbUserId(req: Request): Promise<string | null> {
+    if (req.user?.id) return req.user.id;
     const clerkId = getClerkId(req);
     if (!clerkId) return null;
     const user = await prisma.user.findUnique({
@@ -215,7 +214,7 @@ export const adminListPendingAgents = async (req: Request, res: Response) => {
 
 export const adminApproveAgent = async (req: Request, res: Response) => {
     try {
-        const adminClerkId = ((req as any).auth?.userId as string | undefined) || str(req.query.clerkId);
+        const adminClerkId = req.user?.clerkId || req.auth?.userId || "";
         const id = str(req.params.id);
         const updated = await agentService.approveAgent(id, adminClerkId);
         return ok(res, updated, "Agent approved");
@@ -226,7 +225,7 @@ export const adminApproveAgent = async (req: Request, res: Response) => {
 
 export const adminRejectAgent = async (req: Request, res: Response) => {
     try {
-        const adminClerkId = ((req as any).auth?.userId as string | undefined) || str(req.query.clerkId);
+        const adminClerkId = req.user?.clerkId || req.auth?.userId || "";
         const id = str(req.params.id);
         const { reason } = req.body;
         if (!reason) return fail(res, "Rejection reason is required");
@@ -295,7 +294,7 @@ export const adminListStrikes = async (req: Request, res: Response) => {
 
 export const adminReviewStrike = async (req: Request, res: Response) => {
     try {
-        const adminClerkId = ((req as any).auth?.userId as string | undefined) || str(req.query.clerkId);
+        const adminClerkId = req.user?.clerkId || req.auth?.userId || "";
         const id = str(req.params.id);
         const { action, adminNote } = req.body;
 

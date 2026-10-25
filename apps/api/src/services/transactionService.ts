@@ -3,6 +3,10 @@ import { Transaction, TransactionStatus } from "@prisma/client";
 import { smsService } from "./smsService";
 import { afriExchangePayoutService } from "./afriExchangePayoutService";
 import crypto from "crypto";
+import { hashOtp, otpMatches } from "../utils/cryptoCompare";
+import { stripReleaseOtp } from "../utils/identity";
+
+const otpAttempts = new Map<string, { count: number; resetAt: number }>();
 
 export class TransactionService {
     /**
@@ -153,23 +157,10 @@ export class TransactionService {
     ): Promise<Transaction> {
         const updateData: any = { status };
 
-        // If payment is successful, mark as escrowed
+        // Payment success holds funds in escrow. Listing stays UNDER_OFFER until OTP handover.
         if (status === TransactionStatus.SUCCESSFUL) {
             updateData.escrowHeld = true;
             updateData.status = TransactionStatus.ESCROWED;
-
-            // Also update property status to RENTED
-            const transaction = await prisma.transaction.findUnique({
-                where: { id },
-                select: { propertyId: true }
-            });
-
-            if (transaction) {
-                await prisma.property.update({
-                    where: { id: transaction.propertyId },
-                    data: { status: "RENTED" } // Using string literal to match enum
-                });
-            }
         }
 
         // Add payment gateway references
@@ -323,7 +314,11 @@ export class TransactionService {
     /**
      * Stage 6: Generate Handover Release OTP for Tenant
      */
-    async generateHandoverOTP(transactionId: string, tenantId: string): Promise<{ message: string; otp: string; expiresAt: Date }> {
+    sanitizeTransaction<T extends { releaseOtp?: string | null }>(transaction: T | null) {
+        return stripReleaseOtp(transaction);
+    }
+
+    async generateHandoverOTP(transactionId: string, tenantId: string): Promise<{ message: string; expiresAt: Date }> {
         const transaction = await prisma.transaction.findUnique({
             where: { id: transactionId },
             include: { tenant: true }
@@ -341,17 +336,17 @@ export class TransactionService {
             throw new Error("Escrow must be funded before generating handover OTP");
         }
 
-        // Generate 6-digit OTP
         const otp = crypto.randomInt(100000, 999999).toString();
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
         await prisma.transaction.update({
             where: { id: transactionId },
             data: {
-                releaseOtp: otp,
+                releaseOtp: hashOtp(otp),
                 otpExpiresAt: expiresAt
             }
         });
+        otpAttempts.delete(transactionId);
 
         // Send SMS to tenant
         if (transaction.tenant.phone) {
@@ -361,7 +356,6 @@ export class TransactionService {
 
         return {
             message: "Handover OTP generated and sent to your registered phone number",
-            otp,
             expiresAt
         };
     }
@@ -391,7 +385,18 @@ export class TransactionService {
             throw new Error("Escrow has already been released for this transaction");
         }
 
-        if (!transaction.releaseOtp || transaction.releaseOtp !== otp) {
+        const attempts = otpAttempts.get(transactionId);
+        const now = Date.now();
+        if (attempts && attempts.resetAt > now && attempts.count >= 5) {
+            throw new Error("Too many invalid OTP attempts. Request a new handover code.");
+        }
+        if (!attempts || attempts.resetAt <= now) {
+            otpAttempts.set(transactionId, { count: 0, resetAt: now + 15 * 60 * 1000 });
+        }
+
+        if (!otpMatches(transaction.releaseOtp, otp)) {
+            const current = otpAttempts.get(transactionId)!;
+            current.count += 1;
             throw new Error("Invalid Handover Release OTP code");
         }
 
@@ -399,16 +404,26 @@ export class TransactionService {
             throw new Error("Handover Release OTP code has expired. Tenant must request a new OTP.");
         }
 
-        // Complete release & update property to RENTED
-        const released = await prisma.transaction.update({
-            where: { id: transactionId },
+        const releasedRows = await prisma.transaction.updateMany({
+            where: {
+                id: transactionId,
+                escrowReleased: false,
+                disputed: false,
+            },
             data: {
                 status: TransactionStatus.RELEASED,
                 escrowReleased: true,
                 releaseDate: new Date(),
-                releaseReason: "Handover confirmed via Tenant OTP"
+                releaseReason: "Handover confirmed via Tenant OTP",
+                releaseOtp: null,
             }
         });
+        if (releasedRows.count === 0) {
+            throw new Error("Escrow has already been released for this transaction");
+        }
+        otpAttempts.delete(transactionId);
+
+        const released = await prisma.transaction.findUniqueOrThrow({ where: { id: transactionId } });
 
         await prisma.property.update({
             where: { id: transaction.propertyId },

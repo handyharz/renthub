@@ -6,15 +6,12 @@ export const verificationController = {
     // Request OTP
     async requestPhoneVerification(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const clerkId = (req.user?.clerkId || req.query.clerkId) as string;
+            const userId = req.user?.id;
             const { phone } = req.body;
 
             let user = userId
                 ? await prisma.user.findUnique({ where: { id: userId } })
-                : clerkId
-                    ? await prisma.user.findUnique({ where: { clerkId } })
-                    : null;
+                : null;
 
             if (!user) {
                 return res.status(401).json({ success: false, message: "Unauthorized: User not found" });
@@ -59,15 +56,12 @@ export const verificationController = {
     // Verify OTP
     async verifyPhone(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const clerkId = (req.user?.clerkId || req.query.clerkId) as string;
+            const userId = req.user?.id;
             const { otp } = req.body;
 
             const user = userId
                 ? await prisma.user.findUnique({ where: { id: userId } })
-                : clerkId
-                    ? await prisma.user.findUnique({ where: { clerkId } })
-                    : null;
+                : null;
 
             if (!user) {
                 return res.status(401).json({ success: false, message: "Unauthorized: User not found" });

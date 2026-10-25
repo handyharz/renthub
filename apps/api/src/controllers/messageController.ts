@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { messageService } from "../services/messageService";
-import { prisma } from "../config/database";
 
 export class MessageController {
     /**
@@ -9,14 +8,8 @@ export class MessageController {
      */
     async initiateConversation(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const { clerkId } = req.query;
+            const userId = req.user?.id;
             const { receiverId, propertyId, content } = req.body;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const sender = await prisma.user.findUnique({ where: { clerkId } });
-                userId = sender?.id;
-            }
 
             if (!userId || !receiverId) {
                 return res.status(401).json({ success: false, message: "Unauthorized or missing receiverId" });
@@ -58,22 +51,23 @@ export class MessageController {
      */
     async sendMessage(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const { clerkId } = req.query;
+            const userId = req.user?.id;
             const { receiverId, content, propertyId, conversationId: existingConvId } = req.body;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const sender = await prisma.user.findUnique({ where: { clerkId } });
-                userId = sender?.id;
-            }
 
             if (!userId) {
                 return res.status(401).json({ success: false, message: "Unauthorized: User identification required" });
             }
 
-            // 1. Get or Create conversation
             let conversationId: string | undefined = existingConvId as string;
-            if (!conversationId) {
+            if (conversationId) {
+                const member = await messageService.isParticipant(conversationId, userId);
+                if (!member) {
+                    return res.status(403).json({ success: false, message: "Forbidden" });
+                }
+            } else {
+                if (!receiverId) {
+                    return res.status(400).json({ success: false, message: "receiverId is required" });
+                }
                 const conversation = await messageService.getOrCreateConversation(
                     [userId, receiverId],
                     propertyId
@@ -110,13 +104,7 @@ export class MessageController {
      */
     async getConversations(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const { clerkId } = req.query;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const u = await prisma.user.findUnique({ where: { clerkId } });
-                userId = u?.id;
-            }
+            const userId = req.user?.id;
 
             if (!userId) {
                 return res.status(401).json({ success: false, message: "Unauthorized: User identification required" });
@@ -144,7 +132,15 @@ export class MessageController {
      */
     async getMessages(req: Request, res: Response) {
         try {
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
             const conversationId = req.params.id;
+            const member = await messageService.isParticipant(conversationId as string, userId);
+            if (!member) {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
             const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
             const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
@@ -170,17 +166,16 @@ export class MessageController {
      */
     async markAsRead(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const { clerkId } = req.query;
+            const userId = req.user?.id;
             const conversationId = req.params.id;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const u = await prisma.user.findUnique({ where: { clerkId } });
-                userId = u?.id;
-            }
 
             if (!userId) {
                 return res.status(401).json({ success: false, message: "Unauthorized: User identification required" });
+            }
+
+            const member = await messageService.isParticipant(conversationId as string, userId);
+            if (!member) {
+                return res.status(403).json({ success: false, message: "Forbidden" });
             }
 
             await messageService.markAsRead(conversationId as string, userId);
@@ -205,13 +200,7 @@ export class MessageController {
      */
     async getUnreadCount(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const { clerkId } = req.query;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const u = await prisma.user.findUnique({ where: { clerkId } });
-                userId = u?.id;
-            }
+            const userId = req.user?.id;
 
             if (!userId) {
                 return res.status(401).json({ success: false, message: "Unauthorized: User identification required" });

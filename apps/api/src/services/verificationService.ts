@@ -1,6 +1,7 @@
 import redis from "../lib/redis";
 import { smsService } from "./smsService";
 import crypto from "crypto";
+import { hashOtp, otpMatches } from "../utils/cryptoCompare";
 
 export class VerificationService {
     private readonly OTP_TTL = 600; // 10 minutes in seconds
@@ -14,7 +15,7 @@ export class VerificationService {
 
         // Store in Redis: verification:phone:{userId} -> otp
         const key = `verification:phone:${userId}`;
-        await redis.set(key, otp, "EX", this.OTP_TTL);
+        await redis.set(key, hashOtp(otp), "EX", this.OTP_TTL);
 
         // Send SMS
         const message = `Your RentHub verification code is: ${otp}. Valid for 10 minutes.`;
@@ -34,9 +35,8 @@ export class VerificationService {
         const key = `verification:phone:${userId}`;
         const storedOtp = await redis.get(key);
 
-        if (storedOtp && storedOtp === otp) {
-            // OTP matches
-            await redis.del(key); // Invalidate OTP
+        if (otpMatches(storedOtp, otp)) {
+            await redis.del(key);
             return true;
         }
 

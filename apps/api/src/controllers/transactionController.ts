@@ -9,13 +9,7 @@ export class TransactionController {
      */
     async createTransaction(req: Request, res: Response) {
         try {
-            let tenantId = req.user?.id;
-            const { clerkId } = req.query;
-
-            if (!tenantId && clerkId && typeof clerkId === "string") {
-                const tenant = await prisma.user.findUnique({ where: { clerkId } });
-                tenantId = tenant?.id;
-            }
+            const tenantId = req.user?.id;
 
             if (!tenantId) {
                 return res.status(401).json({
@@ -79,7 +73,7 @@ export class TransactionController {
                 console.info(`[TransactionController] Returning existing transaction ${existingTransaction.id} for tenant=${tenantId} property=${property.id}`);
                 return res.status(200).json({
                     success: true,
-                    data: existingTransaction,
+                    data: transactionService.sanitizeTransaction(existingTransaction),
                 });
             }
 
@@ -99,7 +93,7 @@ export class TransactionController {
 
             return res.status(201).json({
                 success: true,
-                data: transaction,
+                data: transactionService.sanitizeTransaction(transaction),
             });
         } catch (error: any) {
             console.error("Error creating transaction:", error);
@@ -128,9 +122,17 @@ export class TransactionController {
                 });
             }
 
+            const isParty =
+                transaction.tenantId === req.user?.id ||
+                (transaction as any).property?.landlordId === req.user?.id ||
+                req.user?.role === "ADMIN";
+            if (!isParty) {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
+
             return res.status(200).json({
                 success: true,
-                data: transaction,
+                data: transactionService.sanitizeTransaction(transaction),
             });
         } catch (error: any) {
             console.error("Error fetching transaction:", error);
@@ -148,13 +150,7 @@ export class TransactionController {
      */
     async getTenantTransactions(req: Request, res: Response) {
         try {
-            let tenantId = req.user?.id;
-            const { clerkId } = req.query;
-
-            if (!tenantId && clerkId && typeof clerkId === "string") {
-                const tenant = await prisma.user.findUnique({ where: { clerkId } });
-                tenantId = tenant?.id;
-            }
+            const tenantId = req.user?.id;
 
             if (!tenantId) {
                 return res.status(401).json({
@@ -169,7 +165,7 @@ export class TransactionController {
 
             return res.status(200).json({
                 success: true,
-                data: transactions,
+                data: transactions.map((tx) => transactionService.sanitizeTransaction(tx)),
             });
         } catch (error: any) {
             console.error("Error fetching tenant transactions:", error);
@@ -187,13 +183,7 @@ export class TransactionController {
      */
     async getLandlordTransactions(req: Request, res: Response) {
         try {
-            let landlordId = req.user?.id;
-            const { clerkId } = req.query;
-
-            if (!landlordId && clerkId && typeof clerkId === "string") {
-                const landlord = await prisma.user.findUnique({ where: { clerkId } });
-                landlordId = landlord?.id;
-            }
+            const landlordId = req.user?.id;
 
             if (!landlordId) {
                 return res.status(401).json({
@@ -207,7 +197,7 @@ export class TransactionController {
 
             return res.status(200).json({
                 success: true,
-                data: transactions,
+                data: transactions.map((tx) => transactionService.sanitizeTransaction(tx)),
             });
         } catch (error: any) {
             console.error("Error fetching landlord transactions:", error);
@@ -236,7 +226,7 @@ export class TransactionController {
 
             return res.status(200).json({
                 success: true,
-                data: transaction,
+                data: transactionService.sanitizeTransaction(transaction),
             });
         } catch (error: any) {
             console.error("Error updating transaction status:", error);
@@ -294,7 +284,7 @@ export class TransactionController {
             return res.status(200).json({
                 success: true,
                 message: result.message,
-                data: { otp: result.otp, expiresAt: result.expiresAt }
+                data: { expiresAt: result.expiresAt }
             });
         } catch (error: any) {
             console.error("Error generating handover OTP:", error);

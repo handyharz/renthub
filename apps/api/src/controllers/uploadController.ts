@@ -50,7 +50,9 @@ export class UploadController {
                 });
             }
 
-            // TODO: Verify user owns this property
+            if (!req.user || (property.landlordId !== req.user.id && req.user.role !== "ADMIN")) {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
 
             // Get current image count
             const currentImageCount = await prisma.image.count({
@@ -115,17 +117,14 @@ export class UploadController {
                 });
             }
 
-            // TODO: Get userId from authenticated user
-            const { userId } = req.body;
-
+            const userId = req.user?.id;
             if (!userId) {
-                return res.status(400).json({
+                return res.status(401).json({
                     success: false,
-                    message: "User ID is required",
+                    message: "Unauthorized",
                 });
             }
 
-            // Verify user exists
             const user = await prisma.user.findUnique({
                 where: { id: userId },
             });
@@ -193,7 +192,9 @@ export class UploadController {
                 });
             }
 
-            // TODO: Verify user owns this property
+            if (!req.user || (image.property.landlordId !== req.user.id && req.user.role !== "ADMIN")) {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
 
             // Delete from Cloudinary
             await uploadService.deleteImage(image.publicId);
@@ -242,6 +243,7 @@ export class UploadController {
 
             const image = await prisma.image.findUnique({
                 where: { id: imageId },
+                include: { property: true },
             });
 
             if (!image) {
@@ -251,7 +253,9 @@ export class UploadController {
                 });
             }
 
-            // TODO: Verify user owns this property
+            if (!req.user || (image.property.landlordId !== req.user.id && req.user.role !== "ADMIN")) {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
 
             // Unset current primary
             await prisma.image.updateMany({
@@ -298,17 +302,14 @@ export class UploadController {
                 });
             }
 
-            // TODO: Get userId from authenticated user
-            const { userId } = req.body;
-
+            const userId = req.user?.id;
             if (!userId) {
-                return res.status(400).json({
+                return res.status(401).json({
                     success: false,
-                    message: "User ID is required",
+                    message: "Unauthorized",
                 });
             }
 
-            // Verify user exists
             const user = await prisma.user.findUnique({
                 where: { id: userId },
             });

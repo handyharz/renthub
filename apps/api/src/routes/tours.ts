@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { tourController } from "../controllers/tourController";
-
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireDbUser } from "../middleware/auth";
 
 const router: Router = Router();
 
-router.post("/", requireAuth, tourController.createTourRequest);
-router.get("/", requireAuth, tourController.getTourRequests);
-router.patch("/:id/status", requireAuth, tourController.updateStatus);
+router.use(requireAuth, requireDbUser);
+
+router.post("/", tourController.createTourRequest);
+router.get("/", tourController.getTourRequests);
+router.patch("/:id/status", tourController.updateStatus);
 
 export default router;

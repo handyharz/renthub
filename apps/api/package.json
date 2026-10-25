@@ -7,12 +7,12 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc --noEmit false",
     "start": "node dist/index.js",
-    "start:prod": "prisma migrate deploy && tsx src/index.ts",
+    "start:prod": "prisma migrate deploy && node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "tsx prisma/seed.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx --test src/**/*.test.ts"
   },
   "keywords": [],
   "author": "",

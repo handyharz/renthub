@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { favoritesService } from "../services/favoritesService";
-import { userService } from "../services/userService";
 
 export class FavoritesController {
     /**
@@ -10,13 +9,7 @@ export class FavoritesController {
     async toggleFavorite(req: Request, res: Response) {
         try {
             const propertyId = req.params.propertyId as string;
-            let userId = req.user?.id;
-            const clerkId = req.query.clerkId as string;
-
-            if (!userId && clerkId) {
-                const user = await userService.getUserByClerkId(clerkId);
-                userId = user?.id;
-            }
+            const userId = req.user?.id;
 
             if (!userId) {
                 return res.status(401).json({
@@ -47,13 +40,7 @@ export class FavoritesController {
      */
     async getMyFavorites(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const clerkId = req.query.clerkId as string;
-
-            if (!userId && clerkId) {
-                const user = await userService.getUserByClerkId(clerkId);
-                userId = user?.id;
-            }
+            const userId = req.user?.id;
 
             if (!userId) {
                 return res.status(401).json({

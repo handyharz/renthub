@@ -11,14 +11,8 @@ export class PaymentController {
      */
     async initializePayment(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const { clerkId } = req.query;
+            const userId = req.user?.id;
             const { transactionId, callbackUrl } = req.body;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const u = await prisma.user.findUnique({ where: { clerkId } });
-                userId = u?.id;
-            }
 
             if (!userId) {
                 return res.status(401).json({
@@ -120,7 +114,11 @@ export class PaymentController {
                 });
             }
 
-            // 1. Find local transaction first
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
             let transaction = await prisma.transaction.findFirst({
                 where: {
                     OR: [
@@ -131,28 +129,20 @@ export class PaymentController {
             });
 
             const payRef = transaction?.paystackRef || reference;
-            let paymentData: any = null;
-
-            // 2. Try verifying with Paystack
+            let paymentData: any;
             try {
                 paymentData = await paymentService.verifyPayment(payRef as string);
-
-                // If paymentData returned and metadata has transactionId, update transaction lookup
-                if (!transaction && paymentData?.metadata?.transactionId) {
-                    transaction = await prisma.transaction.findUnique({
-                        where: { id: paymentData.metadata.transactionId },
-                    });
-                }
             } catch (paystackError: any) {
-                console.warn("Paystack verification API notice:", paystackError.message);
-                // In local/test mode, if we already have the transaction record, proceed with mock verification
-                if (!transaction) {
-                    return res.status(404).json({
-                        success: false,
-                        message: "Transaction not found",
-                        error: paystackError.message,
-                    });
-                }
+                return res.status(502).json({
+                    success: false,
+                    message: "Payment provider verification failed",
+                });
+            }
+
+            if (!transaction && paymentData?.metadata?.transactionId) {
+                transaction = await prisma.transaction.findUnique({
+                    where: { id: paymentData.metadata.transactionId },
+                });
             }
 
             if (!transaction) {
@@ -162,7 +152,25 @@ export class PaymentController {
                 });
             }
 
-            // 3. Update transaction status to ESCROWED & property to RENTED
+            if (transaction.tenantId !== userId && req.user?.role !== "ADMIN") {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
+
+            if (paymentData?.status !== "success") {
+                return res.status(400).json({
+                    success: false,
+                    message: "Payment has not been confirmed by Paystack",
+                });
+            }
+
+            const expectedKobo = paymentService.nairaToKobo(transaction.totalAmount);
+            if (typeof paymentData.amount === "number" && paymentData.amount < expectedKobo) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Paid amount does not match the escrow total",
+                });
+            }
+
             const updatedTransaction = await transactionService.updateTransactionStatus(
                 transaction.id,
                 "SUCCESSFUL" as any,
@@ -173,8 +181,8 @@ export class PaymentController {
                 success: true,
                 message: "Payment verified successfully",
                 data: {
-                    transaction: updatedTransaction,
-                    payment: paymentData || { status: "success", reference: payRef },
+                    transaction: transactionService.sanitizeTransaction(updatedTransaction),
+                    payment: { status: paymentData.status, reference: payRef },
                 },
             });
         } catch (error: any) {
@@ -202,11 +210,8 @@ export class PaymentController {
                 });
             }
 
-            // Verify webhook signature
-            const isValid = paymentService.verifyWebhookSignature(
-                JSON.stringify(req.body),
-                signature
-            );
+            const payload = req.rawBody ? req.rawBody.toString("utf8") : JSON.stringify(req.body);
+            const isValid = paymentService.verifyWebhookSignature(payload, signature);
 
             if (!isValid) {
                 return res.status(401).json({
@@ -311,21 +316,14 @@ export class PaymentController {
      */
     async payWithAfriExchange(req: Request, res: Response) {
         try {
-            let userId = req.user?.id;
-            const { clerkId } = req.query;
+            const userId = req.user?.id;
             const {
                 transactionId,
                 afriExchangeAccountEmail,
                 afriExchangeWalletAddress,
                 afriExchangeUserId,
                 tokenType,
-                amountInToken,
             } = req.body;
-
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const u = await prisma.user.findUnique({ where: { clerkId } });
-                userId = u?.id;
-            }
 
             if (!userId) {
                 return res.status(401).json({
@@ -350,7 +348,6 @@ export class PaymentController {
                     afriExchangeWalletAddress,
                     afriExchangeUserId,
                     tokenType: tokenType || "NT",
-                    amountInToken: amountInToken ? parseFloat(amountInToken) : undefined,
                 });
 
                 return res.status(200).json({
@@ -365,7 +362,6 @@ export class PaymentController {
                 transactionId,
                 tenantId: userId,
                 tokenType: tokenType || "NT",
-                amountInToken: amountInToken ? parseFloat(amountInToken) : undefined,
                 customerEmail: afriExchangeAccountEmail,
                 returnUrl: req.body.returnUrl,
             });
@@ -402,6 +398,13 @@ export class PaymentController {
             }
 
             const result = await afriExchangePaymentService.verifyAndFinalizePayment(reference);
+            const tenantId = (result as any)?.transaction?.tenantId;
+            if (tenantId && tenantId !== req.user?.id && req.user?.role !== "ADMIN") {
+                return res.status(403).json({ success: false, message: "Forbidden" });
+            }
+            if ((result as any)?.transaction) {
+                (result as any).transaction = transactionService.sanitizeTransaction((result as any).transaction);
+            }
             return res.status(200).json({
                 success: true,
                 message: "AfriExchange payment verification completed",
@@ -426,18 +429,22 @@ export class PaymentController {
             const signature = req.headers["x-afriexchange-signature"] as string;
             const webhookSecret = process.env.AFRIEXCHANGE_WEBHOOK_SECRET;
 
-            if (webhookSecret && signature && timestamp) {
-                const crypto = await import("crypto");
-                const rawBody = JSON.stringify(req.body);
-                const expected =
-                    "sha256=" +
-                    crypto
-                        .createHmac("sha256", webhookSecret)
-                        .update(`${timestamp}.${rawBody}`)
-                        .digest("hex");
-                if (signature !== expected) {
-                    console.warn("[AfriExchange Webhook] Signature verification notice - signature mismatch");
-                }
+            if (!webhookSecret || !signature || !timestamp) {
+                return res.status(401).json({ success: false, message: "Invalid signature" });
+            }
+
+            const crypto = await import("crypto");
+            const rawBody = req.rawBody ? req.rawBody.toString("utf8") : JSON.stringify(req.body);
+            const expected =
+                "sha256=" +
+                crypto
+                    .createHmac("sha256", webhookSecret)
+                    .update(`${timestamp}.${rawBody}`)
+                    .digest("hex");
+            const left = Buffer.from(expected);
+            const right = Buffer.from(signature);
+            if (left.length !== right.length || !crypto.timingSafeEqual(left, right)) {
+                return res.status(401).json({ success: false, message: "Invalid signature" });
             }
 
             const event = req.body;

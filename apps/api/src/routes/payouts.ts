@@ -26,10 +26,11 @@ router.delete(
     payoutController.unlinkAfriExchangeAccount.bind(payoutController)
 );
 
-// Link/update AfriExchange wallet for automated payouts (direct fallback)
+// Direct wallet link is admin-only — landlords must complete OTP verification.
 router.put(
     "/link-afriexchange",
     requireAuth,
+    requireRole("ADMIN"),
     payoutController.linkAfriExchangeAccount.bind(payoutController)
 );
 

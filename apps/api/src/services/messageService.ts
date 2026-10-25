@@ -125,6 +125,17 @@ export class MessageService {
         });
     }
 
+    async isParticipant(conversationId: string, userId: string): Promise<boolean> {
+        const conversation = await (prisma as any).conversation.findFirst({
+            where: {
+                id: conversationId,
+                participants: { some: { id: userId } },
+            },
+            select: { id: true },
+        });
+        return Boolean(conversation);
+    }
+
     /**
      * Get messages for a specific conversation.
      */

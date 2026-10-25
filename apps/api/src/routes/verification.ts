@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { verificationController } from "../controllers/verificationController";
+import { requireAuth, requireDbUser } from "../middleware/auth";
 
 const router: Router = Router();
 
-// Request OTP
-router.post("/phone/request", verificationController.requestPhoneVerification);
+router.use(requireAuth, requireDbUser);
 
-// Verify OTP
+router.post("/phone/request", verificationController.requestPhoneVerification);
 router.post("/phone/verify", verificationController.verifyPhone);
 
 export default router;

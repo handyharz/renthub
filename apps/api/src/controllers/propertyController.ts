@@ -64,12 +64,12 @@ export class PropertyController {
                 });
             }
 
-            const targetLandlordId = req.user?.id || landlordId;
+            const targetLandlordId = req.user?.id;
 
             if (!targetLandlordId) {
-                return res.status(400).json({
+                return res.status(401).json({
                     success: false,
-                    message: "Landlord ID is required",
+                    message: "Unauthorized",
                 });
             }
 
@@ -207,7 +207,6 @@ export class PropertyController {
     async getPropertyById(req: Request, res: Response) {
         try {
             const id = req.params.id as string;
-            const { clerkId } = req.query;
 
             const property = await propertyService.getPropertyById(id);
 
@@ -218,12 +217,7 @@ export class PropertyController {
                 });
             }
 
-            // If clerkId is provided, try to get dbUserId for more accurate activity tracking
-            let userId: string | undefined = req.user?.id;
-            if (!userId && clerkId && typeof clerkId === "string") {
-                const user = await prisma.user.findUnique({ where: { clerkId } });
-                userId = user?.id;
-            }
+            const userId: string | undefined = req.user?.id;
 
             // Increment view count (async, don't wait)
             propertyService.incrementViewCount(id, userId).catch(console.error);
@@ -338,7 +332,7 @@ export class PropertyController {
             if (!existingProp) {
                 return res.status(404).json({ success: false, message: "Property not found" });
             }
-            if (req.user && existingProp.landlordId !== req.user.id && req.user.role !== "ADMIN") {
+            if (!req.user || (existingProp.landlordId !== req.user.id && req.user.role !== "ADMIN")) {
                 return res.status(403).json({ success: false, message: "Forbidden: You do not own this property" });
             }
 
@@ -372,7 +366,7 @@ export class PropertyController {
             if (!existingProp) {
                 return res.status(404).json({ success: false, message: "Property not found" });
             }
-            if (req.user && existingProp.landlordId !== req.user.id && req.user.role !== "ADMIN") {
+            if (!req.user || (existingProp.landlordId !== req.user.id && req.user.role !== "ADMIN")) {
                 return res.status(403).json({ success: false, message: "Forbidden: You do not own this property" });
             }
 
