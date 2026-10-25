@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { Transaction, TransactionStatus } from "@prisma/client";
 import { smsService } from "./smsService";
+import { emailService } from "./emailService";
 import { afriExchangePayoutService } from "./afriExchangePayoutService";
 import crypto from "crypto";
 import { hashOtp, otpMatches } from "../utils/cryptoCompare";
@@ -120,6 +121,7 @@ export class TransactionService {
                 property: {
                     select: {
                         id: true,
+                        landlordId: true,
                         title: true,
                         address: true,
                         city: true,
@@ -318,10 +320,18 @@ export class TransactionService {
         return stripReleaseOtp(transaction);
     }
 
-    async generateHandoverOTP(transactionId: string, tenantId: string): Promise<{ message: string; expiresAt: Date }> {
+    async generateHandoverOTP(transactionId: string, tenantId: string): Promise<{ otp: string; message: string; expiresAt: Date }> {
         const transaction = await prisma.transaction.findUnique({
             where: { id: transactionId },
-            include: { tenant: true }
+            include: {
+                tenant: true,
+                property: {
+                    select: {
+                        id: true,
+                        title: true,
+                    },
+                },
+            },
         });
 
         if (!transaction) {
@@ -348,14 +358,22 @@ export class TransactionService {
         });
         otpAttempts.delete(transactionId);
 
-        // Send SMS to tenant
+        // Send SMS to tenant if valid phone exists
         if (transaction.tenant.phone) {
             const smsMessage = `Your RentHub Key Handover OTP is: ${otp}. Give this code to the landlord ONLY after physically inspecting keys and house condition.`;
             await smsService.sendSms(transaction.tenant.phone, smsMessage).catch(console.error);
         }
 
+        // Send Email to tenant
+        if (transaction.tenant.email) {
+            const tenantName = `${transaction.tenant.firstName || ""} ${transaction.tenant.lastName || ""}`.trim() || "Tenant";
+            const propertyTitle = (transaction as any).property?.title || "your rented property";
+            await emailService.sendHandoverOtpEmail(transaction.tenant.email, tenantName, otp, propertyTitle).catch(console.error);
+        }
+
         return {
-            message: "Handover OTP generated and sent to your registered phone number",
+            otp,
+            message: "Handover OTP generated successfully! Sent to your registered email and shown below.",
             expiresAt
         };
     }
@@ -648,12 +666,13 @@ export class TransactionService {
         const tx = await this.getTransactionById(transactionId);
         if (!tx) throw new Error("Transaction not found");
 
-        const landlordOfProperty = (tx as any).property?.landlordId;
+        const landlordOfProperty = (tx as any).property?.landlordId || (tx as any).property?.landlord?.id;
         if (landlordOfProperty !== landlordId) {
             throw new Error("Unauthorized: Only the property landlord can submit handover proof");
         }
 
-        if (tx.status !== "ESCROWED" || tx.escrowReleased) {
+        const isActive = (tx.status === "ESCROWED" || tx.status === "SUCCESSFUL") && !tx.escrowReleased;
+        if (!isActive) {
             throw new Error("Transaction is not in an active escrow state");
         }
 
@@ -676,15 +695,27 @@ export class TransactionService {
             },
         });
 
-        // Notify tenant via SMS
+        // Notify tenant via SMS & Email
         const tenant = (tx as any).tenant;
+        const alertMsg = `RentHub Alert: Your landlord submitted proof of key handover. You have 24 hours to confirm or dispute in your dashboard before funds release.`;
         if (tenant?.phone) {
-            smsService
-                .sendSms(
-                    tenant.phone,
-                    `RentHub Alert: Your landlord submitted proof of key handover. You have 24 hours to confirm or dispute in your dashboard before funds release.`
-                )
-                .catch(console.error);
+            smsService.sendSms(tenant.phone, alertMsg).catch(console.error);
+        }
+        if (tenant?.email) {
+            emailService.sendEmail(
+                tenant.email,
+                "RentHub Action Required: Landlord Submitted Handover Proof",
+                `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
+                    <h2 style="color: #f59e0b; margin: 0 0 12px;">Proof of Key Handover Submitted</h2>
+                    <p style="font-size: 14px; color: #334155;">Hello <strong>${tenant.firstName || "Tenant"}</strong>,</p>
+                    <p style="font-size: 14px; color: #334155;">Your landlord has submitted proof indicating that physical handover of keys for your rental has occurred.</p>
+                    <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 16px; border-radius: 12px; margin: 20px 0;">
+                        <p style="margin: 0; font-size: 13px; color: #92400e; font-weight: 600;">24-Hour Review Window Active</p>
+                        <p style="margin: 6px 0 0; font-size: 12px; color: #78350f;">Please log in to your RentHub dashboard to confirm possession and release escrow, or contest this claim if you have not received keys.</p>
+                    </div>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">RentHub Trust & Safety • 7-Stage Protocol</p>
+                </div>`
+            ).catch(console.error);
         }
 
         return updatedTx;

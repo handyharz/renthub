@@ -47,9 +47,9 @@ export function DocumentViewerModal({
 
         setLoading(true);
         Promise.allSettled([
-            api.get(`/api/transactions/${transactionId}/receipt`).then((r) => r.data.data),
-            api.get(`/api/transactions/${transactionId}/agreement`).then((r) => r.data.data),
-            api.get(`/api/transactions/${transactionId}/tax-pack`).then((r) => r.data.data),
+            api.get(`/transactions/${transactionId}/receipt`).then((r) => r.data.data),
+            api.get(`/transactions/${transactionId}/agreement`).then((r) => r.data.data),
+            api.get(`/transactions/${transactionId}/tax-pack`).then((r) => r.data.data),
         ])
             .then(([rRes, aRes, tRes]) => {
                 if (rRes.status === "fulfilled") setReceiptData(rRes.value);

@@ -39,7 +39,7 @@ export function HandoverProofModal({
 
         setLoading(true);
         try {
-            await api.post(`/api/transactions/${transactionId}/handover-proof`, {
+            await api.post(`/transactions/${transactionId}/handover-proof`, {
                 proofUrl: proofUrl.trim(),
                 notes: notes.trim(),
             });
@@ -56,7 +56,7 @@ export function HandoverProofModal({
     const handleTenantResponse = async (contest: boolean) => {
         setLoading(true);
         try {
-            await api.post(`/api/transactions/${transactionId}/handover-challenge`, {
+            await api.post(`/transactions/${transactionId}/handover-challenge`, {
                 contest,
                 reason: contest ? contestReason : undefined,
             });

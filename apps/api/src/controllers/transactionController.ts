@@ -284,7 +284,10 @@ export class TransactionController {
             return res.status(200).json({
                 success: true,
                 message: result.message,
-                data: { expiresAt: result.expiresAt }
+                data: {
+                    otp: result.otp,
+                    expiresAt: result.expiresAt,
+                },
             });
         } catch (error: any) {
             console.error("Error generating handover OTP:", error);

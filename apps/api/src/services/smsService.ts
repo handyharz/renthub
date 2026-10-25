@@ -22,17 +22,31 @@ export class SmsService {
      */
     async sendSms(to: string, message: string): Promise<boolean> {
         try {
-            // Termii requires international format without + for some endpoints, 
-            // but generally accepts 23480... 
-            // Let's ensure it starts with 234 if it's a Nigerian number and strip leading 0
+            if (!to) return false;
             const formattedPhone = this.formatPhoneNumber(to);
+            if (!formattedPhone) {
+                console.warn(`[SmsService] Skipped sending SMS: invalid or unroutable phone number "${to}"`);
+                return false;
+            }
+
+            if (!this.apiKey) {
+                console.log("\n==================================================");
+                console.log("             DEV MODE SMS BYPASS                  ");
+                console.log("==================================================");
+                console.log(`TO: ${formattedPhone} (raw: ${to})`);
+                console.log(`MESSAGE: ${message}`);
+                console.log("--------------------------------------------------");
+                console.log("Mocking successful send for development purpose.");
+                console.log("==================================================\n");
+                return true;
+            }
 
             const payload = {
                 to: formattedPhone,
                 from: this.senderId,
                 sms: message,
                 type: "plain",
-                channel: "dnd", // Use 'dnd' channel to deliver to DND numbers, or 'generic'
+                channel: "dnd",
                 api_key: this.apiKey,
             };
 
@@ -43,13 +57,11 @@ export class SmsService {
                 return true;
             } else {
                 console.error("Termii SMS failed:", response.data);
-                throw new Error(response.data.message || "Termii SMS failed");
+                return false;
             }
         } catch (error: any) {
             console.error("Failed to send SMS:", error.response?.data || error.message);
 
-            // DEV MODE BYPASS
-            // If in development, log the OTP and return true so we can test the flow
             if (process.env.NODE_ENV !== 'production') {
                 console.log("\n==================================================");
                 console.log("             DEV MODE SMS BYPASS                  ");
@@ -66,17 +78,21 @@ export class SmsService {
         }
     }
 
-    private formatPhoneNumber(phone: string): string {
-        // Remove spaces and special chars
+    private formatPhoneNumber(phone: string): string | null {
+        if (!phone) return null;
         let cleaned = phone.replace(/\D/g, "");
 
-        // If it starts with '0', replace with '234' (Assuming Nigeria)
         if (cleaned.startsWith("0")) {
             cleaned = "234" + cleaned.substring(1);
+        } else if (!cleaned.startsWith("234") && cleaned.length === 10) {
+            cleaned = "234" + cleaned;
         }
 
-        // If it already starts with 234, keep it. 
-        // If it's something else, we assume it's already formatted or international.
+        // Valid international phone number must have at least 10 digits and at most 15 digits
+        if (cleaned.length < 10 || cleaned.length > 15) {
+            return null;
+        }
+
         return cleaned;
     }
 }

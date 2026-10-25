@@ -11,6 +11,11 @@ const api = axios.create({
 // Request interceptor to add auth token if available (Clerk)
 api.interceptors.request.use(
     async (config) => {
+        // Normalize URL if leading /api is accidentally provided
+        if (config.url?.startsWith('/api/')) {
+            config.url = config.url.replace(/^\/api/, '');
+        }
+
         console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, config.data || "");
 
         try {

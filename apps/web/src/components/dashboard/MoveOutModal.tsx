@@ -62,7 +62,7 @@ export function MoveOutModal({
     const handleSubmitReport = async () => {
         setLoading(true);
         try {
-            await api.post(`/api/transactions/${transactionId}/move-out-report`, {
+            await api.post(`/transactions/${transactionId}/move-out-report`, {
                 photos,
                 notes,
                 deductions: isLandlord ? deductions : undefined,
@@ -80,7 +80,7 @@ export function MoveOutModal({
     const handleResolveDeductions = async (accept: boolean) => {
         setLoading(true);
         try {
-            await api.post(`/api/transactions/${transactionId}/caution-resolve`, {
+            await api.post(`/transactions/${transactionId}/caution-resolve`, {
                 accept,
             });
             toast.success(accept ? "Deductions accepted. Caution refund dispatched!" : "Deductions contested. Sent to arbitration.");
