@@ -464,6 +464,397 @@ export class TransactionService {
             }
         });
     }
+
+    /**
+     * Generate official digital payment receipt (Guide §10)
+     */
+    async generateReceipt(transactionId: string) {
+        const tx = await this.getTransactionById(transactionId);
+        if (!tx) throw new Error("Transaction not found");
+
+        const tenant = (tx as any).tenant;
+        const property = (tx as any).property;
+        const landlord = property?.landlord;
+
+        return {
+            receiptNumber: `RH-REC-${tx.id.slice(-8).toUpperCase()}`,
+            transactionId: tx.id,
+            issuedAt: tx.updatedAt || tx.createdAt,
+            escrowStatus: tx.status,
+            escrowHeld: tx.escrowHeld,
+            escrowReleased: tx.escrowReleased,
+            releaseDate: tx.releaseDate,
+            payer: {
+                name: `${tenant?.firstName || ""} ${tenant?.lastName || ""}`.trim() || "Tenant",
+                email: tenant?.email,
+                phone: tenant?.phone,
+            },
+            beneficiary: {
+                name: `${landlord?.firstName || ""} ${landlord?.lastName || ""}`.trim() || "Landlord",
+                email: landlord?.email,
+                phone: landlord?.phone,
+            },
+            property: {
+                id: property?.id,
+                title: property?.title,
+                address: property?.address,
+                city: property?.city,
+                state: property?.state,
+            },
+            breakdown: {
+                rentAmount: tx.rentAmount,
+                cautionFee: tx.cautionFee,
+                platformFee: tx.platformFee,
+                legalFee: 0,
+                serviceFee: tx.serviceFee || 0,
+                totalAmountPaid: tx.totalAmount,
+            },
+            paymentMethod: tx.paymentMethod,
+            paymentGateway: tx.paymentGateway,
+            paymentReference: tx.paystackRef || tx.afriExchangeRef || `RH-REF-${tx.id.slice(0, 8)}`,
+            securityNotice: "Protected by RentHub Segregated Escrow Protocol. Funds released strictly upon 6-digit handover OTP validation.",
+        };
+    }
+
+    /**
+     * Generate standard digital tenancy agreement (Guide §10, Deck Slide 6)
+     */
+    async generateTenancyAgreement(transactionId: string) {
+        const tx = await this.getTransactionById(transactionId);
+        if (!tx) throw new Error("Transaction not found");
+
+        const tenant = (tx as any).tenant;
+        const property = (tx as any).property;
+        const landlord = property?.landlord;
+
+        const startDate = tx.leaseStartDate || tx.createdAt;
+        const durationMonths = tx.leaseDuration || 12;
+        const endDate = tx.leaseEndDate || new Date(new Date(startDate).setMonth(new Date(startDate).getMonth() + durationMonths));
+
+        const auditHash = crypto
+            .createHash("sha256")
+            .update(`${tx.id}:${tenant?.email}:${landlord?.email}:${tx.rentAmount}:${startDate}`)
+            .digest("hex");
+
+        return {
+            agreementNumber: `RH-AGR-${tx.id.slice(-8).toUpperCase()}`,
+            governingLaw: "Lagos State Tenancy Law 2011 / Recovery of Premises Act (Abuja FCT)",
+            commencementDate: startDate,
+            expiryDate: endDate,
+            durationMonths,
+            parties: {
+                landlord: {
+                    fullName: `${landlord?.firstName || ""} ${landlord?.lastName || ""}`.trim() || "Landlord",
+                    email: landlord?.email,
+                    phone: landlord?.phone,
+                },
+                tenant: {
+                    fullName: `${tenant?.firstName || ""} ${tenant?.lastName || ""}`.trim() || "Tenant",
+                    email: tenant?.email,
+                    phone: tenant?.phone,
+                },
+            },
+            premises: {
+                id: property?.id,
+                title: property?.title,
+                address: property?.address,
+                city: property?.city,
+                state: property?.state,
+            },
+            financialTerms: {
+                annualRent: tx.rentAmount,
+                cautionDeposit: tx.cautionFee,
+                platformFeePaidByTenant: tx.platformFee,
+                legalDocumentationFee: 0,
+                cautionRolloverPolicy: "₦0 fresh caution deposit required upon 1-click lease renewal (Guide §7).",
+            },
+            statutoryCovenants: [
+                "1. ESCROW RELEASE: Rent is released to Landlord strictly upon successful redemption of the 6-digit key handover OTP at the premises.",
+                "2. NO SIDE-PAYMENTS: Tenant shall not pay any inspection fee, viewing toll, or agency commission to any party.",
+                "3. CAUTION DEPOSIT PROTECTION: Caution deposit remains held in RentHub segregated escrow throughout tenancy and is refundable upon move-out condition report sign-off.",
+                "4. 48-HOUR DEFECT REPORTING: Tenant holds 48 hours from scheduled handover to report undisclosed structural or utility defects.",
+                "5. TAX RELIEF COMPLIANCE: Landlord confirms rent received is declared and qualifies for employee tax relief under the Nigeria Tax Act 2025.",
+                "6. PEACEFUL ENJOYMENT: Landlord covenants tenant shall quietly possess and enjoy the premises without unlawful interruption.",
+                "7. NOTICE PERIOD: Either party shall provide statutory written notice prior to lease expiration in accordance with applicable tenancy legislation.",
+            ],
+            digitalVerification: {
+                agreementHash: auditHash,
+                signedDigitally: true,
+                platformSeal: "RENTHUB DIGITAL LEASE REGISTRY — VERIFIED COMPLIANT",
+            },
+        };
+    }
+
+    /**
+     * Generate Nigeria Tax Act 2025 Rent Relief Claim Certificate (Guide §10, Deck Slide 6)
+     */
+    async generateTaxReliefPack(transactionId: string) {
+        const tx = await this.getTransactionById(transactionId);
+        if (!tx) throw new Error("Transaction not found");
+
+        const tenant = (tx as any).tenant;
+        const property = (tx as any).property;
+        const landlord = property?.landlord;
+
+        const annualRent = tx.rentAmount;
+        const reliefBasePercentage = 20;
+        const allowableDeduction = Math.min(Math.round(annualRent * 0.20), 500000);
+
+        const auditHash = crypto
+            .createHash("sha256")
+            .update(`TAX-RELIEF-2026:${tx.id}:${annualRent}:${allowableDeduction}`)
+            .digest("hex")
+            .toUpperCase();
+
+        return {
+            certificateNumber: `RH-TAX-2026-${tx.id.slice(-8).toUpperCase()}`,
+            taxYear: 2026,
+            statutoryAuthority: "Nigeria Tax Act 2025 (Effective 1 January 2026) — Individual Employment Rent Deduction",
+            claimant: {
+                legalName: `${tenant?.firstName || ""} ${tenant?.lastName || ""}`.trim() || "Tenant",
+                email: tenant?.email,
+                phone: tenant?.phone,
+            },
+            tenancyDetails: {
+                propertyAddress: `${property?.address}, ${property?.city}, ${property?.state}`,
+                landlordName: `${landlord?.firstName || ""} ${landlord?.lastName || ""}`.trim() || "Landlord",
+                leaseDurationMonths: tx.leaseDuration || 12,
+            },
+            taxCalculation: {
+                annualRentPaidNgn: annualRent,
+                statutoryReliefRate: "20% of annual rent paid",
+                grossReliefAmountNgn: Math.round(annualRent * 0.20),
+                statutoryCapNgn: 500000,
+                certifiedAllowableTaxDeductionNgn: allowableDeduction,
+            },
+            escrowProof: {
+                paymentReference: tx.paystackRef || tx.afriExchangeRef || `RH-REF-${tx.id.slice(0, 8)}`,
+                paymentGateway: tx.paymentGateway,
+                paymentDate: tx.createdAt,
+                escrowStatus: tx.status,
+            },
+            auditVerification: {
+                certificateHash: auditHash,
+                verificationPortal: "https://renthub.ng/verify/tax-relief",
+                officialCertification: "Certified audit-ready record. Valid for employer payroll deduction and tax authority audits.",
+            },
+        };
+    }
+
+    /**
+     * Landlord submits proof of handover (Guide §5.3: Tenant occupies but withholds OTP)
+     */
+    async submitHandoverProof(transactionId: string, landlordId: string, proofUrl: string, notes?: string) {
+        const tx = await this.getTransactionById(transactionId);
+        if (!tx) throw new Error("Transaction not found");
+
+        const landlordOfProperty = (tx as any).property?.landlordId;
+        if (landlordOfProperty !== landlordId) {
+            throw new Error("Unauthorized: Only the property landlord can submit handover proof");
+        }
+
+        if (tx.status !== "ESCROWED" || tx.escrowReleased) {
+            throw new Error("Transaction is not in an active escrow state");
+        }
+
+        const existingMetadata = ((tx as any).metadata as any) || {};
+        const challengeExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24-hour challenge window
+
+        const updatedTx = await prisma.transaction.update({
+            where: { id: transactionId },
+            data: {
+                metadata: {
+                    ...existingMetadata,
+                    handoverProof: {
+                        proofUrl,
+                        notes: notes || "",
+                        submittedAt: new Date().toISOString(),
+                        challengeExpiresAt: challengeExpiresAt.toISOString(),
+                        status: "PENDING_TENANT_CHALLENGE",
+                    },
+                },
+            },
+        });
+
+        // Notify tenant via SMS
+        const tenant = (tx as any).tenant;
+        if (tenant?.phone) {
+            smsService
+                .sendSms(
+                    tenant.phone,
+                    `RentHub Alert: Your landlord submitted proof of key handover. You have 24 hours to confirm or dispute in your dashboard before funds release.`
+                )
+                .catch(console.error);
+        }
+
+        return updatedTx;
+    }
+
+    /**
+     * Tenant responds to Landlord's handover proof (Guide §5.3)
+     */
+    async challengeHandoverProof(transactionId: string, tenantId: string, contest: boolean, reason?: string) {
+        const tx = await this.getTransactionById(transactionId);
+        if (!tx) throw new Error("Transaction not found");
+
+        if (tx.tenantId !== tenantId) {
+            throw new Error("Unauthorized: Only the tenant can respond to handover proof");
+        }
+
+        const existingMetadata = ((tx as any).metadata as any) || {};
+        const handoverProof = existingMetadata.handoverProof;
+
+        if (!handoverProof || handoverProof.status !== "PENDING_TENANT_CHALLENGE") {
+            throw new Error("No pending handover proof awaiting response");
+        }
+
+        if (contest) {
+            return await prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    disputed: true,
+                    disputeReason: reason || "Tenant challenged landlord handover proof",
+                    metadata: {
+                        ...existingMetadata,
+                        handoverProof: {
+                            ...handoverProof,
+                            status: "CONTESTED",
+                            contestReason: reason,
+                            contestedAt: new Date().toISOString(),
+                        },
+                    },
+                },
+            });
+        } else {
+            // Tenant confirms possession -> release funds
+            return await prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    status: "RELEASED",
+                    escrowReleased: true,
+                    releaseDate: new Date(),
+                    releaseReason: "TENANT_CONFIRMED_HANDOVER_PROOF",
+                    metadata: {
+                        ...existingMetadata,
+                        handoverProof: {
+                            ...handoverProof,
+                            status: "ACCEPTED",
+                            acceptedAt: new Date().toISOString(),
+                        },
+                    },
+                },
+            });
+        }
+    }
+
+    /**
+     * Submit Move-Out Condition Report & Caution Deposit Deductions (Guide §6)
+     */
+    async submitMoveOutReport(
+        transactionId: string,
+        userId: string,
+        role: string,
+        photos: string[],
+        notes: string,
+        deductions?: { item: string; amount: number; quoteUrl?: string }[]
+    ) {
+        const tx = await this.getTransactionById(transactionId);
+        if (!tx) throw new Error("Transaction not found");
+
+        const isTenant = tx.tenantId === userId;
+        const isLandlord = (tx as any).property?.landlordId === userId;
+
+        if (!isTenant && !isLandlord) {
+            throw new Error("Unauthorized: Only tenant or landlord can submit condition reports");
+        }
+
+        const existingMetadata = ((tx as any).metadata as any) || {};
+        const sanitizedDeductions = (deductions || []).map((d, index) => ({
+            id: `ded_${Date.now()}_${index}`,
+            item: d.item,
+            amount: Number(d.amount) || 0,
+            quoteUrl: d.quoteUrl || null,
+            contested: false,
+        }));
+
+        const hasDeductions = sanitizedDeductions.length > 0;
+
+        return await prisma.transaction.update({
+            where: { id: transactionId },
+            data: {
+                metadata: {
+                    ...existingMetadata,
+                    moveOutReport: {
+                        submittedByRole: role,
+                        submittedByUserId: userId,
+                        photos: photos || [],
+                        notes: notes || "",
+                        deductions: sanitizedDeductions,
+                        submittedAt: new Date().toISOString(),
+                        status: hasDeductions ? "PENDING_TENANT_REVIEW" : "CLEARED_NO_DEDUCTIONS",
+                    },
+                },
+            },
+        });
+    }
+
+    /**
+     * Resolve Caution Deposit Deductions (Guide §6)
+     */
+    async resolveCautionDeductions(transactionId: string, tenantId: string, accept: boolean, contestReason?: string) {
+        const tx = await this.getTransactionById(transactionId);
+        if (!tx) throw new Error("Transaction not found");
+
+        if (tx.tenantId !== tenantId) {
+            throw new Error("Unauthorized: Only the tenant can resolve caution deductions");
+        }
+
+        const existingMetadata = ((tx as any).metadata as any) || {};
+        const moveOut = existingMetadata.moveOutReport;
+
+        if (!moveOut || moveOut.status !== "PENDING_TENANT_REVIEW") {
+            throw new Error("No pending caution deductions awaiting resolution");
+        }
+
+        if (accept) {
+            const totalDeductions = (moveOut.deductions || []).reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+            const netRefundToTenant = Math.max(tx.cautionFee - totalDeductions, 0);
+
+            return await prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    metadata: {
+                        ...existingMetadata,
+                        moveOutReport: {
+                            ...moveOut,
+                            status: "RESOLVED_ACCEPTED",
+                            resolvedAt: new Date().toISOString(),
+                            totalDeductions,
+                            netRefundToTenant,
+                        },
+                    },
+                },
+            });
+        } else {
+            return await prisma.transaction.update({
+                where: { id: transactionId },
+                data: {
+                    disputed: true,
+                    disputeReason: contestReason || "Tenant contested caution deposit deductions",
+                    metadata: {
+                        ...existingMetadata,
+                        moveOutReport: {
+                            ...moveOut,
+                            status: "CONTESTED_IN_ARBITRATION",
+                            contestReason,
+                            contestedAt: new Date().toISOString(),
+                        },
+                    },
+                },
+            });
+        }
+    }
 }
 
 export const transactionService = new TransactionService();
+

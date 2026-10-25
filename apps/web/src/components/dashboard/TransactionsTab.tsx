@@ -42,6 +42,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { EscrowStatusModal } from "./EscrowStatusModal";
+import { DocumentViewerModal } from "./DocumentViewerModal";
+import { HandoverProofModal } from "./HandoverProofModal";
+import { MoveOutModal } from "./MoveOutModal";
 
 interface Transaction {
     id: string;
@@ -87,6 +90,10 @@ export function TransactionsTab() {
     const [inputOtp, setInputOtp] = useState("");
     const [releasing, setReleasing] = useState(false);
     const [ratedTenantTxIds, setRatedTenantTxIds] = useState<string[]>([]);
+    const [docModalTxId, setDocModalTxId] = useState<string | null>(null);
+    const [docModalTab, setDocModalTab] = useState<"receipt" | "agreement" | "tax-pack">("tax-pack");
+    const [handoverModalTx, setHandoverModalTx] = useState<Transaction | null>(null);
+    const [moveOutModalTx, setMoveOutModalTx] = useState<Transaction | null>(null);
 
     // Search, filter & pagination state
     const [searchQuery, setSearchQuery] = useState("");
@@ -741,7 +748,7 @@ export function TransactionsTab() {
 
                                     {/* Action Bar */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--border-color)]">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -754,17 +761,67 @@ export function TransactionsTab() {
                                                 <Eye className="h-3.5 w-3.5" />
                                                 <span>Escrow Vault Details</span>
                                             </Button>
+
+                                            {/* Nigeria Tax Act 2025 Relief Pack */}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setDocModalTxId(tx.id);
+                                                    setDocModalTab("tax-pack");
+                                                }}
+                                                className="h-9 px-3 rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 text-xs font-bold gap-1.5 shadow-2xs"
+                                            >
+                                                <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                                                <span>Tax Act 2025 Pack</span>
+                                            </Button>
+
+                                            {/* Digital Receipt & Lease */}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setDocModalTxId(tx.id);
+                                                    setDocModalTab("receipt");
+                                                }}
+                                                className="h-9 px-3 rounded-xl border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-bold gap-1.5 shadow-2xs"
+                                            >
+                                                <Receipt className="h-3.5 w-3.5" />
+                                                <span>Official Receipt</span>
+                                            </Button>
                                         </div>
 
-                                        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                                        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-end sm:self-center">
                                             {/* Key Handover Release OTP Button */}
                                             {(tx.status === "ESCROWED" || tx.status === "SUCCESSFUL") && !tx.escrowReleased && !tx.disputed && (
+                                                <>
+                                                    <Button
+                                                        onClick={() => setOtpModalTx(tx)}
+                                                        className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs rounded-xl shrink-0 flex items-center gap-1.5 h-10 px-4 shadow-xs"
+                                                    >
+                                                        <KeyRound className="h-4 w-4" />
+                                                        <span>Enter OTP</span>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => setHandoverModalTx(tx)}
+                                                        className="h-10 px-3 rounded-xl border-amber-500/30 text-amber-600 hover:bg-amber-500/10 text-xs font-bold"
+                                                        title="Submit proof of key exchange if tenant occupied without sharing OTP (Guide §5.3)"
+                                                    >
+                                                        Proof of Handover
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {/* Move-out & Caution Resolution */}
+                                            {(tx.escrowReleased || tx.status === "RELEASED") && (
                                                 <Button
-                                                    onClick={() => setOtpModalTx(tx)}
-                                                    className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs rounded-xl shrink-0 flex items-center gap-1.5 h-10 px-5 shadow-xs"
+                                                    variant="outline"
+                                                    onClick={() => setMoveOutModalTx(tx)}
+                                                    className="h-10 px-3 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                                                 >
-                                                    <KeyRound className="h-4 w-4" />
-                                                    <span>Enter Handover OTP to Claim Funds</span>
+                                                    <Building2 className="h-3.5 w-3.5" />
+                                                    <span>Move-Out & Caution</span>
                                                 </Button>
                                             )}
 
@@ -971,6 +1028,41 @@ export function TransactionsTab() {
                         setIsEscrowModalOpen(false);
                         setOtpModalTx(selectedTransaction);
                     }}
+                />
+            )}
+
+            {/* Document Viewer Modal (Receipt, Tenancy Agreement, Nigeria Tax Act 2025 Pack) */}
+            {docModalTxId && (
+                <DocumentViewerModal
+                    isOpen={!!docModalTxId}
+                    onClose={() => setDocModalTxId(null)}
+                    transactionId={docModalTxId}
+                    initialTab={docModalTab}
+                />
+            )}
+
+            {/* Handover Proof Modal (Guide §5.3: Landlord Proof & Tenant Response) */}
+            {handoverModalTx && (
+                <HandoverProofModal
+                    isOpen={!!handoverModalTx}
+                    onClose={() => setHandoverModalTx(null)}
+                    transactionId={handoverModalTx.id}
+                    isLandlord={true}
+                    existingProof={(handoverModalTx as any).metadata?.handoverProof}
+                    onSuccess={() => fetchTransactions(true)}
+                />
+            )}
+
+            {/* Move-Out & Caution Deposit Modal (Guide §6) */}
+            {moveOutModalTx && (
+                <MoveOutModal
+                    isOpen={!!moveOutModalTx}
+                    onClose={() => setMoveOutModalTx(null)}
+                    transactionId={moveOutModalTx.id}
+                    cautionAmount={moveOutModalTx.cautionFee || 0}
+                    isLandlord={true}
+                    existingReport={(moveOutModalTx as any).metadata?.moveOutReport}
+                    onSuccess={() => fetchTransactions(true)}
                 />
             )}
         </div>

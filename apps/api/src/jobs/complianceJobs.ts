@@ -27,9 +27,24 @@ export async function runComplianceJobs(): Promise<void> {
         },
     });
 
-    if (expiredFeatured.count || expiredOffers.count) {
+    // Guide §5.5: Flag transactions where OTP expired without key handover or dispute
+    const expiredOtps = await prisma.transaction.updateMany({
+        where: {
+            status: "ESCROWED",
+            escrowHeld: true,
+            escrowReleased: false,
+            disputed: false,
+            otpExpiresAt: { lt: now },
+        },
+        data: {
+            disputed: true,
+            disputeReason: "OTP_EXPIRED_ACTION_REQUIRED: 48h handover window elapsed without OTP redemption",
+        },
+    });
+
+    if (expiredFeatured.count || expiredOffers.count || expiredOtps.count) {
         logger.info(
-            `[compliance] cleared featured=${expiredFeatured.count} expired offer locks=${expiredOffers.count}`
+            `[compliance] cleared featured=${expiredFeatured.count} expired offer locks=${expiredOffers.count} expired OTPs flagged=${expiredOtps.count}`
         );
     }
 }

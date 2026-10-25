@@ -940,6 +940,14 @@ function SearchContent() {
                                         </button>
                                     </span>
                                 )}
+                                {filters.waterSupply && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 shadow-2xs">
+                                        <span>Water: {filters.waterSupply.replace(/_/g, " ")}</span>
+                                        <button onClick={() => updateFilter("waterSupply", undefined)} className="text-cyan-600 dark:text-cyan-400 hover:text-rose-500">
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </span>
+                                )}
                             </div>
                         )}
 

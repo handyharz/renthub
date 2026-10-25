@@ -362,6 +362,189 @@ export class TransactionController {
             });
         }
     }
+
+    /**
+     * Get Digital Escrow Payment Receipt (Guide §10)
+     * GET /api/transactions/:id/receipt
+     */
+    async getReceipt(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const tx = await transactionService.getTransactionById(id);
+            if (!tx) return res.status(404).json({ success: false, message: "Transaction not found" });
+
+            const isParty =
+                tx.tenantId === req.user?.id ||
+                (tx as any).property?.landlordId === req.user?.id ||
+                req.user?.role === "ADMIN";
+            if (!isParty) return res.status(403).json({ success: false, message: "Forbidden" });
+
+            const receipt = await transactionService.generateReceipt(id);
+            return res.status(200).json({ success: true, data: receipt });
+        } catch (error: any) {
+            console.error("Error generating receipt:", error);
+            return res.status(500).json({ success: false, message: error.message || "Failed to generate receipt" });
+        }
+    }
+
+    /**
+     * Get Digital Tenancy Agreement (Guide §10, Deck Slide 6)
+     * GET /api/transactions/:id/agreement
+     */
+    async getAgreement(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const tx = await transactionService.getTransactionById(id);
+            if (!tx) return res.status(404).json({ success: false, message: "Transaction not found" });
+
+            const isParty =
+                tx.tenantId === req.user?.id ||
+                (tx as any).property?.landlordId === req.user?.id ||
+                req.user?.role === "ADMIN";
+            if (!isParty) return res.status(403).json({ success: false, message: "Forbidden" });
+
+            const agreement = await transactionService.generateTenancyAgreement(id);
+            return res.status(200).json({ success: true, data: agreement });
+        } catch (error: any) {
+            console.error("Error generating agreement:", error);
+            return res.status(500).json({ success: false, message: error.message || "Failed to generate tenancy agreement" });
+        }
+    }
+
+    /**
+     * Get Nigeria Tax Act 2025 Rent Relief Claim Certificate (Guide §10, Deck Slide 6)
+     * GET /api/transactions/:id/tax-pack
+     */
+    async getTaxPack(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const tx = await transactionService.getTransactionById(id);
+            if (!tx) return res.status(404).json({ success: false, message: "Transaction not found" });
+
+            const isParty =
+                tx.tenantId === req.user?.id ||
+                (tx as any).property?.landlordId === req.user?.id ||
+                req.user?.role === "ADMIN";
+            if (!isParty) return res.status(403).json({ success: false, message: "Forbidden" });
+
+            const taxPack = await transactionService.generateTaxReliefPack(id);
+            return res.status(200).json({ success: true, data: taxPack });
+        } catch (error: any) {
+            console.error("Error generating tax relief pack:", error);
+            return res.status(500).json({ success: false, message: error.message || "Failed to generate tax relief pack" });
+        }
+    }
+
+    /**
+     * Submit Landlord Handover Proof (Guide §5.3)
+     * POST /api/transactions/:id/handover-proof
+     */
+    async submitHandoverProof(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const landlordId = req.user?.id;
+            const { proofUrl, notes } = req.body;
+
+            if (!landlordId) return res.status(401).json({ success: false, message: "Unauthorized" });
+            if (!proofUrl) return res.status(400).json({ success: false, message: "Proof document or photo URL is required" });
+
+            const updated = await transactionService.submitHandoverProof(id, landlordId, proofUrl, notes);
+            return res.status(200).json({
+                success: true,
+                message: "Handover proof submitted successfully. Tenant has been notified with a 24-hour response window.",
+                data: transactionService.sanitizeTransaction(updated),
+            });
+        } catch (error: any) {
+            console.error("Error submitting handover proof:", error);
+            return res.status(400).json({ success: false, message: error.message || "Failed to submit handover proof" });
+        }
+    }
+
+    /**
+     * Tenant Handover Challenge (Guide §5.3)
+     * POST /api/transactions/:id/handover-challenge
+     */
+    async challengeHandoverProof(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const tenantId = req.user?.id;
+            const { contest, reason } = req.body;
+
+            if (!tenantId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+            const updated = await transactionService.challengeHandoverProof(id, tenantId, !!contest, reason);
+            return res.status(200).json({
+                success: true,
+                message: contest
+                    ? "Contest recorded. Transaction routed to RentHub arbitration."
+                    : "Key handover confirmed. Funds released.",
+                data: transactionService.sanitizeTransaction(updated),
+            });
+        } catch (error: any) {
+            console.error("Error responding to handover proof:", error);
+            return res.status(400).json({ success: false, message: error.message || "Failed to respond to handover proof" });
+        }
+    }
+
+    /**
+     * Submit Move-Out Condition Report (Guide §6)
+     * POST /api/transactions/:id/move-out-report
+     */
+    async submitMoveOutReport(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const userId = req.user?.id;
+            const role = req.user?.role || "TENANT";
+            const { photos, notes, deductions } = req.body;
+
+            if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+            const updated = await transactionService.submitMoveOutReport(
+                id,
+                userId,
+                role,
+                photos || [],
+                notes || "",
+                deductions
+            );
+
+            return res.status(200).json({
+                success: true,
+                message: "Move-out condition report submitted successfully.",
+                data: transactionService.sanitizeTransaction(updated),
+            });
+        } catch (error: any) {
+            console.error("Error submitting move-out report:", error);
+            return res.status(400).json({ success: false, message: error.message || "Failed to submit move-out report" });
+        }
+    }
+
+    /**
+     * Resolve Caution Deposit Deductions (Guide §6)
+     * POST /api/transactions/:id/caution-resolve
+     */
+    async resolveCautionDeductions(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const tenantId = req.user?.id;
+            const { accept, contestReason } = req.body;
+
+            if (!tenantId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+            const updated = await transactionService.resolveCautionDeductions(id, tenantId, !!accept, contestReason);
+            return res.status(200).json({
+                success: true,
+                message: accept
+                    ? "Caution deposit deductions accepted. Net refund queued."
+                    : "Caution deposit deductions contested. Routed to RentHub arbitration.",
+                data: transactionService.sanitizeTransaction(updated),
+            });
+        } catch (error: any) {
+            console.error("Error resolving caution deductions:", error);
+            return res.status(400).json({ success: false, message: error.message || "Failed to resolve caution deductions" });
+        }
+    }
 }
 
 export const transactionController = new TransactionController();
+

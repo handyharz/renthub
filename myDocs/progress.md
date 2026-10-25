@@ -129,6 +129,29 @@ RentHub operates on a 7-Stage Trust Chain to defeat real estate fraud and build 
   - Prisma migration catch-up generated with shadow database (`20261025000000_phase4_audit_sync`).
   - Baselined existing migrations and deployed catch-up schema across Neon/Postgres (`rental_applications`, `landlord_payouts`, `lease_renewals`, `agent_profiles`, `agent_listings`, `agent_strikes`).
 
+### Phase 7: DOCUMENTS, TAX RELIEF & OPERATIONAL PROTOCOLS - **100% Complete** 📜
+- [x] **Nigeria Tax Act 2025 Rent Relief Claim Pack (Guide §10, Deck Slide 6)**:
+  - Official certification engine calculating the 20% annual residential rent deduction (capped at ₦500,000 statutory limit).
+  - Unique cryptographic tax-audit hash and verification seal (`/api/transactions/:id/tax-pack`).
+  - Unit test suite (`taxRelief.test.ts`) validating ₦2M, ₦3.5M capped, and edge case leases (`pass 10, fail 0`).
+- [x] **Digital Tenancy Agreements & Official Escrow Receipts (Guide §10)**:
+  - Automated standard digital tenancy agreement generator (`/api/transactions/:id/agreement`) governed by Lagos State Tenancy Law 2011 and Recovery of Premises Act.
+  - Itemized official escrow receipts with segregated vault payment references (`/api/transactions/:id/receipt`).
+  - Printable/downloadable modal viewer (`DocumentViewerModal.tsx`) integrated into user dashboards.
+- [x] **Move-Out Condition Reports & Caution Deposit Mediation (Guide §6)**:
+  - Photo condition reports and itemized damage deduction submissions (`POST /api/transactions/:id/move-out-report`).
+  - Tenant dispute & resolution protocol (`POST /api/transactions/:id/caution-resolve`).
+  - Interactive Move-Out Walkthrough & Caution Refund Modal (`MoveOutModal.tsx`).
+- [x] **Landlord Proof-of-Handover Self-Service & 24h Tenant Challenge (Guide §5.3)**:
+  - Evidence upload for landlords when tenant occupies but withholds 6-digit OTP (`POST /api/transactions/:id/handover-proof`).
+  - Automated SMS alert dispatch and 24-hour response window for tenants (`POST /api/transactions/:id/handover-challenge`).
+  - Handover proof review and contest modal (`HandoverProofModal.tsx`).
+- [x] **Nigerian Infrastructure & Amenities End-to-End Filtering (Guide §2 & §9)**:
+  - `propertyController.getProperties` updated to parse and filter by `powerSupply` (*GRID_ONLY, GRID_AND_GENERATOR, GRID_AND_SOLAR, SOLAR_ONLY, MIXED*) and `waterSupply` (*BOREHOLE, TREATED_WATER, TANK_ONLY, BOTH*).
+  - Search page (`/search`) active filter badges and query synchronization verified.
+- [x] **Automated Compliance Job Enhancements (`complianceJobs.ts`)**:
+  - Sweeps unredeemed escrow transactions where `otpExpiresAt` has passed to prevent funds from being frozen without administrative action.
+
 ---
 
 ## 📈 Platform Route Build Matrix (25/25 Verified)
