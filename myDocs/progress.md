@@ -125,8 +125,9 @@ RentHub operates on a 7-Stage Trust Chain to defeat real estate fraud and build 
   - Transaction static routes registered prior to dynamic `/:id` routes.
   - Automated interval jobs: background expiration of featured listings and 48-hour `UNDER_OFFER` auto-unlock.
   - Added `.env.example`, GitHub CI workflow, and automated unit tests for role sanitization and OTP hashing (`pass 6, fail 0`).
-- [ ] **Pending Operational Item**:
-  - Prisma migration catch-up: generate diff SQL using a shadow database (`prisma migrate diff --shadow-database-url ...`) to deploy pending schema additions to Neon/Postgres.
+- [x] **Database & Migration Synchronization**:
+  - Prisma migration catch-up generated with shadow database (`20261025000000_phase4_audit_sync`).
+  - Baselined existing migrations and deployed catch-up schema across Neon/Postgres (`rental_applications`, `landlord_payouts`, `lease_renewals`, `agent_profiles`, `agent_listings`, `agent_strikes`).
 
 ---
 
