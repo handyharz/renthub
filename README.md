@@ -5,6 +5,8 @@ RentHub is a mission-driven rental marketplace designed to eliminate the **"Agen
 > **Our Mission:** To save Nigerians ₦10 Billion in agent fees over the next 5 years, starting with Abuja.
 >
 > 🚀 **Read the full Pitch & Traction Deck:** [PITCH.md](./PITCH.md)
+> 📊 **Institutional Seed Pitch Deck (13 Slides):** [PRESENTATION.md](./PRESENTATION.md) *(or open [presentation.html](./presentation.html))*
+> 📖 **Complete User & Operational Manual:** [USER_GUIDE.md](./USER_GUIDE.md)
 
 ---
 
