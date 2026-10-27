@@ -12,6 +12,9 @@ dotenv.config();
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxy (Render, AWS ALB, Cloudflare) so req.ip represents real client IP
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(
   helmet({
@@ -38,6 +41,43 @@ app.use(
   })
 );
 app.use(express.urlencoded({ extended: true }));
+
+// Global API rate limiting (300 requests per 15 minutes, skips webhooks)
+import rateLimit from "express-rate-limit";
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  skip: (req) => {
+    const url = req.originalUrl || req.url || req.path || "";
+    return url.includes("/webhooks") || url.includes("webhook") || url.startsWith("/health");
+  },
+  message: {
+    success: false,
+    message: "Too many requests from this IP, please try again after 15 minutes.",
+  },
+});
+
+const authOtpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 25,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many verification or payment attempts, please try again later.",
+  },
+});
+
+// Sensitive OTP and payment initiation endpoints rate-limited strictly
+app.use("/api/verification/phone", authOtpLimiter);
+app.use("/api/payments/initialize", authOtpLimiter);
+app.use("/api/payments/afriexchange/pay", authOtpLimiter);
+
+// General rate limiter on all API routes (except webhooks)
+app.use("/api", apiLimiter);
 
 // Routes
 app.use("/api", routes);

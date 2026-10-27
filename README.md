@@ -54,23 +54,22 @@ RentHub isn't just a listing site; it's a trust infrastructure engineered specif
 RentHub is built as a **Turborepo monorepo**, ensuring a shared type-safe environment between the frontend and backend.
 
 ### Tech Stack
-- **Frontend**: Next.js 14 (App Router), Tailwind CSS, Lucide Icons.
+- **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS v4, Lucide Icons.
 - **Backend**: Node.js, Express.js (TypeScript).
-- **ORM & Database**: Prisma with PostgreSQL.
+- **ORM & Database**: Prisma 5 with PostgreSQL (Schema & migrations in `apps/api/prisma`).
 - **Authentication**: Clerk (Identity Management & Verification).
-- **Payments**: Paystack (Escrow & Service Transactions primary).
+- **Payments**: Paystack & AfriExchange (Escrow, Service Transactions & Automated Payouts).
 - **SMS & OTP**: Termii API.
 - **Media**: Cloudinary.
+- **CI/CD**: GitHub Actions (`.github/workflows/ci.yml`).
 
 ### Project Structure
 ```text
 renthub/
 ├── apps/
-│   ├── web/          # Next.js Frontend
-│   └── api/          # Express.js Backend
-├── packages/
-│   └── database/     # Shared Prisma Schema & Client
-├── myDocs/           # Project Manifesto, Roadmap, and Progress
+│   ├── web/          # Next.js 16 Frontend
+│   └── api/          # Express.js Backend (Prisma schema & migrations)
+├── myDocs/           # Platform Manifesto, Scoreboards, and Architecture Docs
 └── README.md         # You are here
 ```
 
@@ -79,26 +78,25 @@ renthub/
 ## 🏁 Getting Started
 
 ### Prerequisites
-- Node.js (v18+)
-- pnpm
+- Node.js (v20+)
+- npm or pnpm
 - A running PostgreSQL instance
 
 ### Installation
 1. Clone the repository
 2. Install dependencies:
    ```bash
-   pnpm install
+   npm install # or pnpm install
    ```
 3. Set up environment variables:
-   - Create `.env` files in `apps/api` and `apps/web` based on `.env.example`
+   - Create `.env` in `apps/api` and `apps/web` based on `.env.example`
 4. Synchronize the database:
    ```bash
-   pnpm run prisma:generate
-   pnpm run prisma:push
+   cd apps/api && npx prisma migrate deploy
    ```
 5. Start the development server:
    ```bash
-   pnpm run dev
+   npm run dev
    ```
 
 ---

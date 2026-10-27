@@ -147,6 +147,64 @@ export class RenewalController {
             });
         }
     }
+
+    /**
+     * Initiate payment for an accepted renewal
+     * POST /api/renewals/:id/pay
+     */
+    async initiateRenewalPayment(req: Request, res: Response) {
+        try {
+            const tenantId = await this.resolveUserId(req);
+            if (!tenantId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const { id } = req.params;
+            const result = await renewalService.initiateRenewalPayment({
+                renewalId: id as string,
+                tenantId,
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Renewal payment initiated successfully",
+                data: result,
+            });
+        } catch (error: any) {
+            console.error("Initiate renewal payment error:", error);
+            return res.status(400).json({
+                success: false,
+                message: error.message || "Failed to initiate renewal payment",
+            });
+        }
+    }
+
+    /**
+     * Verify renewal payment and mark PAID_IN_ESCROW
+     * POST /api/renewals/verify
+     */
+    async verifyRenewalPayment(req: Request, res: Response) {
+        try {
+            const { reference } = req.body;
+            if (!reference) {
+                return res.status(400).json({ success: false, message: "Reference is required" });
+            }
+
+            const userId = await this.resolveUserId(req);
+            const result = await renewalService.completeRenewalPayment(reference, userId || undefined);
+            return res.status(200).json({
+                success: true,
+                message: "Renewal payment confirmed in escrow",
+                data: result,
+            });
+        } catch (error: any) {
+            console.error("Verify renewal payment error:", error);
+            return res.status(400).json({
+                success: false,
+                message: error.message || "Failed to verify renewal payment",
+            });
+        }
+    }
 }
 
 export const renewalController = new RenewalController();

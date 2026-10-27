@@ -44,6 +44,7 @@ model User {
   conversations    Conversation[] @relation("UserConversations")
   serviceTransactions ServiceTransaction[]
   landlordPayouts  LandlordPayout[]
+  notifications    Notification[]
   renewalsAsTenant LeaseRenewal[] @relation("TenantRenewals")
   renewalsAsLandlord LeaseRenewal[] @relation("LandlordRenewals")
 
@@ -233,6 +234,7 @@ model Transaction {
   releaseReason  String?
   releaseOtp     String?
   otpExpiresAt   DateTime?
+  otpAttempts    Int               @default(0)
   disputed       Boolean           @default(false)
   disputeReason  String?
   leaseStartDate DateTime?
@@ -249,6 +251,7 @@ model Transaction {
   property       Property          @relation(fields: [propertyId], references: [id])
   tenant         User              @relation(fields: [tenantId], references: [id])
   application    RentalApplication? @relation(fields: [applicationId], references: [id])
+  landlordPayout LandlordPayout?
 
   @@index([tenantId])
   @@index([propertyId])
@@ -343,6 +346,7 @@ model PropertyView {
 model Notification {
   id          String           @id @default(cuid())
   userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   type        NotificationType
   title       String
   message     String
@@ -588,6 +592,7 @@ model LandlordPayout {
   processedAt     DateTime?
   // Links
   landlord        User         @relation(fields: [landlordId], references: [id])
+  transaction     Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   metadata        Json?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt

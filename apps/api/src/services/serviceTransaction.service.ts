@@ -56,13 +56,13 @@ export class ServiceTransactionService {
             },
         });
 
-        // Create pending service transaction in DB
+        // Create pending service transaction in DB (amount stored in standard Naira, consistent with Transaction and Property models)
         const transaction = await prisma.serviceTransaction.create({
             data: {
                 userId,
                 propertyId,
                 type,
-                amount: paymentService.nairaToKobo(amount),
+                amount, // Store in standard Naira
                 status: TransactionStatus.PENDING,
                 reference,
                 metadata: {
@@ -160,13 +160,13 @@ export class ServiceTransactionService {
             returnUrl ||
             `${frontendBaseUrl}/dashboard?tab=properties&payment=success&serviceTxId=${reference}`;
 
-        // Create pending service transaction in DB
+        // Create pending service transaction in DB (standard Naira)
         const transaction = await prisma.serviceTransaction.create({
             data: {
                 userId,
                 propertyId,
                 type,
-                amount: paymentService.nairaToKobo(amount),
+                amount, // Store in standard Naira
                 status: TransactionStatus.PENDING,
                 reference,
                 metadata: {

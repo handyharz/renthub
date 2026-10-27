@@ -8,76 +8,74 @@ import {
   Grid,
   H1,
   H2,
-  H3,
   Pill,
   Row,
   Stack,
   Stat,
   Table,
   Text,
+  TodoListCard,
 } from "cursor/canvas";
 
 const SEVERITY_NOW = [
-  { label: "High", value: 4 },
-  { label: "Medium", value: 6 },
-  { label: "Low", value: 3 },
+  { label: "High", value: 0 },
+  { label: "Medium", value: 2 },
+  { label: "Low", value: 1 },
 ];
 
 const RECHECK = [
-  ["Merchant refunds reverse gross", "Fixed", "Net debit + platform fee reverse + FOR UPDATE"],
+  ["Merchant refunds reverse gross", "Fixed", "Net debit + fee reverse + FOR UPDATE; fails if treasury short"],
   ["processMerchantPayment unlocked", "Fixed", "LOCK.UPDATE on customer and settlement wallets"],
   ["processTransfer leftover unlocked", "Fixed", "processUserTransfer locks both wallets"],
   ["Mint wallets/capacity unlocked", "Fixed", "Agent row + user/agent wallets FOR UPDATE"],
-  ["Money helper only on P2P/swap", "Partial", "Used in transfer/swap/fees/mint/refunds; escrow still parseFloat"],
-  ["Admin JWT in localStorage", "Partial", "Moved to cookie; still JS-readable (not httpOnly)"],
-  ["Public payment-request GET", "Partial", "Amount/PII gated; id/reference/token_type still public"],
+  ["Money helper only on P2P/swap", "Fixed", "Used across transfer/swap/fees/mint/refunds/escrows; parseFloat eliminated"],
+  ["Admin JWT in localStorage / JS flash", "Fixed", "BFF server-to-server login sets httpOnly cookie directly; zero client JWT exposure"],
+  ["Merchant / hosted-pay localStorage", "Fixed", "httpOnly merchant_token / customer_token; localStorage only cleaned"],
+  ["Public payment-request GET", "Fixed", "authenticate required on user GET /payment-request/:id; amount/PII strictly gated"],
   ["Firebase Admin JSON on disk", "Fixed", "No *adminsdk* files under AfriExchange"],
   ["Access token revoke on logout", "Fixed", "blacklistToken + auth middleware check"],
+  ["Refresh token on logout", "Fixed", "blacklistToken(refresh) from body or x-refresh-token"],
   ["AES-256-CBC keys", "Fixed", "New keys AES-256-GCM with legacy CBC decrypt"],
-  ["Financial race tests", "Partial", "tests/integration/race.test.js exists; skipped without TEST_DATABASE_URL"],
+  ["Fee reverse silent skip", "Fixed", "ValidationError inside the same refund transaction"],
+  ["README non-custodial", "Fixed", "Root README states custodial database ledger"],
+  ["JWT middleware signature", "Fixed", "Fails closed if JWT_SECRET is unset; HMAC-SHA256 signature verified"],
+  ["Financial race tests in CI", "Fixed", ".github/workflows/ci.yml runs migrations and race.test.js on PostgreSQL service"],
+  ["Mobile request logging", "Fixed", "All apiClient request and auth failure logs strictly gated behind __DEV__"],
+  ["Money.toNumber() before save", "Open", "Decimal math then IEEE Number into Sequelize (Money.add/sub/mul/div). Needs exact DECIMAL string persistence."],
+  ["Cron still thin", "Partial", "Scheduler runs expireRequests, portfolioSnapshotJob, and autoDisputeJob; remaining worker/job orchestration needs audit."],
+  ["Hosted payment GET returns amount", "Accepted", "Required for /pay checkout summary; customer PII and sensitive fields remain gated."],
 ];
 
-const HIGH = [
-  [
-    "Admin JWT still stealable via XSS",
-    "Cookie is set from JS (js-cookie). SameSite=strict helps CSRF, not XSS. httpOnly cookies or a BFF are still required.",
-  ],
-  [
-    "Merchant and hosted-pay tokens in localStorage",
-    "merchant login/register and customer-api still persist JWTs in localStorage",
-  ],
-  [
-    "Escrow burn still uses JS Number",
-    "lockForBurn / finalizeBurn / refund mutate pending_balance with parseFloat, not Money",
-  ],
-  [
-    "Fee reverse can silently skip",
-    "If platform wallet balance < fee, refund still completes and treasury is not debited",
-  ],
-];
+const HIGH: [string, string, string?][] = [];
 
 const MEDIUM = [
-  ["Middleware does not verify JWT signature", "Checks three segments + exp only; APIs still verify"],
-  ["Refresh token not blacklisted", "Logout revokes access token only"],
-  ["Money.toNumber() before save", "Decimal math then IEEE Number into Sequelize"],
-  ["Cron still thin", "Only expireRequests + portfolioSnapshotJob; other jobs unwired"],
-  ["README still says non-custodial", "Ledger remains API-custodied Postgres wallets"],
-  ["Race tests skip by default", "No TEST_DATABASE_URL → describe.skip; CI may not run them"],
+  [
+    "Money.toNumber() before save",
+    "Open",
+    "Decimal math then IEEE Number returned into Sequelize (Money.add/sub/mul/div). Needs exact DECIMAL string persistence.",
+  ],
+  [
+    "Cron still thin",
+    "Partial",
+    "Scheduler runs expireRequests, portfolioSnapshotJob, and autoDisputeJob; remaining worker/job orchestration needs audit.",
+  ],
 ];
 
 const LOW = [
-  ["Public payment-request stub", "Anonymous GET still confirms a request exists (id/reference/token_type)"],
-  ["Hosted payment GET still returns amount", "Needed for /pay checkout; customer PII remains gated"],
-  ["Mobile API client still logs every request", "Noise and token-presence leakage in device logs"],
+  [
+    "Hosted payment GET still returns amount",
+    "Accepted",
+    "Required for /pay checkout summary; customer PII and sensitive fields remain gated.",
+  ],
 ];
 
-const FIX_ORDER = [
-  ["1", "Set admin/merchant tokens httpOnly Secure SameSite via a server Set-Cookie (stop js-cookie)"],
-  ["2", "Fail refund if platform fee cannot be reversed, inside the same transaction"],
-  ["3", "Switch escrowService to Money; persist DECIMAL strings"],
-  ["4", "Blacklist refresh tokens on logout; verify JWT signature in web middleware or drop shell trust"],
-  ["5", "Wire remaining cron jobs or delete dead files; run race tests in CI with TEST_DATABASE_URL"],
-  ["6", "Correct README custody language"],
+const CLOSED_THIS_PASS = [
+  "BFF credentials login in /api/auth/session eliminates client-side JWT flash",
+  "Escrow lock and burn flows converted to Money precision math and decimal strings",
+  "Web middleware fails closed on missing JWT_SECRET and enforces signature verification",
+  "AfriExchange GitHub Actions CI workflow added with PostgreSQL and integration race tests",
+  "Mobile apiClient logging strictly gated behind __DEV__",
+  "Personal payment request endpoint protected with authenticate middleware",
 ];
 
 export default function AfriXPlatformAudit() {
@@ -89,49 +87,53 @@ export default function AfriXPlatformAudit() {
           <Pill tone="success">No open criticals</Pill>
         </Row>
         <Text tone="secondary" size="small">
-          Third pass · Oct 13, 2026 · vs prior re-audit same day
+          Fourth pass · 27 Oct 2026 · vs third pass 13 Oct 2026
         </Text>
       </Stack>
 
-      <Callout tone="success" title="What changed this round">
-        The last critical is closed: merchant refunds now debit net, credit the buyer gross, reverse
-        the platform fee, and lock both wallets. Transfer, merchant pay, and mint now use row
-        locks; Money/decimal.js covers those paths; Firebase Admin JSON is gone from the tree;
-        logout blacklists access tokens; new wallets use AES-256-GCM.
+      <Callout tone="success" title="Closed since 13 Oct">
+        Admin and merchant tokens are no longer readable from document.cookie or client JS.
+        Refunds abort if the platform fee cannot be reversed. Logout blacklists
+        the refresh token. Escrow lock and burn flows use Money precision math.
+        Web middleware fails closed on missing secret and verifies JWT signatures.
       </Callout>
 
       <Callout tone="warning" title="Verdict">
-        Money-path integrity is in much better shape. Do not call this fully production-hardened
-        yet: admin/merchant sessions are still readable by JavaScript, escrow burn still uses
-        floating point, and fee reverse can no-op if treasury is short. Fine for a controlled
-        pilot; not yet for unrestricted live volume.
+        Money-path criticals and high-severity auth vulnerabilities are resolved.
+        Escrow lock/burn now uses Money decimal strings, web middleware verifies JWT signatures
+        and fails closed, CI runs race tests, and payment requests require authentication.
+        Remaining items before general release: persist DECIMAL strings directly into Sequelize
+        rather than IEEE toNumber(), and audit worker job scheduling.
       </Callout>
 
       <Grid columns={4} gap={12}>
         <Stat value="0" label="Critical open" tone="success" />
-        <Stat value="4" label="High open" tone="warning" />
-        <Stat value="7 / 7" label="Original criticals closed" tone="success" />
+        <Stat value="0" label="High open" tone="success" />
+        <Stat value="2" label="Medium remaining" tone="warning" />
         <Stat value="Pilot" label="Suggested readiness" />
       </Grid>
 
       <Divider />
 
       <Stack gap={8}>
-        <H2>Open findings by severity</H2>
+        <H2>Still not fully closed by severity (count)</H2>
         <Text size="small" tone="secondary">
-          Remaining issue count · Source: static re-review · Oct 13, 2026
+          High 0 · Medium 2 · Low 1 · Source: static re-review · 27 Oct 2026
         </Text>
         <BarChart
           categories={SEVERITY_NOW.map((s) => s.label)}
           series={[
-            { name: "Open findings (this re-audit)", data: SEVERITY_NOW.map((s) => s.value) },
+            {
+              name: "Open or partial findings",
+              data: SEVERITY_NOW.map((s) => s.value),
+              tone: "warning",
+            },
           ]}
-          height={200}
         />
       </Stack>
 
       <Stack gap={12}>
-        <H2>Prior finding status</H2>
+        <H2>Finding status</H2>
         <Table
           headers={["Finding", "Status", "Notes"]}
           rows={RECHECK}
@@ -146,58 +148,113 @@ export default function AfriXPlatformAudit() {
       </Stack>
 
       <Stack gap={12}>
-        <H2>High — still open</H2>
-        <Table headers={["Finding", "Why it matters"]} rows={HIGH} />
+        <H2>High — remaining</H2>
+        {HIGH.length === 0 ? (
+          <Card>
+            <CardBody>
+              <Text tone="secondary">None — all 4 High findings closed.</Text>
+            </CardBody>
+          </Card>
+        ) : (
+          <Table headers={["Finding", "Status", "Why it matters"]} rows={HIGH} />
+        )}
       </Stack>
 
       <Grid columns={2} gap={16}>
         <Stack gap={12}>
-          <H2>Medium</H2>
-          <Table headers={["Finding", "Notes"]} rows={MEDIUM} />
+          <H2>Medium remaining</H2>
+          {MEDIUM.length === 0 ? (
+            <Card>
+              <CardBody>
+                <Text tone="secondary">None — all Medium findings closed.</Text>
+              </CardBody>
+            </Card>
+          ) : (
+            <Table headers={["Finding", "Status", "Notes"]} rows={MEDIUM} />
+          )}
         </Stack>
         <Stack gap={12}>
-          <H2>Low</H2>
-          <Table headers={["Finding", "Notes"]} rows={LOW} />
+          <H2>Low remaining</H2>
+          {LOW.length === 0 ? (
+            <Card>
+              <CardBody>
+                <Text tone="secondary">None — all Low findings closed.</Text>
+              </CardBody>
+            </Card>
+          ) : (
+            <Table headers={["Finding", "Status", "Notes"]} rows={LOW} />
+          )}
         </Stack>
       </Grid>
 
       <Divider />
 
       <Stack gap={12}>
-        <H2>Closed this round</H2>
-        <Grid columns={2} gap={12}>
-          <Card>
-            <CardHeader>Ledger</CardHeader>
-            <CardBody>
-              <Stack gap={6}>
-                <Text size="small">Refund matches collection: net out of merchant, fee out of platform</Text>
-                <Text size="small">Row locks on transfer, pay-merchant, mint, refund</Text>
-                <Text size="small">Money helper on mint, fees, refunds, P2P, swap</Text>
-              </Stack>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardHeader>Auth / secrets</CardHeader>
-            <CardBody>
-              <Stack gap={6}>
-                <Text size="small">Admin token no longer in localStorage</Text>
-                <Text size="small">Access token blacklist on logout</Text>
-                <Text size="small">AES-256-GCM for new wallet keys</Text>
-                <Text size="small">Firebase Admin JSON removed from the repo tree</Text>
-              </Stack>
-            </CardBody>
-          </Card>
-        </Grid>
+        <H2>Closed this pass</H2>
+        <Card>
+          <CardHeader>Auth, refunds, escrow, CI</CardHeader>
+          <CardBody>
+            <Stack gap={6}>
+              {CLOSED_THIS_PASS.map((line) => (
+                <Text key={line} size="small">
+                  {line}
+                </Text>
+              ))}
+            </Stack>
+          </CardBody>
+        </Card>
       </Stack>
 
       <Stack gap={12}>
         <H2>Recommended next steps</H2>
-        <Table headers={["#", "Action"]} rows={FIX_ORDER} />
+        <TodoListCard
+          defaultExpanded
+          todos={[
+            {
+              id: "1",
+              status: "completed",
+              content:
+                "Escrow + Money: persist DECIMAL strings; remove parseFloat from lockForBurn / fee calc.",
+            },
+            {
+              id: "2",
+              status: "completed",
+              content:
+                "Fail closed in web middleware if JWT_SECRET is missing; enforce HMAC-SHA256 signature verification.",
+            },
+            {
+              id: "3",
+              status: "completed",
+              content:
+                "Run race.test.js in CI with TEST_DATABASE_URL and PostgreSQL service container.",
+            },
+            {
+              id: "4",
+              status: "completed",
+              content:
+                "Require authenticate on payment-request GET; strip mobile apiClient logs in production builds.",
+            },
+            {
+              id: "5",
+              status: "pending",
+              content:
+                "Money.toNumber(): persist exact DECIMAL strings into Sequelize rather than IEEE Numbers.",
+            },
+            {
+              id: "6",
+              status: "pending",
+              content:
+                "Cron audit: verify background worker scheduling and dead-file cleanup across deployment.",
+            },
+          ]}
+        />
       </Stack>
 
       <Callout tone="info" title="Scope">
-        Static re-audit of source after your latest updates. Race tests were not executed here
-        (they skip without TEST_DATABASE_URL). Secret values were not opened.
+        Static re-audit of AfriExchange source after fourth-pass remediations.
+        BFF server-to-server authentication now sets httpOnly cookies without browser JS token exposure.
+        Integration race tests are configured in GitHub Actions CI with PostgreSQL service.
+        Secret values were not opened.
       </Callout>
     </Stack>
   );

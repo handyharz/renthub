@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { LeaseRenewal, RenewalStatus, NotificationType } from "@prisma/client";
+import { paymentService } from "./paymentService";
 
 export class RenewalService {
     /**
@@ -270,6 +271,140 @@ export class RenewalService {
         }).catch(console.error);
 
         return updated;
+    }
+
+    /**
+     * Initiate payment for an accepted renewal into escrow
+     */
+    async initiateRenewalPayment(data: {
+        renewalId: string;
+        tenantId: string;
+    }) {
+        const renewal = await prisma.leaseRenewal.findUnique({
+            where: { id: data.renewalId },
+            include: {
+                property: true,
+                tenant: true,
+                landlord: true,
+            },
+        });
+
+        if (!renewal) {
+            throw new Error("Renewal offer not found");
+        }
+
+        if (renewal.tenantId !== data.tenantId) {
+            throw new Error("Unauthorized: Only the tenant can pay for this renewal");
+        }
+
+        if (renewal.status !== RenewalStatus.ACCEPTED) {
+            throw new Error(`Cannot pay renewal in status '${renewal.status}'. Offer must be ACCEPTED first.`);
+        }
+
+        const tenantEmail = renewal.tenant.email;
+        if (!tenantEmail) {
+            throw new Error("Tenant does not have an email address configured for payment receipts.");
+        }
+
+        const totalPayableNaira = renewal.offeredRent + renewal.platformFeeTenant;
+        const reference = `RNW-${Date.now()}-${renewal.id.slice(-6)}`;
+
+        // Update renewal with reference
+        await prisma.leaseRenewal.update({
+            where: { id: renewal.id },
+            data: { paymentReference: reference },
+        });
+
+        // Initialize with payment service
+        const paymentData = await paymentService.initializePayment({
+            email: tenantEmail,
+            amount: paymentService.nairaToKobo(totalPayableNaira),
+            reference,
+            callback_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/dashboard?tab=applications&renewalPayment=success&ref=${reference}`,
+            metadata: {
+                renewalId: renewal.id,
+                propertyId: renewal.propertyId,
+                tenantId: renewal.tenantId,
+                landlordId: renewal.landlordId,
+                type: "LEASE_RENEWAL",
+            },
+        });
+
+        return {
+            renewalId: renewal.id,
+            reference,
+            totalPayable: totalPayableNaira,
+            authorizationUrl: paymentData.authorization_url,
+            accessCode: paymentData.access_code,
+        };
+    }
+
+    /**
+     * Mark renewal payment complete in escrow
+     */
+    async completeRenewalPayment(reference: string, requestingUserId?: string) {
+        const renewal = await prisma.leaseRenewal.findFirst({
+            where: { paymentReference: reference },
+            include: { property: true, landlord: true, tenant: true },
+        });
+
+        if (!renewal) {
+            throw new Error(`Renewal with reference '${reference}' not found`);
+        }
+
+        // Ownership check if called from authenticated user endpoint
+        if (requestingUserId && renewal.tenantId !== requestingUserId && renewal.landlordId !== requestingUserId) {
+            throw new Error("Unauthorized: You do not have permission to verify this renewal payment");
+        }
+
+        // Idempotency: if already marked paid, return without duplicating side effects
+        if (renewal.status === RenewalStatus.PAID_IN_ESCROW || renewal.status === RenewalStatus.COMPLETED) {
+            return { status: "already_paid", renewal };
+        }
+
+        // Verify payment against Paystack gateway
+        if (!reference.startsWith("SIM-")) {
+            const verification = await paymentService.verifyPayment(reference);
+            if (!verification || verification.status !== "success") {
+                throw new Error("Gateway verification failed: payment is not marked successful");
+            }
+            const expectedKobo = paymentService.nairaToKobo(renewal.offeredRent + renewal.platformFeeTenant);
+            if (verification.amount && verification.amount < expectedKobo) {
+                throw new Error("Fraud check: paid amount is less than expected renewal total");
+            }
+        }
+
+        const updated = await prisma.leaseRenewal.update({
+            where: { id: renewal.id },
+            data: {
+                status: RenewalStatus.PAID_IN_ESCROW,
+                paidAt: new Date(),
+            },
+        });
+
+        // Notify both parties
+        await prisma.notification.createMany({
+            data: [
+                {
+                    userId: renewal.landlordId,
+                    type: NotificationType.LEASE_RENEWAL_ACCEPTED,
+                    title: "Lease Renewal Rent Paid to Escrow!",
+                    message: `${renewal.tenant.firstName} has paid rent into RentHub Escrow for the renewal of ${renewal.property.title}. Funds are secured until commencement.`,
+                    actionUrl: "/dashboard?tab=applications",
+                    actionText: "View Lease Renewal",
+                },
+                {
+                    userId: renewal.tenantId,
+                    type: NotificationType.LEASE_RENEWAL_ACCEPTED,
+                    title: "Renewal Escrow Secured",
+                    message: `Your renewal payment for ${renewal.property.title} has been received and locked in escrow.`,
+                    actionUrl: "/dashboard?tab=applications",
+                    actionText: "View Receipt",
+                },
+            ],
+        }).catch(console.error);
+
+        return { status: "success", renewal: updated };
     }
 }
 

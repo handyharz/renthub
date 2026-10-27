@@ -353,7 +353,8 @@ export class TransactionService {
             where: { id: transactionId },
             data: {
                 releaseOtp: hashOtp(otp),
-                otpExpiresAt: expiresAt
+                otpExpiresAt: expiresAt,
+                otpAttempts: 0,
             }
         });
         otpAttempts.delete(transactionId);
@@ -403,19 +404,18 @@ export class TransactionService {
             throw new Error("Escrow has already been released for this transaction");
         }
 
-        const attempts = otpAttempts.get(transactionId);
-        const now = Date.now();
-        if (attempts && attempts.resetAt > now && attempts.count >= 5) {
-            throw new Error("Too many invalid OTP attempts. Request a new handover code.");
-        }
-        if (!attempts || attempts.resetAt <= now) {
-            otpAttempts.set(transactionId, { count: 0, resetAt: now + 15 * 60 * 1000 });
+        // DB-level attempt cap (max 5 attempts before code is permanently locked)
+        if (transaction.otpAttempts >= 5) {
+            throw new Error("Too many invalid OTP attempts (max 5 exceeded). Handover release is locked. Tenant must generate a new OTP.");
         }
 
         if (!otpMatches(transaction.releaseOtp, otp)) {
-            const current = otpAttempts.get(transactionId)!;
-            current.count += 1;
-            throw new Error("Invalid Handover Release OTP code");
+            await prisma.transaction.update({
+                where: { id: transactionId },
+                data: { otpAttempts: { increment: 1 } },
+            });
+            const remaining = Math.max(0, 4 - transaction.otpAttempts);
+            throw new Error(`Invalid Handover Release OTP code. (${remaining} attempt${remaining === 1 ? "" : "s"} remaining before lock)`);
         }
 
         if (transaction.otpExpiresAt && transaction.otpExpiresAt < new Date()) {

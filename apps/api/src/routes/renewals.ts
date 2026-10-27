@@ -16,4 +16,10 @@ router.get("/tenant", requireAuth, renewalController.getTenantRenewals.bind(rene
 // Tenant responds (Accept / Decline / Counter)
 router.patch("/:id/respond", requireAuth, renewalController.respondToRenewal.bind(renewalController));
 
+// Tenant pays for accepted renewal into escrow
+router.post("/:id/pay", requireAuth, renewalController.initiateRenewalPayment.bind(renewalController));
+
+// Verify renewal payment
+router.post("/verify", requireAuth, renewalController.verifyRenewalPayment.bind(renewalController));
+
 export default router;

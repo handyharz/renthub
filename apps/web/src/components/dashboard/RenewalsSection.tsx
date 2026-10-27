@@ -16,7 +16,8 @@ import {
     Home,
     User,
     DollarSign,
-    Check
+    Check,
+    CreditCard
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -133,6 +134,22 @@ export function RenewalsSection({ role, properties = [] }: RenewalsSectionProps)
             toast.error("Action Failed", {
                 description: error.response?.data?.message || "Could not update renewal offer"
             });
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handlePayRenewal = async (renewalId: string) => {
+        try {
+            setActionLoading(renewalId);
+            const res = await api.post(`/renewals/${renewalId}/pay`);
+            if (res.data?.success && res.data.data?.authorizationUrl) {
+                window.location.href = res.data.data.authorizationUrl;
+            } else {
+                toast.error("Payment Error", { description: "Failed to initialize payment gateway." });
+            }
+        } catch (err: any) {
+            toast.error("Payment Error", { description: err.response?.data?.message || err.message });
         } finally {
             setActionLoading(null);
         }
@@ -331,11 +348,19 @@ export function RenewalsSection({ role, properties = [] }: RenewalsSectionProps)
                                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                                             <CheckCircle2 className="h-4 w-4" /> Renewal accepted! Pay into escrow to commence next term.
                                         </span>
-                                        <Link href={`/properties/${item.propertyId}/rent`}>
-                                            <Button size="sm" className="rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-bold">
-                                                Pay into Escrow ({formatPrice(tenantTotal)})
-                                            </Button>
-                                        </Link>
+                                        <Button
+                                            size="sm"
+                                            disabled={actionLoading === item.id}
+                                            onClick={() => handlePayRenewal(item.id)}
+                                            className="rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-bold flex items-center gap-1.5"
+                                        >
+                                            {actionLoading === item.id ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : (
+                                                <CreditCard className="h-3.5 w-3.5" />
+                                            )}
+                                            Pay into Escrow ({formatPrice(tenantTotal)})
+                                        </Button>
                                     </div>
                                 )}
                             </div>

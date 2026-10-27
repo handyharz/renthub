@@ -274,6 +274,18 @@ export class PaymentController {
             const { ServiceTransactionService } = require("../services/serviceTransaction.service");
             const serviceTxService = new ServiceTransactionService();
             await serviceTxService.verifyTransaction(reference);
+            return;
+        }
+
+        // Check lease renewal payment
+        const renewal = await prisma.leaseRenewal.findFirst({
+            where: { paymentReference: reference },
+        });
+
+        if (renewal) {
+            const { renewalService } = require("../services/renewalService");
+            await renewalService.completeRenewalPayment(reference);
+            return;
         }
     }
 
