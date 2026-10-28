@@ -51,8 +51,9 @@ const apiLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   skip: (req) => {
-    const url = req.originalUrl || req.url || req.path || "";
-    return url.includes("/webhooks") || url.includes("webhook") || url.startsWith("/health");
+    // Strictly match pathname prefix so query strings (e.g. ?search=webhook) cannot bypass the limiter
+    const fullPath = (req.baseUrl || "") + (req.path || "");
+    return fullPath.startsWith("/api/webhooks/") || fullPath === "/api/webhooks" || fullPath.startsWith("/health");
   },
   message: {
     success: false,

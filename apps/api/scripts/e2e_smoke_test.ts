@@ -1,5 +1,4 @@
 import { PrismaClient, TransactionStatus, PropertyStatus, UserRole, PropertyType, PaymentMethod, PaymentGateway } from "@prisma/client";
-import { hashOtp } from "../src/utils/cryptoCompare";
 import { transactionService } from "../src/services/transactionService";
 
 const prisma = new PrismaClient();
@@ -100,7 +99,7 @@ async function runSmokeTest() {
     await prisma.transaction.update({
       where: { id: testTransaction.id },
       data: {
-        status: TransactionStatus.UNDER_OFFER,
+        status: TransactionStatus.ESCROWED,
         escrowHeld: true,
       },
     });
@@ -117,69 +116,131 @@ async function runSmokeTest() {
       throw new Error(`Assertion failed: Property should be UNDER_OFFER, got ${updatedProp.status}`);
     }
 
-    // Step 5: OTP Generation with HMAC hash
-    console.log("\n▶ Step 5: Tenant generates 6-digit Key Handover Release OTP...");
-    const rawOtp = "482910";
-    const hashed = hashOtp(rawOtp);
-    const expiresAt = new Date(Date.now() + 48 * 3600 * 1000);
-
-    await prisma.transaction.update({
-      where: { id: testTransaction.id },
-      data: {
-        releaseOtp: hashed,
-        otpExpiresAt: expiresAt,
-        otpAttempts: 0,
-      },
-    });
+    // Step 5: OTP Generation with HMAC hash via transactionService
+    console.log("\n▶ Step 5: Tenant generates 6-digit Key Handover Release OTP via transactionService...");
+    const otpGenResult = await transactionService.generateHandoverOTP(testTransaction.id, testTenant.id);
+    const rawOtp = otpGenResult.otp;
 
     const txWithOtp = await prisma.transaction.findUniqueOrThrow({ where: { id: testTransaction.id } });
     console.log(`  ✓ OTP generated and stored as HMAC hash: ${txWithOtp.releaseOtp?.slice(0, 16)}...`);
-    console.log(`  ✓ Plaintext code (${rawOtp}) is never persisted`);
+    console.log(`  ✓ Plaintext code (${rawOtp}) is never persisted in database`);
+    if (txWithOtp.releaseOtp === rawOtp) {
+      throw new Error("Security failure: Plaintext OTP was stored in the database!");
+    }
 
-    // Step 6: Test DB-persisted brute force limit (5 attempts max)
-    console.log("\n▶ Step 6: Testing DB-persisted OTP attempt limit (max 5 attempts)...");
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      try {
-        await transactionService.releaseEscrowWithOTP(testTransaction.id, "000000", testLandlord.id);
-        throw new Error("Should have rejected wrong OTP");
-      } catch (err: any) {
-        // Expected invalid attempt
+    // Step 6: Test DB-persisted atomic concurrency under parallel brute-force attack (10 concurrent requests)
+    console.log("\n▶ Step 6: Testing atomic concurrency under parallel brute-force attack (10 concurrent requests)...");
+    const concurrentAttempts = 10;
+    const burstResults = await Promise.allSettled(
+      Array.from({ length: concurrentAttempts }, () =>
+        transactionService.releaseEscrowWithOTP(testTransaction.id, "000000", testLandlord.id)
+      )
+    );
+
+    let invalidOtpCount = 0;
+    let lockedCount = 0;
+    for (const r of burstResults) {
+      if (r.status === "rejected") {
+        if (r.reason.message.includes("Invalid Handover Release OTP")) {
+          invalidOtpCount++;
+        } else if (r.reason.message.includes("max 5 exceeded")) {
+          lockedCount++;
+        }
       }
+    }
+    console.log(`  ✓ Concurrent attack outcomes: ${invalidOtpCount} invalid-OTP rejections, ${lockedCount} locked rejections`);
+
+    // Verify all attempts were accounted for (no unhandled or swallowed error types)
+    if (invalidOtpCount + lockedCount !== concurrentAttempts) {
+      throw new Error(`Step 6 error accounting failure: ${invalidOtpCount + lockedCount} errors accounted for out of ${concurrentAttempts}`);
+    }
+
+    // Concurrency guarantee: No more than 5 requests could have slipped in before the atomic lock closed
+    if (invalidOtpCount > 5) {
+      throw new Error(`Concurrency race condition detected: ${invalidOtpCount} requests got "Invalid OTP" (expected <= 5)`);
     }
 
     const txAfterFails = await prisma.transaction.findUniqueOrThrow({ where: { id: testTransaction.id } });
-    console.log(`  ✓ Recorded invalid attempts in PostgreSQL: ${txAfterFails.otpAttempts} / 5`);
+    console.log(`  ✓ Recorded invalid attempts in PostgreSQL: ${txAfterFails.otpAttempts} attempts`);
+    if (txAfterFails.otpAttempts < 5) {
+      throw new Error(`Expected at least 5 attempts recorded, got ${txAfterFails.otpAttempts}`);
+    }
 
-    // 6th attempt must be permanently locked
+    // Attempting with valid rawOtp must now be permanently blocked by the lock
+    let lockedThrew = false;
     try {
       await transactionService.releaseEscrowWithOTP(testTransaction.id, rawOtp, testLandlord.id);
-      throw new Error("Should have blocked attempt because max attempts exceeded");
     } catch (err: any) {
+      lockedThrew = true;
       if (err.message.includes("max 5 exceeded")) {
-        console.log(`  ✓ Security gate confirmed: Locked after 5 failed attempts (${err.message.slice(0, 45)}...)`);
+        console.log(`  ✓ Security gate confirmed: Valid OTP blocked after lock (${err.message.slice(0, 48)}...)`);
       } else {
         throw err;
       }
     }
+    if (!lockedThrew) {
+      throw new Error("Step 6 security assertion failed: Valid OTP was accepted despite account being locked!");
+    }
 
-    // Step 7: Tenant regenerates fresh OTP, resetting attempt counter
-    console.log("\n▶ Step 7: Tenant regenerates fresh OTP for Landlord...");
-    const freshOtp = "739104";
-    const freshHash = hashOtp(freshOtp);
+    // Step 7: Tenant regenerates fresh OTP via transactionService (resets attempts to 0)
+    console.log("\n▶ Step 7: Tenant regenerates fresh OTP via transactionService (resets attempt counter)...");
+    const freshResult = await transactionService.generateHandoverOTP(testTransaction.id, testTenant.id);
+    const freshOtp = freshResult.otp;
+
+    const txAfterReset = await prisma.transaction.findUniqueOrThrow({ where: { id: testTransaction.id } });
+    if (txAfterReset.otpAttempts !== 0) {
+      throw new Error(`Expected otpAttempts to be reset to 0 by generateHandoverOTP, got ${txAfterReset.otpAttempts}`);
+    }
+    console.log(`  ✓ Fresh OTP generated via service, attempts atomically reset to ${txAfterReset.otpAttempts}`);
+
+    // Step 7b: Test OTP Expiry handling
+    console.log("\n▶ Step 7b: Testing expired OTP rejection...");
     await prisma.transaction.update({
       where: { id: testTransaction.id },
-      data: {
-        releaseOtp: freshHash,
-        otpAttempts: 0,
-        otpExpiresAt: new Date(Date.now() + 48 * 3600 * 1000),
-      },
+      data: { otpExpiresAt: new Date(Date.now() - 5000) },
     });
-    console.log(`  ✓ Fresh OTP generated, attempts reset to 0`);
+    let expiryThrew = false;
+    try {
+      await transactionService.releaseEscrowWithOTP(testTransaction.id, freshOtp, testLandlord.id);
+    } catch (err: any) {
+      expiryThrew = true;
+      if (err.message.includes("expired")) {
+        console.log(`  ✓ Security gate confirmed: Expired OTP rejected (${err.message})`);
+      } else {
+        throw err;
+      }
+    }
+    if (!expiryThrew) {
+      throw new Error("Step 7b failure: Expired OTP was accepted without error!");
+    }
 
-    // Step 8: Landlord redeems valid OTP at property handover
-    console.log("\n▶ Step 8: Landlord redeems valid OTP upon physical key handover...");
+    // Restore active expiration window for handover
+    await prisma.transaction.update({
+      where: { id: testTransaction.id },
+      data: { otpExpiresAt: new Date(Date.now() + 24 * 3600 * 1000) },
+    });
+
+    // Step 8: Test boundary policy (4 failed guesses, then 5th attempt succeeds with valid OTP)
+    console.log("\n▶ Step 8: Testing boundary policy (4 wrong guesses, 5th attempt with valid OTP succeeds)...");
+    for (let wrongAttempt = 1; wrongAttempt <= 4; wrongAttempt++) {
+      try {
+        await transactionService.releaseEscrowWithOTP(testTransaction.id, "000000", testLandlord.id);
+        throw new Error(`Boundary test failure: Wrong attempt ${wrongAttempt} did not throw!`);
+      } catch (err: any) {
+        if (!err.message.includes("Invalid Handover Release OTP code")) {
+          throw err;
+        }
+      }
+    }
+    const txAtBoundary = await prisma.transaction.findUniqueOrThrow({ where: { id: testTransaction.id } });
+    console.log(`  ✓ 4 failed attempts recorded in PostgreSQL (attempts: ${txAtBoundary.otpAttempts} / 5)`);
+    if (txAtBoundary.otpAttempts !== 4) {
+      throw new Error(`Expected exactly 4 attempts before boundary release, got ${txAtBoundary.otpAttempts}`);
+    }
+
+    // 5th attempt is the CORRECT code: Must be evaluated and succeed!
     const releaseResult = await transactionService.releaseEscrowWithOTP(testTransaction.id, freshOtp, testLandlord.id);
-    console.log(`  ✓ Escrow successfully released! Status: ${releaseResult.status}`);
+    console.log(`  ✓ Boundary verified: 5th attempt with valid OTP succeeded! Status: ${releaseResult.status}`);
 
     const finalTx = await prisma.transaction.findUniqueOrThrow({ where: { id: testTransaction.id } });
     const finalProp = await prisma.property.findUniqueOrThrow({ where: { id: testProperty.id } });
@@ -193,36 +254,43 @@ async function runSmokeTest() {
     }
 
     // Step 9: Landlord Payout record creation & verification
-    console.log("\n▶ Step 9: Creating and validating Landlord Payout record with Foreign Key relation...");
-    // Give async disburseLandlordPayout a brief moment or create/upsert directly
-    await new Promise((r) => setTimeout(r, 1000));
-    let payout = await prisma.landlordPayout.findUnique({
-      where: { transactionId: testTransaction.id },
-      include: { transaction: true },
-    });
-
-    if (!payout) {
-      const grossAmount = rentAmount;
-      const platformFee = Math.round(rentAmount * 0.02);
-      const netAmount = grossAmount - platformFee;
-      payout = await prisma.landlordPayout.create({
-        data: {
-          landlordId: testLandlord.id,
-          transactionId: testTransaction.id,
-          grossAmount,
-          platformFee,
-          netAmount,
-          idempotencyKey: `SMOKE-PAYOUT-${testSuffix}`,
-          status: "PENDING",
-        },
-        include: {
-          transaction: true,
-        },
+    console.log("\n▶ Step 9: Validating Landlord Payout record and Notification created by AfriExchangePayoutService...");
+    let payout: any = null;
+    // Poll up to 6 seconds for async disburseLandlordPayout to complete and reach terminal status
+    for (let i = 0; i < 24; i++) {
+      payout = await prisma.landlordPayout.findUnique({
+        where: { transactionId: testTransaction.id },
+        include: { transaction: true },
       });
+      if (payout && payout.status !== "PENDING") {
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 250));
     }
 
-    console.log(`  ✓ LandlordPayout verified (ID: ${payout.id}, Net: ₦${payout.netAmount.toLocaleString()})`);
+    if (!payout) {
+      throw new Error("Step 9 failure: afriExchangePayoutService failed to create a LandlordPayout record!");
+    }
+
+    if (payout.status !== "SKIPPED") {
+      throw new Error(`Step 9 failure: Expected LandlordPayout status to be SKIPPED, but got ${payout.status}`);
+    }
+
+    console.log(`  ✓ LandlordPayout verified (ID: ${payout.id}, Net: ₦${payout.netAmount.toLocaleString()}, Status: ${payout.status})`);
     console.log(`  ✓ Foreign key relation verified: payout.transaction.id = ${payout.transaction?.id}`);
+
+    // Verify landlord notification was dispatched prompting settlement link with exact title match
+    const notification = await prisma.notification.findFirst({
+      where: {
+        userId: testLandlord.id,
+        type: "SYSTEM",
+        title: "Action Required: Link AfriExchange Account",
+      },
+    });
+    if (!notification) {
+      throw new Error("Step 9 failure: Landlord settlement notification with title 'Action Required: Link AfriExchange Account' was not created!");
+    }
+    console.log(`  ✓ Landlord settlement notification verified: "${notification.title}" (ID: ${notification.id})`);
 
     console.log("\n════════════════════════════════════════════════════════════════");
     console.log("✅ ALL END-TO-END SMOKE TEST PHASES PASSED WITH ZERO ERRORS!");
@@ -241,6 +309,7 @@ async function runSmokeTest() {
       await prisma.user.deleteMany({ where: { id: testTenant.id } });
     }
     if (testLandlord) {
+      await prisma.notification.deleteMany({ where: { userId: testLandlord.id } });
       await prisma.user.deleteMany({ where: { id: testLandlord.id } });
     }
     console.log("  ✓ Database cleaned up cleanly.");

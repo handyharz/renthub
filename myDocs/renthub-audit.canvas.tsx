@@ -209,8 +209,8 @@ const FINDINGS: Finding[] = [
     area: "Money",
     status: "Fixed",
     title: "Handover OTP is 6 digits, plaintext, not timing-safe",
-    evidence: "hashOtp + otpMatches timing-safe; in-memory attempt cap; never returned in JSON",
-    impact: "DB leak of the hash is not enough to redeem; brute force is rate-limited in-process",
+    evidence: "hashOtp + otpMatches timing-safe; DB-persisted atomic attempt cap (max 5); never returned in JSON",
+    impact: "DB leak of the hash is not enough to redeem; brute force is rate-limited and locked in PostgreSQL",
   },
   {
     id: "M4",
@@ -281,7 +281,7 @@ const FINDINGS: Finding[] = [
     area: "Ops",
     status: "Fixed",
     title: "No API rate limiting or Zod/Joi",
-    evidence: "express-rate-limit configured on /api, /api/verification, and /api/payments in apps/api/src/index.ts",
+    evidence: "express-rate-limit with trust proxy on global /api, strict limit on verification & payment init, /api/webhooks/* strictly exempt",
     impact: "Global DoS, SMS pumping, and brute force protection enforced at API layer",
   },
   {
@@ -345,18 +345,19 @@ export default function RenthubAudit() {
         </Text>
       </Stack>
 
-      <Callout tone="success" title="All tracked findings addressed">
+      <Callout tone="success" title="All 30 discovery findings addressed in code; Service-layer smoke test verified on Neon">
         Identity is JWT-only. Escrow cannot be marked paid without provider
         success. Role cannot be set to ADMIN from the client. Unit consistency
         standardized to Naira. Lease renewal escrow payments wired. API rate limiting
-        and database-persisted OTP attempt counters enforced.
+        and database-persisted OTP attempt counters enforced. Service-layer smoke test passed with 0 errors on Neon DB.
+        HTTP endpoints, signed live webhooks, and real payout disbursements remain to be orchestrated in a full staging environment.
       </Callout>
 
       <Row gap={24} wrap>
         <Stat value={String(closed)} label="Closed of 30" tone="success" />
         <Stat value={String(partial)} label="Partial" tone="warning" />
         <Stat value={String(open)} label="Still open" tone="info" />
-        <Stat value="Ready for smoke test" label="Readiness" />
+        <Stat value="Service-layer passed" label="Neon DB Smoke Test" tone="success" />
       </Row>
 
       <Grid columns={2} gap={24}>
@@ -475,6 +476,12 @@ export default function RenthubAudit() {
               id: "l3",
               status: "completed",
               content: "L3 — Foreign key constraints committed in SQL migration with orphan cleanup.",
+            },
+            {
+              id: "smoke-test",
+              status: "completed",
+              content:
+                "Service-layer lifecycle (escrow → OTP → release → payout row) passed on Neon staging.",
             },
           ]}
         />

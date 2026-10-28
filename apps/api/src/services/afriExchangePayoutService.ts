@@ -137,6 +137,22 @@ export class AfriExchangePayoutService {
             console.warn(
                 `[AfriExchangePayoutService] Strict Security Enforcement: Payout SKIPPED for tx=${transactionId} landlord=${landlord.id}. AfriExchange settlement account not verified or linked.`
             );
+
+            // Notify landlord so funds are not left silently stuck
+            try {
+                await prisma.notification.create({
+                    data: {
+                        userId: landlord.id,
+                        type: "SYSTEM",
+                        title: "Action Required: Link AfriExchange Account",
+                        message: `Your escrow payment of ₦${netAmount.toLocaleString()} for ${transaction.property.title} has been released! Please link your verified AfriExchange wallet or email in Settings > Payouts to disburse funds.`,
+                        actionUrl: "/dashboard/payouts",
+                        actionText: "Link Settlement Account",
+                    },
+                });
+            } catch (notifyErr) {
+                console.warn("[AfriExchangePayoutService] Failed to create settlement notification:", notifyErr);
+            }
             return;
         }
 

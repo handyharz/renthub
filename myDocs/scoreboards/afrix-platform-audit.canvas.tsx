@@ -20,7 +20,7 @@ import {
 const SEVERITY_NOW = [
   { label: "High", value: 0 },
   { label: "Medium", value: 2 },
-  { label: "Low", value: 1 },
+  { label: "Low (Open)", value: 0 },
 ];
 
 const RECHECK = [
@@ -118,7 +118,7 @@ export default function AfriXPlatformAudit() {
       <Stack gap={8}>
         <H2>Still not fully closed by severity (count)</H2>
         <Text size="small" tone="secondary">
-          High 0 · Medium 2 · Low 1 · Source: static re-review · 27 Oct 2026
+          High 0 · Medium 2 · Low 0 open (1 accepted residual) · Source: static re-review · 27 Oct 2026
         </Text>
         <BarChart
           categories={SEVERITY_NOW.map((s) => s.label)}

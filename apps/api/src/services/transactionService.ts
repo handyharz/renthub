@@ -404,22 +404,35 @@ export class TransactionService {
             throw new Error("Escrow has already been released for this transaction");
         }
 
-        // DB-level attempt cap (max 5 attempts before code is permanently locked)
-        if (transaction.otpAttempts >= 5) {
+        // Atomic claim-then-compare: atomically increment the attempt counter only if
+        // the cap has not yet been reached. This guarantees at most 5 OTP comparisons
+        // regardless of how many concurrent requests arrive simultaneously.
+        // A stale pre-read check cannot be used because all concurrent readers would
+        // see the same snapshot value before any increment lands.
+        if (transaction.otpExpiresAt && transaction.otpExpiresAt < new Date()) {
+            throw new Error("Handover Release OTP code has expired. Tenant must request a new OTP.");
+        }
+
+        const claimed = await prisma.transaction.updateMany({
+            where: { id: transactionId, otpAttempts: { lt: 5 } },
+            data: { otpAttempts: { increment: 1 } },
+        });
+
+        if (claimed.count === 0) {
             throw new Error("Too many invalid OTP attempts (max 5 exceeded). Handover release is locked. Tenant must generate a new OTP.");
         }
 
         if (!otpMatches(transaction.releaseOtp, otp)) {
-            await prisma.transaction.update({
+            // Slot was claimed (counter incremented); fetch updated value for the remaining count message.
+            const updated = await prisma.transaction.findUniqueOrThrow({
                 where: { id: transactionId },
-                data: { otpAttempts: { increment: 1 } },
+                select: { otpAttempts: true },
             });
-            const remaining = Math.max(0, 4 - transaction.otpAttempts);
+            const remaining = Math.max(0, 5 - updated.otpAttempts);
+            if (updated.otpAttempts >= 5) {
+                throw new Error("Too many invalid OTP attempts (max 5 exceeded). Handover release is locked. Tenant must generate a new OTP.");
+            }
             throw new Error(`Invalid Handover Release OTP code. (${remaining} attempt${remaining === 1 ? "" : "s"} remaining before lock)`);
-        }
-
-        if (transaction.otpExpiresAt && transaction.otpExpiresAt < new Date()) {
-            throw new Error("Handover Release OTP code has expired. Tenant must request a new OTP.");
         }
 
         const releasedRows = await prisma.transaction.updateMany({
