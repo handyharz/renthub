@@ -19,5 +19,7 @@ router.get("/settings", adminController.getSettings.bind(adminController));
 router.patch("/settings", adminController.updateSettings.bind(adminController));
 router.post("/settings/test-afriexchange", adminController.testAfriExchangeConnection.bind(adminController));
 router.get("/transparency/audit", adminController.getTransparencyAudit.bind(adminController));
+router.get("/transparency/challenges", adminController.getChallenges.bind(adminController));
+router.patch("/transparency/challenges/:id", adminController.moderateChallenge.bind(adminController));
 
 export default router;

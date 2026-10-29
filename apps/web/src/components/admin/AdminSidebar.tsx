@@ -15,6 +15,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Briefcase,
+    Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/layout/ThemeProvider";
@@ -29,6 +30,7 @@ const navItems = [
     { href: "/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { href: "/admin/agents", label: "Agent Partners", icon: Briefcase, accent: "purple" },
     { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/transparency", label: "Transparency & Audit", icon: Eye, accent: "teal" },
     { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -66,6 +68,7 @@ export function AdminSidebar() {
                 {navItems.map(({ href, label, icon: Icon, exact, accent }) => {
                     const active = isActive(href, exact);
                     const isPurple = accent === "purple";
+                    const isTeal = accent === "teal";
                     return (
                         <Link
                             key={href}
@@ -76,9 +79,13 @@ export function AdminSidebar() {
                                 active
                                     ? isPurple
                                         ? "bg-purple-100 text-purple-700 border border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800"
+                                        : isTeal
+                                        ? "bg-teal-100 text-teal-700 border border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800"
                                         : "bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/25"
                                     : isPurple
                                         ? "text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-700"
+                                        : isTeal
+                                        ? "text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:text-teal-700"
                                         : "text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-primary)]"
                             )}
                         >

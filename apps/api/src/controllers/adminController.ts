@@ -240,6 +240,89 @@ export class AdminController {
             });
         }
     }
+
+    async getChallenges(req: Request, res: Response) {
+        try {
+            const { status, page = "1", limit = "25" } = req.query as Record<string, string>;
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+
+            const where: any = {};
+            if (status && status !== "ALL") where.status = status;
+
+            const [challenges, total] = await Promise.all([
+                prisma.publicChallenge.findMany({
+                    where,
+                    orderBy: { createdAt: "desc" },
+                    skip,
+                    take: parseInt(limit),
+                    select: {
+                        id: true,
+                        challengeType: true,
+                        targetRef: true,
+                        reason: true,
+                        evidenceUrl: true,
+                        status: true,
+                        adminNote: true,
+                        resolvedAt: true,
+                        createdAt: true,
+                        updatedAt: true,
+                    },
+                }),
+                prisma.publicChallenge.count({ where }),
+            ]);
+
+            const statusCounts = await prisma.publicChallenge.groupBy({
+                by: ["status"],
+                _count: { status: true },
+            });
+
+            const counts: Record<string, number> = { PENDING: 0, INVESTIGATING: 0, UPHELD: 0, DISMISSED: 0 };
+            for (const row of statusCounts) {
+                counts[row.status] = row._count.status;
+            }
+
+            return res.status(200).json({
+                success: true,
+                data: { challenges, total, page: parseInt(page), limit: parseInt(limit), counts },
+            });
+        } catch (error: any) {
+            console.error("Admin getChallenges error:", error);
+            return res.status(500).json({ success: false, message: "Failed to fetch challenges", error: error.message });
+        }
+    }
+
+    async moderateChallenge(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const { status, adminNote } = req.body as {
+                status: "INVESTIGATING" | "UPHELD" | "DISMISSED";
+                adminNote?: string;
+            };
+
+            const allowed = ["INVESTIGATING", "UPHELD", "DISMISSED"];
+            if (!allowed.includes(status)) {
+                return res.status(400).json({ success: false, message: `status must be one of: ${allowed.join(", ")}` });
+            }
+
+            const updated = await prisma.publicChallenge.update({
+                where: { id: id as string },
+                data: {
+                    status,
+                    adminNote: adminNote ?? undefined,
+                    resolvedAt: ["UPHELD", "DISMISSED"].includes(status) ? new Date() : undefined,
+                },
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: `Challenge marked as ${status}`,
+                data: updated,
+            });
+        } catch (error: any) {
+            console.error("Admin moderateChallenge error:", error);
+            return res.status(500).json({ success: false, message: "Failed to update challenge", error: error.message });
+        }
+    }
 }
 
 export const adminController = new AdminController();
