@@ -39,7 +39,26 @@ router.get("/stats", async (req: Request, res: Response) => {
             });
         }
 
-        const [strikesCount, verifiedPropertiesCount, challengeStats] = await Promise.all([
+        const [totalProcessedAgg, activeEscrowAgg, strikesCount, verifiedPropertiesCount, challengeStats] = await Promise.all([
+            prisma.transaction.aggregate({
+                where: {
+                    OR: [
+                        { status: "RELEASED", escrowReleased: true },
+                        { status: "ESCROWED", escrowHeld: true },
+                    ],
+                },
+                _sum: { totalAmount: true, rentAmount: true },
+                _count: { id: true },
+            }),
+            prisma.transaction.aggregate({
+                where: {
+                    status: "ESCROWED",
+                    escrowHeld: true,
+                    escrowReleased: false,
+                },
+                _sum: { totalAmount: true, rentAmount: true },
+                _count: { id: true },
+            }),
             prisma.agentStrike.count({ where: { status: "UPHELD" } }),
             prisma.property.count({ where: { verified: true } }),
             prisma.publicChallenge.groupBy({
@@ -64,8 +83,15 @@ router.get("/stats", async (req: Request, res: Response) => {
             }
         }
 
-        const dbExpectedKobo = latestSnapshot?.dbExpectedKobo || BigInt(0);
         const varianceKobo = latestSnapshot?.varianceKobo || BigInt(0);
+        const totalProtectedNaira = totalProcessedAgg._sum.rentAmount || 0;
+        const totalTransactionsCount = totalProcessedAgg._count.id || 0;
+        const activeEscrowsCount = activeEscrowAgg._count.id || 0;
+        const totalReleasedCount = totalTransactionsCount - activeEscrowsCount;
+
+        const volumeDisplay = totalProtectedNaira >= 1_000_000
+            ? `₦${(totalProtectedNaira / 1_000_000).toFixed(2)}M`
+            : `₦${Math.round(totalProtectedNaira / 1000).toLocaleString()}k`;
 
         res.json({
             success: true,
@@ -73,8 +99,10 @@ router.get("/stats", async (req: Request, res: Response) => {
                 systemStatus: getEscrowHealthStatus(),
                 isReconciled: latestSnapshot?.isReconciled ?? true,
                 varianceDisplay: varianceKobo === BigInt(0) ? "0 kobo" : `${varianceKobo.toString()} kobo`,
-                activeEscrowsCount: latestSnapshot?.activeEscrowsCount || 0,
-                totalEscrowedRange: formatRange(dbExpectedKobo),
+                activeEscrowsCount,
+                totalCompletedEscrows: totalReleasedCount,
+                totalTransactionsCount,
+                totalEscrowedRange: volumeDisplay,
                 lastAuditTimestamp: latestSnapshot?.timestamp || new Date(),
                 supportedRails: [
                     {
@@ -99,7 +127,7 @@ router.get("/stats", async (req: Request, res: Response) => {
                 challenges: challengeSummary,
                 verifiedStock: {
                     totalVerifiedProperties: verifiedPropertiesCount,
-                    primaryZone: "Abuja (FCT: Jabi, Gwarinpa, Lugbe, Guzape)",
+                    primaryZone: "Abuja (FCT: Jabi, Gwarinpa, Lugbe, Guzape, Maitama)",
                 },
             },
         });
@@ -150,18 +178,25 @@ router.get("/proofs", async (req: Request, res: Response) => {
             prisma.propertyProof.count({ where: whereClause }),
             prisma.transaction.findMany({
                 where: {
-                    status: "RELEASED",
-                    escrowReleased: true,
+                    OR: [
+                        { status: "RELEASED", escrowReleased: true },
+                        { status: "ESCROWED", escrowHeld: true },
+                    ],
                 },
                 orderBy: { updatedAt: "desc" },
-                take: 5,
+                take: 10,
                 select: {
                     id: true,
+                    status: true,
                     paymentGateway: true,
                     anchorVirtualNuban: true,
                     anchorEscrowLedgerId: true,
                     afriExchangeRef: true,
                     rentAmount: true,
+                    totalAmount: true,
+                    escrowHeld: true,
+                    escrowReleased: true,
+                    createdAt: true,
                     updatedAt: true,
                 },
             }),
@@ -172,17 +207,38 @@ router.get("/proofs", async (req: Request, res: Response) => {
             if (tx.anchorVirtualNuban && tx.anchorVirtualNuban.length >= 8) {
                 maskedAccount = `${tx.anchorVirtualNuban.slice(0, 4)}***${tx.anchorVirtualNuban.slice(-4)}`;
             } else if (tx.afriExchangeRef) {
-                maskedAccount = `RQST-RH-${tx.afriExchangeRef.slice(0, 6)}...`;
+                // Keep the prefix and mask intermediate chars
+                const ref = tx.afriExchangeRef;
+                maskedAccount = ref.length > 16 ? `${ref.slice(0, 16)}...` : ref;
             }
 
+            const isReleased = tx.status === "RELEASED";
+            const rentNaira = tx.rentAmount;
+            const volumeFormatted = rentNaira >= 1_000_000
+                ? `₦${(rentNaira / 1_000_000).toFixed(2)}M`
+                : `₦${Math.round(rentNaira / 1000).toLocaleString()}k`;
+
+            const verificationHash = crypto
+                .createHash("sha256")
+                .update(`${tx.id}:${tx.paymentGateway}:${tx.rentAmount}:${tx.createdAt.toISOString()}`)
+                .digest("hex");
+
             return {
+                id: tx.id,
                 maskedRef: maskedAccount,
                 rail: tx.paymentGateway,
-                ledgerIdMasked: tx.anchorEscrowLedgerId ? `${tx.anchorEscrowLedgerId.slice(0, 15)}...` : "VAULT_ESCROW",
-                volumeRange: tx.rentAmount >= 2_000_000 ? "₦2.0M – ₦3.0M" : "₦500k – ₦1.5M",
-                otpStatus: "NULLIFIED_POST_CONSUMPTION",
-                payoutRail: tx.paymentGateway === "ANCHOR" ? "ANCHOR_NIP_N20" : "AFRIEXCHANGE_PAYOUT",
+                ledgerIdMasked: tx.anchorEscrowLedgerId
+                    ? `${tx.anchorEscrowLedgerId.slice(0, 14)}...`
+                    : `VAULT_MERCHANT_${tx.id.slice(-6).toUpperCase()}`,
+                volumeRange: volumeFormatted,
+                rawAmount: rentNaira,
+                totalAmount: tx.totalAmount,
+                otpStatus: isReleased ? "NULLIFIED_POST_RELEASE" : "LOCKED_AWAITING_HANDOVER",
+                escrowStatus: isReleased ? "RELEASED" : "ESCROWED",
+                payoutRail: tx.paymentGateway === "ANCHOR" ? "ANCHOR_NIP_N20" : "AFRIEXCHANGE_SETTLEMENT",
+                verificationHash,
                 releasedAt: tx.updatedAt,
+                lockedAt: tx.createdAt,
             };
         });
 

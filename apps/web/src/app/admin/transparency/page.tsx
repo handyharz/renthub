@@ -87,13 +87,13 @@ function AuditStatusPill({ variance }: { variance: string }) {
 function ChallengeBadge({ status }: { status: PublicChallenge["status"] }) {
     const map = {
         PENDING: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-        UNDER_REVIEW: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        INVESTIGATING: "bg-blue-500/10 text-blue-400 border-blue-500/20",
         UPHELD: "bg-rose-500/10 text-rose-400 border-rose-500/20",
         DISMISSED: "bg-gray-500/10 text-gray-400 border-gray-500/20",
     };
     const icons = {
         PENDING: <Clock className="h-3 w-3" />,
-        UNDER_REVIEW: <Eye className="h-3 w-3" />,
+        INVESTIGATING: <Eye className="h-3 w-3" />,
         UPHELD: <AlertTriangle className="h-3 w-3" />,
         DISMISSED: <CheckCircle2 className="h-3 w-3" />,
     };
@@ -429,11 +429,11 @@ export default function AdminTransparencyPage() {
                             <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Submission Details</h4>
                             <div>
                                 <p className="text-[10px] font-semibold uppercase text-[var(--text-muted)]">Target Reference</p>
-                                <p className="text-sm font-mono font-semibold text-[var(--text-primary)] mt-0.5">{selectedChallenge.submitterAlias}</p>
+                                <p className="text-sm font-mono font-semibold text-[var(--text-primary)] mt-0.5">{selectedChallenge.targetRef}</p>
                             </div>
                             <div>
-                                <p className="text-[10px] font-semibold uppercase text-[var(--text-muted)]">Description</p>
-                                <p className="text-sm text-[var(--text-secondary)] mt-0.5 leading-relaxed">{selectedChallenge.description}</p>
+                                <p className="text-[10px] font-semibold uppercase text-[var(--text-muted)]">Reason</p>
+                                <p className="text-sm text-[var(--text-secondary)] mt-0.5 leading-relaxed">{selectedChallenge.reason}</p>
                             </div>
                             <div>
                                 <p className="text-[10px] font-semibold uppercase text-[var(--text-muted)] mb-1">Evidence URL</p>
@@ -464,7 +464,7 @@ export default function AdminTransparencyPage() {
                                 <div className="relative">
                                     <select value={moderateStatus} onChange={(e) => setModerateStatus(e.target.value as typeof moderateStatus)}
                                         className="w-full appearance-none rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--color-brand-blue)] focus:outline-none">
-                                        <option value="INVESTIGATING — assigning investigator</option>
+                                        <option value="INVESTIGATING">🔍 Investigating — assigning investigator</option>
                                         <option value="UPHELD">⚠️ Upheld — proof inconsistency confirmed</option>
                                         <option value="DISMISSED">✅ Dismissed — challenge rejected, proof valid</option>
                                     </select>
