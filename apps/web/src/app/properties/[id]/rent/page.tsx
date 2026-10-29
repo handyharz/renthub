@@ -132,6 +132,33 @@ export default function RentPropertyPage() {
         }
     };
 
+    const handleAnchorPayment = async () => {
+        setProcessing(true);
+        setError(null);
+
+        try {
+            const transactionRes = await api.post(`/transactions?clerkId=${user?.id}`, {
+                propertyId: property.id,
+                paymentMethod: "BANK_TRANSFER",
+                paymentGateway: "ANCHOR",
+                leaseDuration: 12,
+            });
+
+            const transaction = transactionRes.data.data;
+
+            const payRes = await api.post(`/payments/anchor/initialize?clerkId=${user?.id}`, {
+                transactionId: transaction.id,
+            });
+
+            return payRes.data?.data;
+        } catch (err: any) {
+            console.error("Anchor payment initialization failed:", err);
+            setError(err.response?.data?.message || "Failed to initialize Anchor bank transfer. Please try again.");
+            setProcessing(false);
+            throw err;
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
@@ -431,6 +458,7 @@ export default function RentPropertyPage() {
                     defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
                     onPaystack={handlePaystackPayment}
                     onAfriExchange={handleAfriExchangePayment}
+                    onAnchor={handleAnchorPayment}
                 />
             )}
         </div>

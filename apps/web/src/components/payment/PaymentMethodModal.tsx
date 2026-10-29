@@ -20,6 +20,10 @@ import {
     AlertCircle,
     ExternalLink,
     Wallet,
+    Landmark,
+    Copy,
+    Check,
+    Sparkles,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
@@ -72,6 +76,13 @@ interface PaymentMethodModalProps {
         tokenType: AfriExchangeTokenType;
         amountInToken: number;
     }) => Promise<void>;
+    onAnchor?: () => Promise<{
+        virtualNuban: string;
+        bankName: string;
+        accountName: string;
+        reference: string;
+        totalAmount?: number;
+    } | void>;
 }
 
 export function PaymentMethodModal({
@@ -82,8 +93,9 @@ export function PaymentMethodModal({
     defaultEmail = "",
     onPaystack,
     onAfriExchange,
+    onAnchor,
 }: PaymentMethodModalProps) {
-    const [selectedMethod, setSelectedMethod] = useState<"PAYSTACK" | "AFRIEXCHANGE">("AFRIEXCHANGE");
+    const [selectedMethod, setSelectedMethod] = useState<"ANCHOR" | "PAYSTACK" | "AFRIEXCHANGE">("ANCHOR");
     const [afriEmail, setAfriEmail] = useState(defaultEmail);
     const [afriWallet, setAfriWallet] = useState("");
     const [tokenType, setTokenType] = useState<AfriExchangeTokenType>("NT");
@@ -96,15 +108,46 @@ export function PaymentMethodModal({
         availableBalance?: number;
         wallets?: Array<{ tokenType: string; balance: number }>;
     } | null>(null);
+    const [anchorDetails, setAnchorDetails] = useState<{
+        virtualNuban: string;
+        bankName: string;
+        accountName: string;
+        reference: string;
+    } | null>(null);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
 
     const convertedTokenAmount = TOKEN_RATES[tokenType].convert(totalAmount);
+
+    const copyToClipboard = (text: string, field: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
+    };
 
     const handleConfirm = async () => {
         setLoading(true);
         setErrorMessage(null);
         setErrorDetails(null);
         try {
-            if (selectedMethod === "PAYSTACK") {
+            if (selectedMethod === "ANCHOR") {
+                if (anchorDetails) {
+                    // Tenant already has account and confirms they paid
+                    onClose();
+                    return;
+                }
+                if (onAnchor) {
+                    const res = await onAnchor();
+                    if (res && res.virtualNuban) {
+                        setAnchorDetails({
+                            virtualNuban: res.virtualNuban,
+                            bankName: res.bankName,
+                            accountName: res.accountName,
+                            reference: res.reference,
+                        });
+                        return;
+                    }
+                }
+            } else if (selectedMethod === "PAYSTACK") {
                 await onPaystack();
             } else {
                 await onAfriExchange({
@@ -132,6 +175,7 @@ export function PaymentMethodModal({
     const handleModalClose = () => {
         setErrorMessage(null);
         setErrorDetails(null);
+        setAnchorDetails(null);
         onClose();
     };
 
@@ -249,7 +293,125 @@ export function PaymentMethodModal({
 
                 {/* Gateway Options */}
                 <div className="space-y-3 pt-1">
-                    {/* Option 1: AfriExchange */}
+                    {/* Option 1: Direct Bank Transfer (Anchor BaaS Escrow) - Recommended */}
+                    <div
+                        onClick={() => {
+                            setSelectedMethod("ANCHOR");
+                            setErrorMessage(null);
+                        }}
+                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                            selectedMethod === "ANCHOR"
+                                ? "border-[var(--color-brand-green)] bg-[var(--color-brand-green)]/5 shadow-sm"
+                                : "border-[var(--border-color)] bg-[var(--bg-card)] hover:border-gray-300 dark:hover:border-gray-700"
+                        }`}
+                    >
+                        <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                    <Landmark className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-bold text-sm text-[var(--text-primary)]">
+                                            Bank Transfer (Dedicated Escrow)
+                                        </p>
+                                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none text-[10px] font-bold py-0.5 flex items-center gap-1">
+                                            <Sparkles className="h-2.5 w-2.5" />
+                                            Recommended · 0% Fee
+                                        </Badge>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">
+                                        Pay into a dedicated Providus/Anchor NUBAN. Instant auto-reconciliation.
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                className={`h-5 w-5 rounded-full border-2 flex items-center justify-center mt-1 ${
+                                    selectedMethod === "ANCHOR"
+                                        ? "border-[var(--color-brand-green)] bg-[var(--color-brand-green)] text-white"
+                                        : "border-gray-300 dark:border-gray-600"
+                                }`}
+                            >
+                                {selectedMethod === "ANCHOR" && <CheckCircle2 className="h-4 w-4 fill-current" />}
+                            </div>
+                        </div>
+
+                        {/* Anchor details display when generated */}
+                        {selectedMethod === "ANCHOR" && anchorDetails && (
+                            <div
+                                className="mt-4 pt-3 border-t border-[var(--border-color)] space-y-3"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="bg-[var(--bg-muted)] p-3.5 rounded-xl border border-[var(--border-color)] space-y-2.5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                                            Bank Name
+                                        </span>
+                                        <span className="text-xs font-bold text-[var(--text-primary)]">
+                                            {anchorDetails.bankName}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                                            Account Number
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-sm font-extrabold text-[var(--color-brand-green)]">
+                                                {anchorDetails.virtualNuban}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => copyToClipboard(anchorDetails.virtualNuban, "nuban")}
+                                                className="p-1 rounded-md hover:bg-[var(--bg-card)] text-[var(--text-secondary)] transition-all"
+                                                title="Copy account number"
+                                            >
+                                                {copiedField === "nuban" ? (
+                                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                                ) : (
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                                            Account Name
+                                        </span>
+                                        <span className="text-xs font-semibold text-[var(--text-primary)] truncate max-w-[200px]">
+                                            {anchorDetails.accountName}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between border-t border-[var(--border-color)]/60 pt-2">
+                                        <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                                            Exact Amount
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-extrabold text-[var(--text-primary)]">
+                                                {formatPrice(totalAmount)}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => copyToClipboard(String(totalAmount), "amount")}
+                                                className="p-1 rounded-md hover:bg-[var(--bg-card)] text-[var(--text-secondary)] transition-all"
+                                                title="Copy amount"
+                                            >
+                                                {copiedField === "amount" ? (
+                                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                                ) : (
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed italic">
+                                    💡 Transfer the exact amount from any Nigerian bank app. Escrow funds automatically upon receipt.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Option 2: AfriExchange */}
                     <div
                         onClick={() => {
                             setSelectedMethod("AFRIEXCHANGE");
@@ -417,8 +579,18 @@ export function PaymentMethodModal({
                         {loading ? (
                             <>
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Preparing Checkout...
+                                Preparing Escrow...
                             </>
+                        ) : selectedMethod === "ANCHOR" ? (
+                            anchorDetails ? (
+                                <>
+                                    I Have Completed Transfer <CheckCircle2 className="h-4 w-4" />
+                                </>
+                            ) : (
+                                <>
+                                    Generate Escrow Bank Account <ArrowRight className="h-4 w-4" />
+                                </>
+                            )
                         ) : selectedMethod === "PAYSTACK" ? (
                             <>
                                 Continue to Paystack Checkout <ArrowRight className="h-4 w-4" />

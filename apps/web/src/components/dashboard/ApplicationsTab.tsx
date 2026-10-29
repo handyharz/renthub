@@ -274,6 +274,43 @@ export function ApplicationsTab() {
         }
     };
 
+    const handleAnchorPayment = async () => {
+        if (!paymentModalApp) return;
+        try {
+            setPaymentLoading(paymentModalApp.id);
+
+            const txRes = await api.post("/transactions", {
+                propertyId: paymentModalApp.propertyId,
+                paymentMethod: "BANK_TRANSFER",
+                paymentGateway: "ANCHOR",
+                leaseDuration: paymentModalApp.leaseDuration,
+                applicationId: paymentModalApp.id,
+            });
+
+            const transaction = txRes.data.data;
+
+            const payRes = await api.post("/payments/anchor/initialize", {
+                transactionId: transaction.id,
+            });
+
+            const anchorData = payRes.data?.data;
+
+            toast.success("Anchor Virtual Account Ready!", {
+                description: `Transfer ₦${(anchorData?.amountKobo / 100).toLocaleString()} to ${anchorData?.accountNumber} (${anchorData?.bankName}). Ref: ${anchorData?.collectionRef}`
+            });
+
+            setPaymentModalApp(null);
+            await fetchData();
+            return anchorData;
+        } catch (error: any) {
+            console.error("Anchor payment initialization failed:", error);
+            toast.error(error.response?.data?.message || "Failed to initialize Anchor bank transfer");
+            throw error;
+        } finally {
+            setPaymentLoading(null);
+        }
+    };
+
     const handleRequestOtp = async (transactionId: string) => {
         try {
             setOtpLoading(transactionId);
@@ -1414,6 +1451,7 @@ export function ApplicationsTab() {
                     defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
                     onPaystack={handlePaystackPayment}
                     onAfriExchange={handleAfriExchangePayment}
+                    onAnchor={handleAnchorPayment}
                 />
             )}
         </div>
