@@ -23,14 +23,14 @@ import { useState } from "react";
 
 const navItems = [
     { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-    { href: "/admin/payouts", label: "Landlord Payouts", icon: Banknote },
     { href: "/admin/escrow", label: "Escrow & Payments", icon: Lock },
+    { href: "/admin/transparency", label: "Transparency & Audit", icon: Eye, accent: "teal" },
+    { href: "/admin/payouts", label: "Landlord Payouts", icon: Banknote },
     { href: "/admin/properties", label: "Properties", icon: Building2 },
     { href: "/admin/verifications", label: "Verifications", icon: ShieldCheck },
     { href: "/admin/disputes", label: "Disputes", icon: AlertTriangle },
     { href: "/admin/agents", label: "Agent Partners", icon: Briefcase, accent: "purple" },
     { href: "/admin/users", label: "Users", icon: Users },
-    { href: "/admin/transparency", label: "Transparency & Audit", icon: Eye, accent: "teal" },
     { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -64,7 +64,7 @@ export function AdminSidebar() {
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 p-3 space-y-1">
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
                 {navItems.map(({ href, label, icon: Icon, exact, accent }) => {
                     const active = isActive(href, exact);
                     const isPurple = accent === "purple";

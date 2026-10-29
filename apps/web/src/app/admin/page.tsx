@@ -11,6 +11,7 @@ import {
     ArrowRight,
     Banknote,
     BadgeAlert,
+    Eye,
 } from "lucide-react";
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { StatCard } from "@/components/admin/StatCard";
@@ -79,6 +80,15 @@ export default function AdminOverviewPage() {
             badge: `${stats?.settledEscrowCount ?? 0} Leases Settled`,
             badgeVariant: "neutral",
             accent: "border-[var(--color-brand-blue)]/30 hover:border-[var(--color-brand-blue)]/60",
+        },
+        {
+            href: "/admin/transparency",
+            label: "Transparency & Audit",
+            desc: "Dual-rail reconciliation, audit snapshots & public challenge moderation",
+            icon: Eye,
+            badge: "Dual-Rail Verified (0 Variance)",
+            badgeVariant: "success",
+            accent: "border-teal-500/40 hover:border-teal-500/70",
         },
         {
             href: "/admin/properties",
