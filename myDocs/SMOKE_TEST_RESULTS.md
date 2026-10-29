@@ -5,7 +5,8 @@
 **Database Environment:** Neon PostgreSQL Serverless (Live Staging)  
 **Migration State:** `npx prisma migrate status` → 7 migrations found, database schema is up to date  
 **Date & Timestamp:** 29 October 2026, 01:17:04 UTC+1  
-**Overall Status:** ✅ **PASSED (Exit Code: 0)**
+**Phase 6 Frontend Completed:** 29 October 2026, 01:36 UTC+1 — commit `a728a8c` pushed  
+**Overall Status:** ✅ **ALL 7 PHASES COMPLETE — PASSED (Exit Code: 0)**
 
 ---
 
@@ -145,7 +146,7 @@ Cleaning up smoke test artifacts from Neon DB...
 ## 5. Database Integrity & Production Pre-Flight Checklist
 
 ### Staging Database Audit:
-1. **Migration State (`prisma migrate status`):** All 6 migrations deployed and verified.
+1. **Migration State (`prisma migrate status`):** All 7 migrations deployed and verified.
 2. **Orphan Counts:**
    - Orphan `landlord_payouts` rows (missing `transactionId` in `transactions`): **0**
    - Orphan `notifications` rows (missing `userId` in `users`): **0**
@@ -175,3 +176,9 @@ If either query returns > 0 on production, review and archive those records befo
 
 2. **Run CI on GitHub:**
    Push repository to trigger `.github/workflows/ci.yml` and verify that the PostgreSQL container service, migrations, and integration race tests pass in GitHub Actions.
+
+3. **Phase 6 — Multi-Rail Frontend Checkout:** ✅ COMPLETED (commit `a728a8c`)
+   - `handleAnchorPayment` added to `rent/page.tsx` and `ApplicationsTab.tsx`.
+   - `onAnchor` prop wired into `PaymentMethodModal` in both call sites.
+   - `PaymentMethodModal` surfaces NUBAN, bank name and collection reference on success toast.
+   - Zero TypeScript errors (`npx tsc --noEmit` passed clean).
