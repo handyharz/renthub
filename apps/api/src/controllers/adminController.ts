@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { adminService } from "../services/adminService";
+import { prisma } from "../config/database";
 
 export class AdminController {
     async getStats(req: Request, res: Response) {
@@ -204,6 +205,37 @@ export class AdminController {
             return res.status(500).json({
                 success: false,
                 message: "AfriExchange health check ping failed",
+                error: error.message,
+            });
+        }
+    }
+
+    async getTransparencyAudit(req: Request, res: Response) {
+        try {
+            const snapshots = await prisma.transparencySnapshot.findMany({
+                orderBy: { timestamp: "desc" },
+                take: 30,
+            });
+            const serialized = snapshots.map((s: any) => ({
+                ...s,
+                dbExpectedKobo: s.dbExpectedKobo.toString(),
+                anchorPoolKobo: s.anchorPoolKobo.toString(),
+                afriExchangePoolKobo: s.afriExchangePoolKobo.toString(),
+                varianceKobo: s.varianceKobo.toString(),
+            }));
+            return res.status(200).json({
+                success: true,
+                data: {
+                    snapshots: serialized,
+                    count: serialized.length,
+                    auditedAt: new Date().toISOString(),
+                },
+            });
+        } catch (error: any) {
+            console.error("Admin transparency audit error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetch transparency audit snapshots",
                 error: error.message,
             });
         }

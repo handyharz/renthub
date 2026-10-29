@@ -22,11 +22,11 @@ export function Footer() {
                         <div className="space-y-2 pt-2">
                             <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                                 <Lock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                                <span>AfriExchange Escrow Protected</span>
+                                <span>Anchor & AfriExchange Multi-Rail Escrow</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                                <span>NDPR & NDPA Compliant</span>
+                                <span>NDPR & NDPA 2023 Compliant</span>
                             </div>
                         </div>
                     </div>
@@ -73,6 +73,7 @@ export function Footer() {
                     <div>
                         <h3 className="font-bold mb-4 text-[var(--text-primary)]">Company</h3>
                         <ul className="space-y-2 text-sm text-[var(--text-secondary)]">
+                            <li><Link href="/transparency" className="hover:text-[var(--color-brand-orange)] font-semibold text-emerald-600 dark:text-emerald-400 transition-colors">Public Transparency Ledger</Link></li>
                             <li><Link href="/resources/manifesto" className="hover:text-[var(--color-brand-orange)] transition-colors">Our Manifesto</Link></li>
                             <li><Link href="/resources" className="hover:text-[var(--color-brand-orange)] transition-colors">Resources & Guides</Link></li>
                             <li><Link href="/resources/tenants/rights-101" className="hover:text-[var(--color-brand-orange)] transition-colors">Tenant Rights 101</Link></li>
@@ -86,6 +87,7 @@ export function Footer() {
                 <div className="mt-12 pt-8 border-t border-[var(--border-color)] flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-[var(--text-muted)]">
                     <p>© {new Date().getFullYear()} RentHub Technologies Nigeria Ltd. All rights reserved.</p>
                     <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                        <Link href="/transparency" className="hover:text-[var(--text-primary)] transition-colors font-medium text-emerald-600 dark:text-emerald-400">Transparency</Link>
                         <Link href="/policies/privacy" className="hover:text-[var(--text-primary)] transition-colors">Privacy</Link>
                         <Link href="/policies/terms" className="hover:text-[var(--text-primary)] transition-colors">Terms</Link>
                         <Link href="/policies/escrow" className="hover:text-[var(--text-primary)] transition-colors">Escrow</Link>

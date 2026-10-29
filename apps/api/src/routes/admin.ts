@@ -18,5 +18,6 @@ router.get("/properties", adminController.getAllProperties.bind(adminController)
 router.get("/settings", adminController.getSettings.bind(adminController));
 router.patch("/settings", adminController.updateSettings.bind(adminController));
 router.post("/settings/test-afriexchange", adminController.testAfriExchangeConnection.bind(adminController));
+router.get("/transparency/audit", adminController.getTransparencyAudit.bind(adminController));
 
 export default router;

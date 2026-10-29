@@ -128,6 +128,7 @@ model Property {
   renewals      LeaseRenewal[]
   agentListings AgentListing[]
   agentStrikes  AgentStrike[]
+  proof         PropertyProof?
 
   @@index([landlordId])
   @@index([city, state])
@@ -794,3 +795,88 @@ model AgentStrike {
   @@index([status])
   @@map("agent_strikes")
 }
+
+// ==========================================
+// Phase 8: Public Transparency & Ratel Audit Infrastructure
+// ==========================================
+
+model TransparencySnapshot {
+  id                    String   @id @default(cuid())
+  timestamp             DateTime @default(now())
+  activeEscrowsCount    Int      @default(0)
+  dbExpectedKobo        BigInt   @default(0)
+  anchorPoolKobo        BigInt   @default(0)
+  afriExchangePoolKobo  BigInt   @default(0)
+  varianceKobo          BigInt   @default(0)
+  isReconciled          Boolean  @default(true)
+  systemStatus          String   @default("HEALTHY") // HEALTHY, PAUSED_VARIANCE, DEGRADED
+  reconciledBy          String   @default("AUTOMATED_CRON")
+  rawDetails            Json?
+  createdAt             DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([isReconciled])
+  @@map("transparency_snapshots")
+}
+
+model PropertyProof {
+  id                  String   @id @default(cuid())
+  propertyId          String   @unique
+  geotagHash          String   // SHA-256 of coordinates + salt
+  duplicateHash       String   // SHA-256 of normalized address + landlordId + pricePerYear
+  verifierAlias       String   // e.g. "FieldOps_Abuja_03"
+  photoCount          Int      @default(0)
+  hasVideoWalkthrough Boolean  @default(false)
+  neighborhood        String   // e.g. "Jabi", "Gwarinpa", "Lugbe"
+  city                String   @default("Abuja")
+  state               String   @default("FCT")
+  verifiedAt          DateTime @default(now())
+  challengeCount      Int      @default(0)
+  resolvedValidCount  Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  property            Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([neighborhood])
+  @@index([city])
+  @@index([duplicateHash])
+  @@index([verifiedAt])
+  @@map("property_proofs")
+}
+
+enum PublicChallengeType {
+  PROPERTY_DUPLICATE
+  FAKE_GEOTAG
+  UNAUTHORIZED_FEE
+  ESCROW_QUERY
+}
+
+enum PublicChallengeStatus {
+  PENDING
+  INVESTIGATING
+  UPHELD
+  DISMISSED
+}
+
+model PublicChallenge {
+  id              String                @id @default(cuid())
+  challengeType   PublicChallengeType
+  targetRef       String                // Property ID, hash, or masked transaction reference
+  reason          String
+  evidenceUrl     String                // Mandatory proof (photo/document/receipt URL)
+  reporterEmail   String?
+  ipHash          String                // Salted SHA-256 hash of IP for abuse prevention
+  status          PublicChallengeStatus @default(PENDING)
+  adminNote       String?
+  resolvedAt      DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([targetRef])
+  @@index([status])
+  @@index([ipHash])
+  @@index([createdAt])
+  @@map("public_challenges")
+}
+

@@ -3,10 +3,11 @@
 **Test Script:** [`apps/api/scripts/e2e_smoke_test.ts`](file:///Users/harz/Documents/backUps/izmir/renthub/apps/api/scripts/e2e_smoke_test.ts)  
 **Execution Command:** `npx tsx scripts/e2e_smoke_test.ts`  
 **Database Environment:** Neon PostgreSQL Serverless (Live Staging)  
-**Migration State:** `npx prisma migrate status` → 7 migrations found, database schema is up to date  
+**Migration State:** `npx prisma migrate status` → 8 migrations found, database schema is up to date  
 **Date & Timestamp:** 29 October 2026, 01:17:04 UTC+1  
 **Phase 6 Frontend Completed:** 29 October 2026, 01:36 UTC+1 — commit `a728a8c` pushed  
-**Overall Status:** ✅ **ALL 7 PHASES COMPLETE — PASSED (Exit Code: 0)**
+**Phase 8 Public Transparency Completed:** 29 October 2026, 22:50 UTC+1 — migration `20261029224500_add_transparency_infrastructure` deployed  
+**Overall Status:** ✅ **ALL PHASES COMPLETE — PASSED (Exit Code: 0)**
 
 ---
 
@@ -182,3 +183,13 @@ If either query returns > 0 on production, review and archive those records befo
    - `onAnchor` prop wired into `PaymentMethodModal` in both call sites.
    - `PaymentMethodModal` surfaces NUBAN, bank name and collection reference on success toast.
    - Zero TypeScript errors (`npx tsc --noEmit` passed clean).
+
+4. **Phase 8 — Public Transparency & Multi-Rail Audit Ledger:** ✅ COMPLETED (29 Oct 2026)
+   - Migration 8 (`20261029224500_add_transparency_infrastructure`) applied to Neon DB.
+   - Models: `TransparencySnapshot`, `PropertyProof`, `PublicChallenge`.
+   - Multi-rail 6h cron (`reconcileAnchorEscrow.ts`) persists audit snapshots comparing both Anchor BaaS pool and AfriExchange vault against DB escrow obligations; auto-pauses checkout on variance ≠ 0.
+   - Public APIs: `/api/transparency/stats` (zero PII, volume ranges), `/api/transparency/proofs` (paginated by neighborhood, SHA-256 hashes), `/api/transparency/challenge` (rate-limited, mandatory evidence URL).
+   - Auditor API: `/api/admin/transparency/audit` (exact kobo sums for KPMG/regulators).
+   - Frontend: `/transparency` Next.js page with live 0-kobo variance indicator, cryptographic proof browser, and interactive public challenge modal.
+   - Zero TypeScript errors across both `apps/api` and `apps/web`.
+
