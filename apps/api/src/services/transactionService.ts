@@ -3,6 +3,7 @@ import { Transaction, TransactionStatus } from "@prisma/client";
 import { smsService } from "./smsService";
 import { emailService } from "./emailService";
 import { afriExchangePayoutService } from "./afriExchangePayoutService";
+import { anchorService } from "./anchorService";
 import crypto from "crypto";
 import { hashOtp, otpMatches } from "../utils/cryptoCompare";
 import { stripReleaseOtp } from "../utils/identity";
@@ -463,10 +464,16 @@ export class TransactionService {
 
         await this.completeAgentListingForTransaction(transaction.propertyId, transaction.rentAmount);
 
-        // 🔥 Trigger automated AfriExchange landlord payout (fire-and-forget)
-        afriExchangePayoutService.disburseLandlordPayout(transactionId).catch((err) =>
-            console.error(`[TransactionService] AfriExchange payout failed for tx=${transactionId}:`, err)
-        );
+        // 🔥 Trigger automated landlord payout based on paymentGateway (fire-and-forget)
+        if (transaction.paymentGateway === "ANCHOR") {
+            anchorService.disburseLandlordPayout(transactionId).catch((err) =>
+                console.error(`[TransactionService] Anchor NIP payout failed for tx=${transactionId}:`, err)
+            );
+        } else {
+            afriExchangePayoutService.disburseLandlordPayout(transactionId).catch((err) =>
+                console.error(`[TransactionService] AfriExchange payout failed for tx=${transactionId}:`, err)
+            );
+        }
 
         return released;
     }

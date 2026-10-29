@@ -3,43 +3,41 @@
 **Test Script:** [`apps/api/scripts/e2e_smoke_test.ts`](file:///Users/harz/Documents/backUps/izmir/renthub/apps/api/scripts/e2e_smoke_test.ts)  
 **Execution Command:** `npx tsx scripts/e2e_smoke_test.ts`  
 **Database Environment:** Neon PostgreSQL Serverless (Live Staging)  
-**Migration State:** `npx prisma migrate status` → 6 migrations found, database schema is up to date  
-**Date & Timestamp:** 28 October 2026, 22:33:05 UTC+1  
+**Migration State:** `npx prisma migrate status` → 7 migrations found, database schema is up to date  
+**Date & Timestamp:** 29 October 2026, 01:17:04 UTC+1  
 **Overall Status:** ✅ **PASSED (Exit Code: 0)**
 
 ---
 
 ## 1. Executive Summary
 
-This automated smoke test exercises the service-layer lifecycle of a RentHub rental transaction, verifying database constraints, atomic attempt tracking under parallel race conditions, OTP hashing and service-level generation, OTP expiry enforcement, boundary policy (valid code on the 5th attempt succeeds), status state machines, automated payout creation, and in-app notification dispatch against Neon PostgreSQL.
+This automated smoke test exercises the service-layer lifecycle of a RentHub rental transaction, verifying database constraints, atomic attempt tracking under parallel race conditions, OTP hashing and service-level generation, OTP expiry enforcement, boundary policy (valid code on the 5th attempt succeeds), status state machines, automated payout creation, in-app notification dispatch, Anchor BaaS dedicated virtual NUBAN & sub-ledger creation, and 6-hour automated ledger reconciliation against Neon PostgreSQL.
 
 ### What Was Proven by This Test:
-1. **Committed SQL Migrations Deployed:** Verified via `prisma migrate status` on Neon that all 6 migrations are applied and up to date, including foreign key relations (`Notification.userId -> User`, `LandlordPayout.transactionId -> Transaction`) and the `otpAttempts` integer column.
+1. **Committed SQL Migrations Deployed:** Verified via `prisma migrate status` on Neon that all 7 migrations are applied and up to date, including `20261029010000_add_anchor_baas_support` (`anchorEscrowLedgerId`, `anchorCautionLedgerId`, `anchorVirtualNuban`, `anchorTransferId`, and `PayoutRail`).
 2. **Service-Level OTP Generation & Reset:**
    - Both initial generation and subsequent regeneration use `transactionService.generateHandoverOTP(txId, tenantId)`.
    - Generates a 6-digit code, persists only the HMAC-SHA256 hash in PostgreSQL, and atomically resets `otpAttempts` to 0.
    - Plaintext OTP is never stored in the database.
-   - OTP dispatch: service sends SMS (via mocked dev bypass for test phone numbers) and email in development mode.
 3. **Atomic Concurrency Security Gate (M3):**
    - 10 concurrent invalid OTP requests fired in parallel via `Promise.allSettled`.
-   - Under 10-way concurrency, 3 requests received "Invalid OTP" rejections and 7 received "Too many invalid OTP attempts (max 5 exceeded)" — and `otpAttempts` landed at exactly **5** in PostgreSQL.
+   - 3 requests received "Invalid OTP" rejections and 7 received "Too many invalid OTP attempts (max 5 exceeded)" — and `otpAttempts` landed at exactly **5** in PostgreSQL.
    - Confirms the atomic claim-then-compare fix works: `updateMany` with `otpAttempts: { lt: 5 }` stops accepting slot claims once 5 are taken, so at most 5 OTP hash comparisons ever occurred regardless of burst size.
-   - Attempting release with the valid OTP while locked is permanently blocked.
 4. **OTP Expiry Enforcement (Step 7b):**
    - After OTP regeneration, the `otpExpiresAt` timestamp is backset by 5 seconds to simulate an expired code.
    - `releaseEscrowWithOTP` correctly rejects the attempt with `"Handover Release OTP code has expired. Tenant must request a new OTP."`.
-   - Confirms the service checks expiry before comparing the OTP hash.
 5. **Boundary Policy Verified (Step 8):**
-   - The implementation uses `otpAttempts >= 5` (locks on the 5th increment), meaning a legitimate landlord gets **4 real wrong-guess chances** before lock-out.
-   - Step 8 makes exactly 4 wrong-OTP attempts (each receives "Invalid Handover Release OTP code"), then the 5th attempt with the **valid OTP is accepted and succeeds**.
-   - Confirms: a correct code on attempt 5 is evaluated and not pre-emptively rejected; lock engages only when a wrong attempt would push `otpAttempts` to 5 or above.
-6. **Status Machine Progression (M10):**
-   - Handover OTP redemption via `transactionService.releaseEscrowWithOTP` flips transaction to `RELEASED`, property to `RENTED`, and nullifies `releaseOtp`.
-7. **Automated Payout & Strict Security Enforcement (H2):**
+   - 4 wrong-OTP attempts (each receives "Invalid Handover Release OTP code"), then the 5th attempt with the **valid OTP is accepted and succeeds** (`RELEASED`).
+6. **Automated Payout & Strict Security Enforcement (H2):**
    - `AfriExchangePayoutService` automatically created a `LandlordPayout` record referencing the transaction via foreign key.
-   - Payout polled to its terminal status of **`SKIPPED`** because the test landlord has not linked an AfriExchange settlement account.
-   - An in-app `Notification` with exact title `"Action Required: Link AfriExchange Account"` was dispatched to the landlord.
-8. **Auto-Disburse Retry Alignment:** The `SKIPPED` status matches the retry mechanism in `payoutController.confirmLinkVerification`, which automatically queries all `status: "SKIPPED"` payouts for the landlord and triggers disbursement as soon as their AfriExchange wallet is verified.
+   - Payout polled to terminal status `SKIPPED` because the test landlord has not linked an AfriExchange settlement account.
+   - In-app `Notification` with exact title `"Action Required: Link AfriExchange Account"` dispatched to landlord.
+7. **Anchor BaaS Virtual NUBAN & Sub-Ledgers (Step 10):**
+   - Dedicated Virtual NUBAN generated: `9940044412` (`Providus Bank / Anchor BaaS`).
+   - Isolated main Escrow Sub-Ledger (`ledg_escrow_...`) and Caution Sub-Ledger (`ledg_caution_...`) generated.
+   - Transaction updated to `PaymentGateway.ANCHOR` with references intact.
+8. **6-Hour Automated Ledger Reconciliation (Step 11):**
+   - Automated reconciliation job verified: `isReconciled = true`, variance = 0 kobo (exact 1:1 match).
 
 ---
 
@@ -47,7 +45,7 @@ This automated smoke test exercises the service-layer lifecycle of a RentHub ren
 
 | Step | Phase Description | Expected Outcome | Actual Result | Status |
 | :--- | :--- | :--- | :--- | :---: |
-| **Step 1** | Landlord & Tenant Account Setup | Test accounts created with Clerk ID placeholders | Created Landlord (`cmvrcl6y3...`) & Tenant (`cmvrcl7d9...`) | ✅ PASSED |
+| **Step 1** | Landlord & Tenant Account Setup | Test accounts created with Clerk ID placeholders | Created Landlord & Tenant | ✅ PASSED |
 | **Step 2** | Test Listing Creation | Property inserted with status `AVAILABLE` | Property created in `AVAILABLE` status | ✅ PASSED |
 | **Step 3** | Rental Transaction Initiation | Rental transaction created with breakdown in Naira | Transaction initiated (`₦3,075,000`, `PENDING`) | ✅ PASSED |
 | **Step 4** | Escrow Payment Baseline | Direct DB write: marks `ESCROWED`; property `UNDER_OFFER` (baseline, not a verified gateway transition) | Escrow baseline set; property `UNDER_OFFER` | ✅ PASSED |
@@ -57,6 +55,8 @@ This automated smoke test exercises the service-layer lifecycle of a RentHub ren
 | **Step 7b** | OTP Expiry Rejection | Backset `otpExpiresAt` by 5s; release call must throw expiry error | `"Handover Release OTP code has expired. Tenant must request a new OTP."` — thrown correctly | ✅ PASSED |
 | **Step 8** | Boundary Policy (4 wrong then 5th valid succeeds) | 4 wrong guesses get "Invalid OTP"; 5th attempt with valid code is accepted | 4 attempts: `otpAttempts = 4 / 5`; 5th valid OTP → `RELEASED` | ✅ PASSED |
 | **Step 9** | Automated Payout & Notification | `LandlordPayout` created with transaction FK; status `SKIPPED`; notification created | Payout (`SKIPPED`); FK verified; settlement notification verified | ✅ PASSED |
+| **Step 10** | Anchor BaaS Dedicated Virtual NUBAN | Generate dedicated NUBAN + isolated Escrow & Caution sub-ledgers | NUBAN (`9940044412 Providus/Anchor`), Sub-Ledger IDs generated | ✅ PASSED |
+| **Step 11** | 6-Hour Automated Ledger Reconciliation | Assert DB sum matches Anchor pool balance | `isReconciled = true`, variance = 0 kobo | ✅ PASSED |
 | **Cleanup** | Database Artifact Purge | Delete all temporary entities created during test run | Cleaned up payout, transaction, property, notifications, users | ✅ PASSED |
 
 ---

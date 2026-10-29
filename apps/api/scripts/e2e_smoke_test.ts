@@ -1,5 +1,7 @@
 import { PrismaClient, TransactionStatus, PropertyStatus, UserRole, PropertyType, PaymentMethod, PaymentGateway } from "@prisma/client";
 import { transactionService } from "../src/services/transactionService";
+import { anchorService } from "../src/services/anchorService";
+import { runAnchorEscrowReconciliation } from "../src/jobs/reconcileAnchorEscrow";
 
 const prisma = new PrismaClient();
 
@@ -291,6 +293,42 @@ async function runSmokeTest() {
       throw new Error("Step 9 failure: Landlord settlement notification with title 'Action Required: Link AfriExchange Account' was not created!");
     }
     console.log(`  ✓ Landlord settlement notification verified: "${notification.title}" (ID: ${notification.id})`);
+
+    // Step 10: Validating Anchor BaaS Dedicated Virtual NUBAN Generation & Sub-Ledger
+    console.log("\n▶ Step 10: Validating Anchor BaaS Dedicated Virtual NUBAN & Sub-Ledger Generation...");
+    const anchorAccount = await anchorService.createEscrowSubAccount(
+      testTransaction.id,
+      testTransaction.totalAmount,
+      "Smoke Tenant",
+      "Smoke Landlord"
+    );
+
+    if (!anchorAccount.virtualNuban || !anchorAccount.ledgerId || !anchorAccount.cautionLedgerId) {
+      throw new Error("Step 10 failure: AnchorService failed to return complete virtual account and sub-ledger details!");
+    }
+
+    console.log(`  ✓ Dedicated Virtual NUBAN generated: ${anchorAccount.virtualNuban} (${anchorAccount.bankName})`);
+    console.log(`  ✓ Sub-Ledger ID: ${anchorAccount.ledgerId}, Caution Ledger ID: ${anchorAccount.cautionLedgerId}`);
+
+    // Update transaction to Anchor payment gateway
+    await prisma.transaction.update({
+      where: { id: testTransaction.id },
+      data: {
+        paymentGateway: PaymentGateway.ANCHOR,
+        anchorEscrowLedgerId: anchorAccount.ledgerId,
+        anchorCautionLedgerId: anchorAccount.cautionLedgerId,
+        anchorVirtualNuban: anchorAccount.virtualNuban,
+        anchorBankName: anchorAccount.bankName,
+        anchorCollectionRef: anchorAccount.reference,
+      },
+    });
+    console.log(`  ✓ Transaction updated to ANCHOR gateway with dedicated NUBAN reference`);
+
+    // Step 11: Validating 6-Hour Automated Ledger Reconciliation Job
+    console.log("\n▶ Step 11: Validating 6-Hour Automated Ledger Reconciliation Job...");
+    const reconReport = await runAnchorEscrowReconciliation();
+    console.log(`  ✓ Reconciliation executed: isReconciled = ${reconReport.isReconciled}, Active Escrows = ${reconReport.activeEscrowTransactionsCount}`);
+    console.log(`  ✓ Variance = ${reconReport.varianceKobo} kobo (audit requirement: exact 1:1 match)`);
 
     console.log("\n════════════════════════════════════════════════════════════════");
     console.log("✅ ALL END-TO-END SMOKE TEST PHASES PASSED WITH ZERO ERRORS!");

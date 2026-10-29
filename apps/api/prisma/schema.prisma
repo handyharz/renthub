@@ -227,6 +227,11 @@ model Transaction {
   paystackRef    String?           @unique
   flutterwaveRef String?           @unique
   afriExchangeRef String?          @unique
+  anchorEscrowLedgerId    String?   @unique
+  anchorCautionLedgerId   String?   @unique
+  anchorVirtualNuban      String?
+  anchorBankName          String?
+  anchorCollectionRef     String?   @unique
   status         TransactionStatus @default(PENDING)
   escrowHeld     Boolean           @default(true)
   escrowReleased Boolean           @default(false)
@@ -471,6 +476,12 @@ enum PaymentGateway {
   PAYSTACK
   FLUTTERWAVE
   AFRIEXCHANGE
+  ANCHOR
+}
+
+enum PayoutRail {
+  AFRIEXCHANGE
+  ANCHOR_NIP
 }
 
 enum TransactionStatus {
@@ -580,10 +591,13 @@ model LandlordPayout {
   grossAmount     Int          // total rent amount held in escrow
   platformFee     Int          // 2% retained by RentHub
   netAmount       Int          // grossAmount - platformFee (paid to landlord)
-  // AfriExchange payout details
+  // Payout details
+  payoutRail      PayoutRail   @default(AFRIEXCHANGE)
   idempotencyKey  String       @unique
   afriExchangePayoutId String?
   afriExchangeRef  String?
+  anchorTransferId String?      @unique
+  anchorReference  String?      @unique
   // Status lifecycle
   status          PayoutStatus @default(PENDING)
   failureReason   String?

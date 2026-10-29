@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { paymentService } from "../services/paymentService";
 import { transactionService } from "../services/transactionService";
 import { afriExchangePaymentService } from "../services/afriExchangePaymentService";
+import { anchorService } from "../services/anchorService";
 import { prisma } from "../config/database";
 
 export class PaymentController {
@@ -531,6 +532,321 @@ export class PaymentController {
             });
         }
     }
+
+    /**
+     * Initialize Anchor dedicated virtual NUBAN escrow account
+     * POST /api/payments/anchor/initialize
+     */
+    async initializeAnchorPayment(req: Request, res: Response) {
+        try {
+            const userId = req.user?.id;
+            const { transactionId } = req.body;
+
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Unauthorized: User identification required",
+                });
+            }
+
+            if (!transactionId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "transactionId is required",
+                });
+            }
+
+            const transaction = await prisma.transaction.findUnique({
+                where: { id: transactionId },
+                include: {
+                    tenant: {
+                        select: {
+                            id: true,
+                            firstName: true,
+                            lastName: true,
+                            email: true,
+                        },
+                    },
+                    property: {
+                        select: {
+                            id: true,
+                            title: true,
+                            landlordId: true,
+                            landlord: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            if (!transaction) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Transaction not found",
+                });
+            }
+
+            // Verify user is the tenant
+            if (userId !== transaction.tenantId) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized: You are not the tenant of this transaction",
+                });
+            }
+
+            if (transaction.status !== "PENDING") {
+                return res.status(400).json({
+                    success: false,
+                    message: `Transaction is in ${transaction.status} status; only PENDING transactions can be initialized`,
+                });
+            }
+
+            // Idempotent return if account was already created
+            if (transaction.anchorVirtualNuban && transaction.anchorEscrowLedgerId) {
+                return res.status(200).json({
+                    success: true,
+                    message: "Anchor dedicated virtual escrow account retrieved",
+                    data: {
+                        transactionId: transaction.id,
+                        virtualNuban: transaction.anchorVirtualNuban,
+                        bankName: transaction.anchorBankName || "Providus Bank / Anchor BaaS",
+                        accountName: `RentHub Escrow: ${transaction.tenant.firstName || "Tenant"}`,
+                        totalAmount: transaction.totalAmount,
+                        rentAmount: transaction.rentAmount,
+                        cautionFee: transaction.cautionFee,
+                        platformFee: transaction.platformFee,
+                        reference: transaction.anchorCollectionRef,
+                        instructions: "Transfer the exact total amount to this dedicated account to fund escrow.",
+                    },
+                });
+            }
+
+            const tenantFullName = `${transaction.tenant.firstName || ""} ${transaction.tenant.lastName || ""}`.trim() || "Tenant";
+            const landlordFullName = transaction.property?.landlord
+                ? `${transaction.property.landlord.firstName || ""} ${transaction.property.landlord.lastName || ""}`.trim()
+                : "Landlord";
+
+            const anchorAccount = await anchorService.createEscrowSubAccount(
+                transaction.id,
+                transaction.totalAmount,
+                tenantFullName,
+                landlordFullName
+            );
+
+            await prisma.transaction.update({
+                where: { id: transaction.id },
+                data: {
+                    paymentGateway: "ANCHOR",
+                    anchorEscrowLedgerId: anchorAccount.ledgerId,
+                    anchorCautionLedgerId: anchorAccount.cautionLedgerId,
+                    anchorVirtualNuban: anchorAccount.virtualNuban,
+                    anchorBankName: anchorAccount.bankName,
+                    anchorCollectionRef: anchorAccount.reference,
+                },
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Anchor dedicated virtual escrow account generated successfully",
+                data: {
+                    transactionId: transaction.id,
+                    virtualNuban: anchorAccount.virtualNuban,
+                    bankName: anchorAccount.bankName,
+                    accountName: anchorAccount.accountName,
+                    totalAmount: transaction.totalAmount,
+                    rentAmount: transaction.rentAmount,
+                    cautionFee: transaction.cautionFee,
+                    platformFee: transaction.platformFee,
+                    reference: anchorAccount.reference,
+                    instructions: "Transfer the exact total amount to this dedicated account to fund escrow.",
+                },
+            });
+        } catch (error: any) {
+            console.error("[Anchor Initialize Error]:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to initialize Anchor virtual escrow account",
+                error: error.message,
+            });
+        }
+    }
+
+    /**
+     * Get Anchor Virtual Account Details
+     * GET /api/payments/anchor/status/:transactionId
+     */
+    async getAnchorAccountDetails(req: Request, res: Response) {
+        try {
+            const userId = req.user?.id;
+            const transactionId = String(req.params.transactionId || "");
+
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Unauthorized: User identification required",
+                });
+            }
+
+            const transaction = await prisma.transaction.findUnique({
+                where: { id: transactionId },
+                include: {
+                    property: true,
+                },
+            });
+
+            if (!transaction) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Transaction not found",
+                });
+            }
+
+            // Gating: Only tenant or landlord of this transaction can inspect
+            const landlordId = (transaction as any).property?.landlordId;
+            if (userId !== transaction.tenantId && userId !== landlordId) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Forbidden: You are not a participant in this transaction",
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    transactionId: transaction.id,
+                    status: transaction.status,
+                    escrowHeld: transaction.escrowHeld,
+                    virtualNuban: transaction.anchorVirtualNuban,
+                    bankName: transaction.anchorBankName,
+                    totalAmount: transaction.totalAmount,
+                    collectionRef: transaction.anchorCollectionRef,
+                },
+            });
+        } catch (error: any) {
+            console.error("[Anchor Status Error]:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to retrieve Anchor virtual account details",
+                error: error.message,
+            });
+        }
+    }
+
+    /**
+     * Handle incoming Anchor BaaS webhooks
+     * POST /api/webhooks/anchor
+     */
+    async handleAnchorWebhook(req: Request, res: Response) {
+        try {
+            const signature = (req.headers["x-anchor-signature"] || req.headers["x-webhook-signature"]) as string;
+            const timestamp = req.headers["x-anchor-timestamp"] as string;
+            const rawPayload = req.rawBody ? req.rawBody.toString("utf8") : JSON.stringify(req.body);
+
+            const isValid = anchorService.verifyWebhookSignature(rawPayload, signature, timestamp);
+
+            if (!isValid) {
+                console.warn("[Anchor Webhook] Unauthorized attempt with invalid signature from IP:", req.ip);
+                return res.status(401).json({
+                    success: false,
+                    message: "Invalid webhook signature",
+                });
+            }
+
+            const event = req.body;
+            const eventType = event.event || event.type;
+            const data = event.data || {};
+
+            console.info(`[Anchor Webhook] Received event: ${eventType}`);
+
+            // We listen for inbound account credit / transfer success events
+            const isCreditEvent =
+                eventType === "account.credited" ||
+                eventType === "inflow.success" ||
+                eventType === "transfer.success" ||
+                eventType === "inward_payment.success";
+
+            if (isCreditEvent) {
+                const reference = data.reference || data.paymentReference;
+                const accountNumber = data.accountNumber;
+                const accountId = data.accountId || data.subAccountId;
+                const amountKobo = data.amount; // in kobo
+
+                // Locate transaction
+                const transaction = await prisma.transaction.findFirst({
+                    where: {
+                        OR: [
+                            ...(reference ? [{ anchorCollectionRef: reference }] : []),
+                            ...(accountNumber ? [{ anchorVirtualNuban: accountNumber }] : []),
+                            ...(accountId ? [{ anchorEscrowLedgerId: accountId }] : []),
+                        ],
+                    },
+                });
+
+                if (transaction) {
+                    // Integer Kobo match assertion
+                    const expectedKobo = anchorService.nairaToKobo(transaction.totalAmount);
+                    if (amountKobo && amountKobo < expectedKobo) {
+                        console.warn(
+                            `[Anchor Webhook] Underpayment detected for tx=${transaction.id}: expected ${expectedKobo} kobo, received ${amountKobo} kobo`
+                        );
+                        return res.status(200).json({
+                            success: false,
+                            message: "Underpayment detected. Escrow not released.",
+                        });
+                    }
+
+                    // Atomic transition PENDING -> ESCROWED
+                    const claimed = await prisma.transaction.updateMany({
+                        where: { id: transaction.id, status: "PENDING" },
+                        data: {
+                            status: "ESCROWED",
+                            escrowHeld: true,
+                            paymentGateway: "ANCHOR",
+                        },
+                    });
+
+                    if (claimed.count > 0) {
+                        console.info(`[Anchor Webhook] Transitioned tx=${transaction.id} to ESCROWED`);
+
+                        // Property to UNDER_OFFER
+                        await prisma.property.update({
+                            where: { id: transaction.propertyId },
+                            data: { status: "UNDER_OFFER" },
+                        });
+
+                        // Deduct 2% platform protection fee to RentHub revenue ledger
+                        const feeKobo = anchorService.nairaToKobo(transaction.platformFee);
+                        if (transaction.anchorEscrowLedgerId && feeKobo > 0) {
+                            try {
+                                await anchorService.deductPlatformFee(
+                                    transaction.anchorEscrowLedgerId,
+                                    feeKobo,
+                                    transaction.id
+                                );
+                            } catch (feeErr) {
+                                console.warn("[Anchor Webhook] Platform fee transfer error:", feeErr);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return res.status(200).json({ success: true, received: true });
+        } catch (error: any) {
+            console.error("[Anchor Webhook Error]:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Webhook processing failed",
+                error: error.message,
+            });
+        }
+    }
 }
 
 export const paymentController = new PaymentController();
+

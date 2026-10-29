@@ -9,4 +9,7 @@ router.post("/paystack", paymentController.handleWebhook.bind(paymentController)
 // AfriExchange webhook
 router.post("/afriexchange", paymentController.handleAfriExchangeWebhook.bind(paymentController));
 
+// Anchor BaaS webhook
+router.post("/anchor", paymentController.handleAnchorWebhook.bind(paymentController));
+
 export default router;

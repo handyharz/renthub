@@ -6,6 +6,7 @@ import routes from "./routes";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { logger } from "./utils/logger";
 import { startComplianceJobs } from "./jobs/complianceJobs";
+import { startAnchorEscrowReconciliationJob } from "./jobs/reconcileAnchorEscrow";
 
 dotenv.config();
 
@@ -102,6 +103,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   startComplianceJobs();
+  startAnchorEscrowReconciliationJob();
   logger.info(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
   logger.info(`🔗 API available at http://localhost:${PORT}/api`);
 });
