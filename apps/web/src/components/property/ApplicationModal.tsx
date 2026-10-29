@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { Calendar, Clock, DollarSign, FileText, CheckCircle2, ShieldCheck, AlertCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { DatePicker } from "@/components/ui/DatePicker";
 import api from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import { toast } from "sonner";
@@ -114,13 +115,12 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
                         <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                             Proposed Move-in Date *
                         </label>
-                        <input
-                            type="date"
-                            required
-                            min={new Date().toISOString().split("T")[0]}
+                        <DatePicker
+                            id="proposed-move-in-date"
                             value={proposedMoveInDate}
-                            onChange={(e) => setProposedMoveInDate(e.target.value)}
-                            className="w-full px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-sm text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--color-brand-green)]/20 focus:border-[var(--color-brand-green)] outline-none transition-colors"
+                            onChange={setProposedMoveInDate}
+                            min={new Date().toISOString().split("T")[0]}
+                            placeholder="Pick a move-in date"
                         />
                     </div>
 
