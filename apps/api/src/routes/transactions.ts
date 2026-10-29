@@ -41,5 +41,6 @@ router.post(
 router.post("/:id/handover-otp", transactionController.requestHandoverOtp.bind(transactionController));
 router.post("/:id/release-otp", transactionController.releaseEscrowWithOtp.bind(transactionController));
 router.post("/:id/dispute", transactionController.raiseDispute.bind(transactionController));
+router.post("/:id/cancel", transactionController.cancelTransaction.bind(transactionController));
 
 export default router;

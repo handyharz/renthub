@@ -70,11 +70,19 @@ export class TransactionController {
             });
 
             if (existingTransaction) {
-                console.info(`[TransactionController] Returning existing transaction ${existingTransaction.id} for tenant=${tenantId} property=${property.id}`);
-                return res.status(200).json({
-                    success: true,
-                    data: transactionService.sanitizeTransaction(existingTransaction),
-                });
+                if (existingTransaction.status === "PENDING" && paymentGateway && existingTransaction.paymentGateway !== paymentGateway) {
+                    console.info(`[TransactionController] Superseding stale pending transaction ${existingTransaction.id} (was ${existingTransaction.paymentGateway}, switching to ${paymentGateway})`);
+                    await prisma.transaction.update({
+                        where: { id: existingTransaction.id },
+                        data: { status: "CANCELLED" },
+                    });
+                } else {
+                    console.info(`[TransactionController] Returning existing transaction ${existingTransaction.id} for tenant=${tenantId} property=${property.id}`);
+                    return res.status(200).json({
+                        success: true,
+                        data: transactionService.sanitizeTransaction(existingTransaction),
+                    });
+                }
             }
 
             // Create new transaction
@@ -545,6 +553,54 @@ export class TransactionController {
         } catch (error: any) {
             console.error("Error resolving caution deductions:", error);
             return res.status(400).json({ success: false, message: error.message || "Failed to resolve caution deductions" });
+        }
+    }
+
+    /**
+     * Cancel Pending Transaction (Tenant)
+     * POST /api/transactions/:id/cancel
+     */
+    async cancelTransaction(req: Request, res: Response) {
+        try {
+            const tenantId = req.user?.id;
+            const id = req.params.id as string;
+
+            if (!tenantId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const tx = await prisma.transaction.findUnique({
+                where: { id },
+            });
+
+            if (!tx) {
+                return res.status(404).json({ success: false, message: "Transaction not found" });
+            }
+
+            if (tx.tenantId !== tenantId) {
+                return res.status(403).json({ success: false, message: "Unauthorized to cancel this transaction" });
+            }
+
+            if (tx.status !== "PENDING") {
+                return res.status(400).json({
+                    success: false,
+                    message: `Only PENDING transactions can be cancelled. Current status is ${tx.status}`,
+                });
+            }
+
+            const updated = await prisma.transaction.update({
+                where: { id },
+                data: { status: "CANCELLED" },
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: "Transaction cancelled. You can now select a payment method.",
+                data: transactionService.sanitizeTransaction(updated),
+            });
+        } catch (error: any) {
+            console.error("Cancel transaction error:", error);
+            return res.status(500).json({ success: false, message: "Failed to cancel transaction" });
         }
     }
 }

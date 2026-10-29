@@ -83,6 +83,7 @@ interface Transaction {
     platformFee: number;
     totalAmount: number;
     status: string;
+    paymentGateway?: string;
     createdAt: string;
     escrowHeld: boolean;
     escrowReleased: boolean;
@@ -306,6 +307,22 @@ export function ApplicationsTab() {
             console.error("Anchor payment initialization failed:", error);
             toast.error(error.response?.data?.message || "Failed to initialize Anchor bank transfer");
             throw error;
+        } finally {
+            setPaymentLoading(null);
+        }
+    };
+
+    const handleCancelPendingPayment = async (transactionId: string) => {
+        try {
+            setPaymentLoading(transactionId);
+            await api.post(`/transactions/${transactionId}/cancel`);
+            toast.success("Payment attempt cancelled", {
+                description: "You can now choose a payment method to pay into escrow."
+            });
+            await fetchData();
+        } catch (error: any) {
+            console.error("Failed to cancel pending transaction:", error);
+            toast.error(error.response?.data?.message || "Failed to cancel payment attempt");
         } finally {
             setPaymentLoading(null);
         }
@@ -941,14 +958,31 @@ export function ApplicationsTab() {
                                             txForApp &&
                                             txForApp.status === "PENDING" &&
                                             !isHandoverCompleted && (
-                                                <div className="bg-amber-500/10 rounded-2xl p-4 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                                <div className="bg-amber-500/10 rounded-2xl p-4 sm:p-5 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                                     <div className="space-y-1 text-xs">
                                                         <div className="font-bold text-amber-600 dark:text-amber-400 text-sm flex items-center gap-1.5">
                                                             <AlertTriangle className="h-4 w-4 text-amber-500" /> Payment Initiated — Awaiting Confirmation
                                                         </div>
                                                         <p className="text-[var(--text-secondary)] font-medium">
-                                                            Your transaction is being confirmed by the payment gateway. If it takes longer than 10 minutes, refresh or contact support.
+                                                            Your transaction was initiated via {txForApp.paymentGateway === "ANCHOR" ? "Anchor BaaS" : txForApp.paymentGateway === "AFRIEXCHANGE" ? "AfriExchange" : "Paystack"}. If you closed or cancelled the checkout session, you can switch payment methods or retry.
                                                         </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <Button
+                                                            variant="outline"
+                                                            disabled={paymentLoading === txForApp.id}
+                                                            onClick={() => handleCancelPendingPayment(txForApp.id)}
+                                                            className="text-xs h-9 px-3 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                                                        >
+                                                            {paymentLoading === txForApp.id ? "Cancelling..." : "Cancel / Change Method"}
+                                                        </Button>
+                                                        <Button
+                                                            disabled={paymentLoading === app.id}
+                                                            onClick={() => setPaymentModalApp(app)}
+                                                            className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs h-9 px-4"
+                                                        >
+                                                            Retry Payment
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             )}
