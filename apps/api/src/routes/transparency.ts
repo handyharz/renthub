@@ -260,6 +260,114 @@ router.get("/proofs", async (req: Request, res: Response) => {
         res.status(500).json({ success: false, message: "Error fetching transparency proofs" });
     }
 });
+/**
+ * GET /api/transparency/verify?hash=<SHA-256>
+ * Public cryptographic audit verifier: checks any hash against property proofs & escrow releases.
+ * Returns zero-PII cryptographic breakdown & formula explanation.
+ */
+router.get("/verify", async (req: Request, res: Response) => {
+    try {
+        const hash = typeof req.query.hash === "string" ? req.query.hash.trim().toLowerCase() : "";
+        if (!hash || hash.length < 12) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a valid SHA-256 hash or hash prefix (minimum 12 characters).",
+            });
+        }
+
+        // 1. Search in PropertyProof (geotagHash or duplicateHash)
+        const proof = await prisma.propertyProof.findFirst({
+            where: {
+                OR: [
+                    { geotagHash: { contains: hash, mode: "insensitive" } },
+                    { duplicateHash: { contains: hash, mode: "insensitive" } },
+                ],
+            },
+        });
+
+        if (proof) {
+            const isGeotag = proof.geotagHash.toLowerCase().includes(hash);
+            return res.json({
+                success: true,
+                data: {
+                    verified: true,
+                    hashType: isGeotag ? "GEOTAG_PROOF" : "ANTI_DUPLICATE_PROOF",
+                    hash: isGeotag ? proof.geotagHash : proof.duplicateHash,
+                    recordId: proof.id,
+                    targetRef: proof.propertyId,
+                    zone: `${proof.neighborhood}, ${proof.city}`,
+                    state: proof.state,
+                    verifierAlias: proof.verifierAlias,
+                    verifiedAt: proof.verifiedAt,
+                    evidenceSummary: `${proof.photoCount} Geo-stamped Photos ${proof.hasVideoWalkthrough ? "+ Video Walkthrough" : ""}`,
+                    explanation: isGeotag
+                        ? "Mathematically verified on-ground field inspection. Salted SHA-256 hash proves coordinates were verified without leaking private residence location (NDPA 2023 compliant)."
+                        : "Mathematically verified anti-duplicate fingerprint. Proves listing is unique and unmanipulated; prevents multi-agent duplicate listings and phantom pricing.",
+                    terminalVerifyCommand: isGeotag
+                        ? `echo -n "<lat_6_decimals>:<lng_6_decimals>:<salt>" | shasum -a 256`
+                        : `echo -n "<normalized_address>:<landlord_id>:<price_naira>:<salt>" | shasum -a 256`,
+                },
+            });
+        }
+
+        // 2. Search in Transaction releases
+        const transactions = await prisma.transaction.findMany({
+            where: {
+                OR: [
+                    { status: "RELEASED", escrowReleased: true },
+                    { status: "ESCROWED", escrowHeld: true },
+                ],
+            },
+            take: 25,
+            select: {
+                id: true,
+                paymentGateway: true,
+                rentAmount: true,
+                createdAt: true,
+                updatedAt: true,
+                status: true,
+                anchorVirtualNuban: true,
+                afriExchangeRef: true,
+            },
+        });
+
+        for (const tx of transactions) {
+            const txHash = crypto
+                .createHash("sha256")
+                .update(`${tx.id}:${tx.paymentGateway}:${tx.rentAmount}:${tx.createdAt.toISOString()}`)
+                .digest("hex");
+
+            if (txHash.toLowerCase().includes(hash)) {
+                const isReleased = tx.status === "RELEASED";
+                return res.json({
+                    success: true,
+                    data: {
+                        verified: true,
+                        hashType: "ESCROW_RELEASE_AUDIT",
+                        hash: txHash,
+                        recordId: tx.id,
+                        targetRef: tx.afriExchangeRef || (tx.anchorVirtualNuban ? `NUBAN-${tx.anchorVirtualNuban.slice(-4)}` : tx.id),
+                        rail: tx.paymentGateway,
+                        volumeFormatted: tx.rentAmount >= 1_000_000 ? `₦${(tx.rentAmount / 1_000_000).toFixed(2)}M` : `₦${Math.round(tx.rentAmount / 1000)}k`,
+                        status: isReleased ? "RELEASED" : "ESCROWED",
+                        lockedAt: tx.createdAt,
+                        releasedAt: tx.updatedAt,
+                        explanation: "Authentic multi-rail cryptographic escrow release. SHA-256 digest mathematically links transaction ID, payment rail, rent amount, and deposit timestamp to the immutable ledger.",
+                        terminalVerifyCommand: `echo -n "${tx.id}:${tx.paymentGateway}:${tx.rentAmount}:${tx.createdAt.toISOString()}" | shasum -a 256`,
+                    },
+                });
+            }
+        }
+
+        return res.json({
+            success: false,
+            message: "No matching cryptographic proof found on RentHub ledger for this hash.",
+        });
+    } catch (error: any) {
+        logger.error(`[transparency/verify] Verification failed: ${error.message}`);
+        res.status(500).json({ success: false, message: "Error verifying cryptographic hash." });
+    }
+});
 
 /**
  * POST /api/transparency/challenge

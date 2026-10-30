@@ -19,7 +19,11 @@ import {
     HelpCircle,
     EyeOff,
     CheckCircle,
-    X
+    X,
+    Terminal,
+    Sparkles,
+    MapPin,
+    Hash
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -101,6 +105,12 @@ export default function TransparencyPage() {
     const [selectedRelease, setSelectedRelease] = useState<MaskedEscrowRelease | null>(null);
     const [selectedProof, setSelectedProof] = useState<PropertyProofItem | null>(null);
 
+    // Interactive Verifier State
+    const [searchHash, setSearchHash] = useState("");
+    const [verifyingHash, setVerifyingHash] = useState(false);
+    const [auditResult, setAuditResult] = useState<any | null>(null);
+    const [auditError, setAuditError] = useState<string | null>(null);
+
     // Challenge Modal State
     const [isChallengeOpen, setIsChallengeOpen] = useState(false);
     const [targetRef, setTargetRef] = useState("");
@@ -173,6 +183,33 @@ export default function TransparencyPage() {
         }
     };
 
+    const handleVerifyHash = async (hashToVerify?: string) => {
+        const target = (hashToVerify || searchHash).trim();
+        if (!target || target.length < 12) {
+            toast.error("Please enter at least 12 characters of a SHA-256 hash");
+            return;
+        }
+
+        if (hashToVerify) setSearchHash(hashToVerify);
+        setVerifyingHash(true);
+        setAuditError(null);
+        setAuditResult(null);
+
+        try {
+            const res = await api.get(`/transparency/verify?hash=${encodeURIComponent(target)}`);
+            if (res.data?.success && res.data.data?.verified) {
+                setAuditResult(res.data.data);
+                toast.success("Cryptographic hash verified!");
+            } else {
+                setAuditError(res.data?.message || "No matching cryptographic proof found on RentHub ledger.");
+            }
+        } catch (err: any) {
+            setAuditError(err.response?.data?.message || "Failed to verify hash.");
+        } finally {
+            setVerifyingHash(false);
+        }
+    };
+
     const handleOpenChallenge = (ref?: string) => {
         if (ref) setTargetRef(ref);
         setIsChallengeOpen(true);
@@ -235,13 +272,24 @@ export default function TransparencyPage() {
                         <strong>Proof over promise:</strong> Modeled on the principle of institutional accountability, RentHub exposes public, verifiable, zero-PII cryptographic proofs across both our payment rails: <strong>Anchor BaaS</strong> (Bank Virtual NUBANs) and <strong>AfriExchange</strong> (Digital Escrow Vaults). Every escrow is audited every 6 hours with a strict 0-kobo variance threshold.
                     </p>
 
-                    <div className="flex flex-wrap items-center gap-4 pt-2">
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
                         <Button
                             onClick={() => handleOpenChallenge()}
                             className="bg-[var(--color-brand-blue)] hover:bg-blue-600 text-white font-medium shadow-sm flex items-center gap-2"
                         >
                             <Scale className="h-4 w-4" />
-                            Challenge a Listing or Escrow
+                            Challenge a Listing
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                const el = document.getElementById("verifier");
+                                el?.scrollIntoView({ behavior: "smooth" });
+                            }}
+                            className="border-[var(--color-brand-blue)]/40 text-[var(--color-brand-blue)] hover:bg-blue-500/10 flex items-center gap-2 font-medium"
+                        >
+                            <Terminal className="h-4 w-4" />
+                            Audit a Hash (Live Verifier)
                         </Button>
                         <Button
                             variant="outline"
@@ -249,7 +297,7 @@ export default function TransparencyPage() {
                             className="border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] flex items-center gap-2"
                         >
                             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                            Refresh Audit Data
+                            Refresh Ledger
                         </Button>
                         <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] sm:ml-auto">
                             <EyeOff className="h-4 w-4 text-emerald-500" />
@@ -368,6 +416,214 @@ export default function TransparencyPage() {
                                 <li>• <strong>Payout:</strong> Automated API trigger upon verified 6-digit key handover OTP.</li>
                             </ul>
                         </div>
+                    </div>
+                </section>
+
+                {/* Cryptographic Audit Guide & Live Verifier Tool */}
+                <section id="verifier" className="p-8 rounded-2xl border border-[var(--border-color)] bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-secondary)]/40 to-[var(--bg-card)] space-y-8 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-[var(--color-brand-blue)] border border-blue-500/20 mb-2">
+                                <Sparkles className="h-3 w-3" />
+                                Independent Public Verification Protocol
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                                <Terminal className="h-6 w-6 text-[var(--color-brand-blue)]" />
+                                How to Audit Hashes (Cryptographic Verification Guide)
+                            </h2>
+                            <p className="text-sm text-[var(--text-secondary)] mt-1 max-w-3xl leading-relaxed">
+                                RentHub implements <strong>three deterministic SHA-256 cryptographic proofs</strong> to eliminate real estate fraud, phantom listings, and fee extortion. Any tenant, landlord, or auditor can audit any hash directly using our live verifier below or via an independent terminal command.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* 3 Hash Types Visual Explanation */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {/* Hash 1: Geotag Hash */}
+                        <div className="p-5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-emerald-500">
+                                <MapPin className="h-4 w-4 shrink-0" />
+                                1. GEOTAG HASH (LOCATION PROOF)
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                                <strong>What it proves:</strong> Mathematical proof that a verified field ops agent physically visited the building coordinates. Protects tenant privacy by keeping unit numbers private (NDPA 2023 compliant).
+                            </p>
+                            <div className="p-2.5 rounded bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[11px] font-mono text-[var(--text-muted)] space-y-1">
+                                <span className="text-[10px] uppercase font-bold text-[var(--text-primary)] block">Formula:</span>
+                                <span>SHA256(Lat : Lng : Salt)</span>
+                            </div>
+                            <button
+                                onClick={() => proofs[0] && handleVerifyHash(proofs[0].geotagHash)}
+                                className="text-xs font-semibold text-[var(--color-brand-blue)] hover:underline inline-flex items-center gap-1"
+                            >
+                                Test sample Geotag hash →
+                            </button>
+                        </div>
+
+                        {/* Hash 2: Anti-Duplicate Hash */}
+                        <div className="p-5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-amber-500">
+                                <ShieldCheck className="h-4 w-4 shrink-0" />
+                                2. ANTI-DUPLICATE HASH (SPAM SHIELD)
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                                <strong>What it proves:</strong> Unique listing fingerprint. Prevents fake roadside agents from multi-listing the same building with conflicting prices to extort viewing fees.
+                            </p>
+                            <div className="p-2.5 rounded bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[11px] font-mono text-[var(--text-muted)] space-y-1">
+                                <span className="text-[10px] uppercase font-bold text-[var(--text-primary)] block">Formula:</span>
+                                <span>SHA256(Address : Landlord : Price : Salt)</span>
+                            </div>
+                            <button
+                                onClick={() => proofs[0] && handleVerifyHash(proofs[0].duplicateHash)}
+                                className="text-xs font-semibold text-[var(--color-brand-blue)] hover:underline inline-flex items-center gap-1"
+                            >
+                                Test sample Duplicate hash →
+                            </button>
+                        </div>
+
+                        {/* Hash 3: Escrow Release Hash */}
+                        <div className="p-5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-bold text-blue-500">
+                                <Lock className="h-4 w-4 shrink-0" />
+                                3. ESCROW RELEASE HASH (FUNDS CUSTODY)
+                            </div>
+                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                                <strong>What it proves:</strong> Mathematical receipt that escrow was deposited, locked, and safely settled to landlord upon tenant key OTP handover without altering payment volume.
+                            </p>
+                            <div className="p-2.5 rounded bg-[var(--bg-secondary)] border border-[var(--border-color)] text-[11px] font-mono text-[var(--text-muted)] space-y-1">
+                                <span className="text-[10px] uppercase font-bold text-[var(--text-primary)] block">Formula:</span>
+                                <span>SHA256(TxID : Rail : RentAmount : Timestamp)</span>
+                            </div>
+                            <button
+                                onClick={() => maskedReleases[0] && handleVerifyHash(maskedReleases[0].verificationHash)}
+                                className="text-xs font-semibold text-[var(--color-brand-blue)] hover:underline inline-flex items-center gap-1"
+                            >
+                                Test sample Escrow hash →
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Interactive On-Page Hash Verifier Tool */}
+                    <div className="p-6 rounded-xl border border-[var(--color-brand-blue)]/30 bg-[var(--bg-card)] space-y-4 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+                                    <Search className="h-4 w-4 text-[var(--color-brand-blue)]" />
+                                    Live Ledger Hash Verifier
+                                </h3>
+                                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                                    Paste any SHA-256 hash copied from Section 2 or 3 below to verify its authentic record on our ledger.
+                                </p>
+                            </div>
+                            <span className="text-[11px] text-[var(--text-muted)] font-mono">
+                                Algorithm: SHA-256 (64 hex characters)
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="relative flex-1">
+                                <Input
+                                    value={searchHash}
+                                    onChange={(e) => setSearchHash(e.target.value)}
+                                    placeholder="Paste SHA-256 hash (e.g. ce5e36028409... or c2f1688167...)"
+                                    className="font-mono text-xs pr-20"
+                                />
+                                {searchHash && (
+                                    <button
+                                        onClick={() => { setSearchHash(""); setAuditResult(null); setAuditError(null); }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                            </div>
+                            <Button
+                                onClick={() => handleVerifyHash()}
+                                disabled={verifyingHash || !searchHash.trim()}
+                                className="bg-[var(--color-brand-blue)] hover:bg-blue-600 text-white text-xs font-semibold px-6 shrink-0"
+                            >
+                                {verifyingHash ? "Auditing Ledger..." : "Verify Hash"}
+                            </Button>
+                        </div>
+
+                        {/* Audit Verification Result */}
+                        {auditResult && (
+                            <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-3 animate-in fade-in duration-200">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                            Cryptographically Valid & Verified on RentHub Ledger
+                                        </span>
+                                    </div>
+                                    <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px]">
+                                        {auditResult.hashType}
+                                    </Badge>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-[var(--bg-secondary)]/70 p-3 rounded-lg border border-[var(--border-color)]">
+                                    <div>
+                                        <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">Record Scope</span>
+                                        <span className="font-semibold text-[var(--text-primary)]">
+                                            {auditResult.zone || auditResult.targetRef}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">Verifier / Rail</span>
+                                        <span className="font-mono text-[var(--text-secondary)]">
+                                            {auditResult.verifierAlias || auditResult.rail}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">Evidence / State</span>
+                                        <span className="text-emerald-500 font-semibold">
+                                            {auditResult.evidenceSummary || `${auditResult.status} (${auditResult.volumeFormatted})`}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-[var(--text-muted)] uppercase font-semibold block">Verified Date</span>
+                                        <span className="text-[var(--text-secondary)]">
+                                            {new Date(auditResult.verifiedAt || auditResult.lockedAt).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
+                                    {auditResult.explanation}
+                                </p>
+
+                                {auditResult.terminalVerifyCommand && (
+                                    <div className="space-y-1">
+                                        <span className="text-[10px] text-[var(--text-muted)] font-semibold uppercase">
+                                            Independent Terminal Audit Command:
+                                        </span>
+                                        <div className="flex items-center justify-between p-2 rounded bg-[var(--bg-secondary)] border border-[var(--border-color)] font-mono text-[11px] text-[var(--text-secondary)]">
+                                            <span className="truncate">{auditResult.terminalVerifyCommand}</span>
+                                            <button
+                                                onClick={() => handleCopy(auditResult.terminalVerifyCommand, "Terminal command")}
+                                                className="ml-2 hover:text-[var(--color-brand-blue)] shrink-0"
+                                                title="Copy command"
+                                            >
+                                                {copiedHash === auditResult.terminalVerifyCommand ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {auditError && (
+                            <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/5 text-xs text-rose-500 flex items-center justify-between gap-2 animate-in fade-in duration-200">
+                                <span>{auditError}</span>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => handleOpenChallenge(searchHash)}
+                                    className="text-xs text-rose-500 border-rose-500/30 hover:bg-rose-500/10 shrink-0"
+                                >
+                                    Submit Fraud Challenge →
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </section>
 
