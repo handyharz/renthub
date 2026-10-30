@@ -18,6 +18,8 @@ async function runSmokeTest() {
   let testTenant: any = null;
   let testProperty: any = null;
   let testTransaction: any = null;
+  let anchorEscrowTx: any = null;
+  let afriExchangeEscrowTx: any = null;
 
   try {
     // Step 1: Create or find test users
@@ -324,11 +326,82 @@ async function runSmokeTest() {
     });
     console.log(`  ✓ Transaction updated to ANCHOR gateway with dedicated NUBAN reference`);
 
-    // Step 11: Validating 6-Hour Automated Ledger Reconciliation Job
-    console.log("\n▶ Step 11: Validating 6-Hour Automated Ledger Reconciliation Job...");
+    // Step 11: Validating Dual-Rail Multi-Escrow Ledger Reconciliation (Anchor BaaS vs AfriExchange)
+    console.log("\n▶ Step 11: Validating Dual-Rail Multi-Escrow Ledger Reconciliation (Anchor vs AfriExchange)...");
+
+    const anchorRent = 2500000;
+    const anchorCaution = 250000;
+    anchorEscrowTx = await prisma.transaction.create({
+      data: {
+        propertyId: testProperty.id,
+        tenantId: testTenant.id,
+        rentAmount: anchorRent,
+        cautionFee: anchorCaution,
+        serviceFee: 150000,
+        legalFee: 125000,
+        platformFee: 50000,
+        totalAmount: anchorRent + anchorCaution + 150000 + 125000 + 50000,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        paymentGateway: PaymentGateway.ANCHOR,
+        anchorVirtualNuban: `99${Date.now().toString().slice(-8)}`,
+        anchorEscrowLedgerId: `ledg_escrow_dual_${testSuffix}`,
+        status: TransactionStatus.ESCROWED,
+        escrowHeld: true,
+        escrowReleased: false,
+      },
+    });
+
+    const afriRent = 1800000;
+    const afriCaution = 180000;
+    afriExchangeEscrowTx = await prisma.transaction.create({
+      data: {
+        propertyId: testProperty.id,
+        tenantId: testTenant.id,
+        rentAmount: afriRent,
+        cautionFee: afriCaution,
+        serviceFee: 100000,
+        legalFee: 90000,
+        platformFee: 36000,
+        totalAmount: afriRent + afriCaution + 100000 + 90000 + 36000,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        paymentGateway: PaymentGateway.AFRIEXCHANGE,
+        afriExchangeRef: `AFRI-SMOKE-${testSuffix}`,
+        status: TransactionStatus.ESCROWED,
+        escrowHeld: true,
+        escrowReleased: false,
+      },
+    });
+
+    console.log(`  ✓ Created dual-rail active escrows: Anchor (${anchorEscrowTx.id}) & AfriExchange (${afriExchangeEscrowTx.id})`);
+
     const reconReport = await runAnchorEscrowReconciliation();
     console.log(`  ✓ Reconciliation executed: isReconciled = ${reconReport.isReconciled}, Active Escrows = ${reconReport.activeEscrowTransactionsCount}`);
     console.log(`  ✓ Variance = ${reconReport.varianceKobo} kobo (audit requirement: exact 1:1 match)`);
+    console.log(`  ✓ Anchor pool = ${reconReport.anchorLedgerTotalKobo} kobo, AfriExchange pool = ${reconReport.afriExchangeLedgerTotalKobo} kobo`);
+
+    const expectedAnchorKobo = BigInt((anchorRent + anchorCaution) * 100);
+    const expectedAfriKobo = BigInt((afriRent + afriCaution) * 100);
+
+    if (reconReport.anchorLedgerTotalKobo < expectedAnchorKobo) {
+      throw new Error(`Step 11 failure: Anchor pool kobo ${reconReport.anchorLedgerTotalKobo} is less than expected ${expectedAnchorKobo}`);
+    }
+    if (reconReport.afriExchangeLedgerTotalKobo < expectedAfriKobo) {
+      throw new Error(`Step 11 failure: AfriExchange pool kobo ${reconReport.afriExchangeLedgerTotalKobo} is less than expected ${expectedAfriKobo}`);
+    }
+    if (reconReport.varianceKobo !== BigInt(0)) {
+      throw new Error(`Step 11 failure: Variance must be exactly 0 kobo, got ${reconReport.varianceKobo}`);
+    }
+    if (!reconReport.isReconciled) {
+      throw new Error(`Step 11 failure: Escrow reconciliation report returned isReconciled=false`);
+    }
+
+    const latestSnapshot = await prisma.transparencySnapshot.findFirst({
+      orderBy: { timestamp: "desc" },
+    });
+    if (!latestSnapshot) {
+      throw new Error("Step 11 failure: TransparencySnapshot was not written to database!");
+    }
+    console.log(`  ✓ TransparencySnapshot recorded in Neon DB: ID ${latestSnapshot.id}, Anchor: ${latestSnapshot.anchorPoolKobo} kobo, AfriExchange: ${latestSnapshot.afriExchangePoolKobo} kobo, Variance: ${latestSnapshot.varianceKobo} kobo`);
 
     console.log("\n════════════════════════════════════════════════════════════════");
     console.log("✅ ALL END-TO-END SMOKE TEST PHASES PASSED WITH ZERO ERRORS!");
@@ -336,6 +409,12 @@ async function runSmokeTest() {
   } finally {
     // Cleanup smoke test rows from database
     console.log("▶ Cleaning up smoke test artifacts from Neon DB...");
+    if (anchorEscrowTx) {
+      await prisma.transaction.deleteMany({ where: { id: anchorEscrowTx.id } });
+    }
+    if (afriExchangeEscrowTx) {
+      await prisma.transaction.deleteMany({ where: { id: afriExchangeEscrowTx.id } });
+    }
     if (testTransaction) {
       await prisma.landlordPayout.deleteMany({ where: { transactionId: testTransaction.id } });
       await prisma.transaction.deleteMany({ where: { id: testTransaction.id } });

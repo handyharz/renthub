@@ -58,8 +58,8 @@ This automated smoke test exercises the service-layer lifecycle of a RentHub ren
 | **Step 8** | Boundary Policy (4 wrong then 5th valid succeeds) | 4 wrong guesses get "Invalid OTP"; 5th attempt with valid code is accepted | 4 attempts: `otpAttempts = 4 / 5`; 5th valid OTP → `RELEASED` | ✅ PASSED |
 | **Step 9** | Automated Payout & Notification | `LandlordPayout` created with transaction FK; status `SKIPPED`; notification created | Payout (`SKIPPED`); FK verified; settlement notification verified | ✅ PASSED |
 | **Step 10** | Anchor BaaS Dedicated Virtual NUBAN | Generate dedicated NUBAN + isolated Escrow & Caution sub-ledgers | NUBAN (`9940044412 Providus/Anchor`), Sub-Ledger IDs generated | ✅ PASSED |
-| **Step 11** | 6-Hour Automated Ledger Reconciliation | Assert DB sum matches Anchor pool balance | `isReconciled = true`, variance = 0 kobo | ✅ PASSED |
-| **Cleanup** | Database Artifact Purge | Delete all temporary entities created during test run | Cleaned up payout, transaction, property, notifications, users | ✅ PASSED |
+| **Step 11** | Dual-Rail Multi-Escrow Reconciliation | Concurrent Anchor (`₦2.75M`) & AfriExchange (`₦1.98M`) active escrows | Active escrows = 2; Anchor pool = 275,000,000 kobo; AfriExchange pool = 198,000,000 kobo; `isReconciled = true`; variance = 0 kobo | ✅ PASSED |
+| **Cleanup** | Database Artifact Purge | Delete all temporary entities created during test run | Cleaned up payouts, multi-rail transactions, property, notifications, users | ✅ PASSED |
 
 ---
 
