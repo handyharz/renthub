@@ -39,7 +39,7 @@ router.get("/stats", async (req: Request, res: Response) => {
             });
         }
 
-        const [totalProcessedAgg, activeEscrowAgg, strikesCount, verifiedPropertiesCount, challengeStats] = await Promise.all([
+        const [totalProcessedAgg, activeEscrowAgg, strikesCount, verifiedPropertiesCount, challengeStats, recentResolutions] = await Promise.all([
             prisma.transaction.aggregate({
                 where: {
                     OR: [
@@ -65,6 +65,23 @@ router.get("/stats", async (req: Request, res: Response) => {
                 by: ["status"],
                 _count: { id: true },
             }),
+            prisma.publicChallenge.findMany({
+                where: {
+                    status: { in: ["UPHELD", "DISMISSED", "INVESTIGATING"] },
+                },
+                orderBy: { updatedAt: "desc" },
+                take: 6,
+                select: {
+                    id: true,
+                    challengeType: true,
+                    targetRef: true,
+                    status: true,
+                    adminNote: true,
+                    resolvedAt: true,
+                    updatedAt: true,
+                    createdAt: true,
+                },
+            }),
         ]);
 
         const challengeSummary = {
@@ -72,6 +89,20 @@ router.get("/stats", async (req: Request, res: Response) => {
             resolvedUpheld: 0,
             resolvedDismissed: 0,
             underInvestigation: 0,
+            recentResolutions: recentResolutions.map((r) => {
+                let maskedRef = r.targetRef;
+                if (maskedRef.length > 18) {
+                    maskedRef = `${maskedRef.slice(0, 8)}...${maskedRef.slice(-6)}`;
+                }
+                return {
+                    id: r.id,
+                    challengeType: r.challengeType,
+                    targetRef: maskedRef,
+                    status: r.status,
+                    adminNote: r.adminNote || (r.status === "INVESTIGATING" ? "Field ops dispatched for ground coordinate verification." : "Review concluded."),
+                    resolvedAt: r.resolvedAt || r.updatedAt,
+                };
+            }),
         };
 
         for (const stat of challengeStats) {

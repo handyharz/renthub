@@ -57,6 +57,14 @@ interface TransparencyStats {
         resolvedUpheld: number;
         resolvedDismissed: number;
         underInvestigation: number;
+        recentResolutions?: Array<{
+            id: string;
+            challengeType: string;
+            targetRef: string;
+            status: string;
+            adminNote: string;
+            resolvedAt: string;
+        }>;
     };
     verifiedStock: {
         totalVerifiedProperties: number;
@@ -139,7 +147,7 @@ export default function TransparencyPage() {
                     { name: "AfriExchange", type: "Fintech & Web3 Escrow Merchant Vault", feeModel: "2% fixed protocol fee", status: "OPERATIONAL" },
                 ],
                 zeroFeeShield: { viewingFeesDemanded: "₦0.00", fuelMoneyAllowed: "₦0.00", agentStrikesEnforced: 0, avgDisputeResolutionHours: 18 },
-                challenges: { totalChallenged: 0, resolvedUpheld: 0, resolvedDismissed: 0, underInvestigation: 0 },
+                challenges: { totalChallenged: 0, resolvedUpheld: 0, resolvedDismissed: 0, underInvestigation: 0, recentResolutions: [] },
                 verifiedStock: { totalVerifiedProperties: 0, primaryZone: "Abuja (FCT)" },
             });
         }
@@ -908,6 +916,72 @@ export default function TransparencyPage() {
                             </div>
                             <p className="text-xs text-[var(--text-secondary)]">24h refund guarantee on cancellation.</p>
                         </div>
+                    </div>
+
+                    {/* Live Public Challenge Resolution Log */}
+                    <div className="space-y-3 pt-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <h3 className="text-sm font-semibold flex items-center gap-2 text-[var(--text-primary)]">
+                                <FileText className="h-4 w-4 text-[var(--color-brand-blue)]" />
+                                Public Challenge Resolution Log (Zero PII Audit Trail)
+                            </h3>
+                            <span className="text-[11px] text-[var(--text-muted)]">
+                                Auto-updated upon Admin & Field Ops moderation
+                            </span>
+                        </div>
+
+                        {stats?.challenges.recentResolutions && stats.challenges.recentResolutions.length > 0 ? (
+                            <div className="overflow-x-auto border border-[var(--border-color)] rounded-xl">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] border-b border-[var(--border-color)]">
+                                        <tr>
+                                            <th className="py-2.5 px-4 font-semibold">Target Ref / Hash</th>
+                                            <th className="py-2.5 px-4 font-semibold">Challenge Type</th>
+                                            <th className="py-2.5 px-4 font-semibold">Moderation Outcome</th>
+                                            <th className="py-2.5 px-4 font-semibold">Field Ops / Admin Action</th>
+                                            <th className="py-2.5 px-4 font-semibold text-right">Resolved</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[var(--border-color)]">
+                                        {stats.challenges.recentResolutions.map((res) => (
+                                            <tr key={res.id} className="hover:bg-[var(--bg-secondary)]/50 transition-colors">
+                                                <td className="py-2.5 px-4 font-mono font-medium text-[11px] text-[var(--text-primary)]">
+                                                    {res.targetRef}
+                                                </td>
+                                                <td className="py-2.5 px-4 text-[11px] text-[var(--text-secondary)]">
+                                                    {res.challengeType.replace(/_/g, " ")}
+                                                </td>
+                                                <td className="py-2.5 px-4">
+                                                    {res.status === "UPHELD" ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                                            <CheckCircle className="h-3 w-3" /> UPHELD (DELISTED)
+                                                        </span>
+                                                    ) : res.status === "DISMISSED" ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                                            <CheckCircle2 className="h-3 w-3" /> DISMISSED (VALID)
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                                            <RefreshCw className="h-3 w-3 animate-spin" /> INVESTIGATING
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="py-2.5 px-4 text-[11px] text-[var(--text-secondary)] max-w-xs truncate" title={res.adminNote}>
+                                                    {res.adminNote}
+                                                </td>
+                                                <td className="py-2.5 px-4 text-[11px] text-[var(--text-muted)] text-right whitespace-nowrap">
+                                                    {new Date(res.resolvedAt).toLocaleDateString("en-NG", { month: "short", day: "numeric" })}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--bg-secondary)]/50 text-center text-xs text-[var(--text-muted)]">
+                                No disputed listings or fee challenges currently in public record. All stock verified.
+                            </div>
+                        )}
                     </div>
                 </section>
             </main>

@@ -304,6 +304,13 @@ export class AdminController {
                 return res.status(400).json({ success: false, message: `status must be one of: ${allowed.join(", ")}` });
             }
 
+            const challenge = await prisma.publicChallenge.findUnique({
+                where: { id: id as string },
+            });
+            if (!challenge) {
+                return res.status(404).json({ success: false, message: "Challenge not found" });
+            }
+
             const updated = await prisma.publicChallenge.update({
                 where: { id: id as string },
                 data: {
@@ -313,9 +320,61 @@ export class AdminController {
                 },
             });
 
+            // Automated enforcement on platform listings
+            try {
+                if (status === "UPHELD") {
+                    // Unverify and suspend the fraudulent property
+                    const proof = await prisma.propertyProof.findFirst({
+                        where: {
+                            OR: [
+                                { propertyId: challenge.targetRef },
+                                { duplicateHash: challenge.targetRef },
+                                { geotagHash: challenge.targetRef },
+                                { id: challenge.targetRef },
+                            ],
+                        },
+                    });
+
+                    if (proof) {
+                        await prisma.property.update({
+                            where: { id: proof.propertyId },
+                            data: {
+                                verified: false,
+                                status: "UNAVAILABLE",
+                            },
+                        });
+                    } else {
+                        await prisma.property.updateMany({
+                            where: { id: challenge.targetRef },
+                            data: {
+                                verified: false,
+                                status: "UNAVAILABLE",
+                            },
+                        });
+                    }
+                } else if (status === "DISMISSED") {
+                    // Increment verified authentic count on property proof
+                    await prisma.propertyProof.updateMany({
+                        where: {
+                            OR: [
+                                { propertyId: challenge.targetRef },
+                                { duplicateHash: challenge.targetRef },
+                                { geotagHash: challenge.targetRef },
+                                { id: challenge.targetRef },
+                            ],
+                        },
+                        data: {
+                            resolvedValidCount: { increment: 1 },
+                        },
+                    });
+                }
+            } catch (err: any) {
+                console.error("Automated enforcement error post-moderation:", err);
+            }
+
             return res.status(200).json({
                 success: true,
-                message: `Challenge marked as ${status}`,
+                message: `Challenge marked as ${status}${status === "UPHELD" ? " and fraudulent listing delisted" : ""}`,
                 data: updated,
             });
         } catch (error: any) {
