@@ -20,6 +20,7 @@ import { formatPrice } from "@/lib/utils";
 
 interface AdminStats {
     pendingVerifications: number;
+    pendingUserVerifications?: number;
     activeDisputes: number;
     disputeRate?: number;
     totalUsers: number;
@@ -102,11 +103,19 @@ export default function AdminOverviewPage() {
         {
             href: "/admin/verifications",
             label: "Verification Queue",
-            desc: "Review paid property inspections & badges",
+            desc: "Review paid property inspections, badges & KYC documents",
             icon: ShieldCheck,
-            badge: `${stats?.pendingVerifications ?? 0} Pending Review`,
-            badgeVariant: (stats?.pendingVerifications ?? 0) > 0 ? "warning" : "success",
-            accent: "border-[var(--color-brand-green)]/30 hover:border-[var(--color-brand-green)]/60",
+            badge: (() => {
+                const propPending = stats?.pendingVerifications ?? 0;
+                const userPending = stats?.pendingUserVerifications ?? 0;
+                const total = propPending + userPending;
+                if (total > 0) return `${propPending} Inspection${propPending !== 1 ? "s" : ""} · ${userPending} KYC Doc${userPending !== 1 ? "s" : ""} Pending`;
+                return "All clear — no pending reviews";
+            })(),
+            badgeVariant: ((stats?.pendingVerifications ?? 0) + (stats?.pendingUserVerifications ?? 0)) > 0 ? "warning" : "success",
+            accent: ((stats?.pendingVerifications ?? 0) + (stats?.pendingUserVerifications ?? 0)) > 0
+                ? "border-amber-500/40 hover:border-amber-500/70"
+                : "border-[var(--color-brand-green)]/30 hover:border-[var(--color-brand-green)]/60",
         },
         {
             href: "/admin/disputes",

@@ -16,6 +16,9 @@ import {
     AlertTriangle,
     Wallet,
     X,
+    FileText,
+    UserCheck,
+    UserX,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminHeader } from "@/components/admin/AdminHeader";
@@ -49,29 +52,52 @@ interface VerificationProperty {
     images: { url: string; isPrimary?: boolean }[];
 }
 
+interface PendingUser {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    role: string;
+    avatar?: string;
+    idType?: string;
+    idNumber?: string;
+    idDocumentUrl: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 interface VerificationStats {
     pendingReview: number;
     verifiedProps: number;
     unverifiedProps: number;
     verifiedLandlords: number;
+    pendingUsers?: number;
 }
 
 export default function AdminVerificationsPage() {
     const [properties, setProperties] = useState<VerificationProperty[]>([]);
     const [recentlyVerified, setRecentlyVerified] = useState<VerificationProperty[]>([]);
+    const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
     const [stats, setStats] = useState<VerificationStats>({
         pendingReview: 0,
         verifiedProps: 0,
         unverifiedProps: 0,
         verifiedLandlords: 0,
+        pendingUsers: 0,
     });
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"pending" | "certified">("pending");
+    const [activeTab, setActiveTab] = useState<"pending" | "certified" | "kyc">("pending");
     const [actionId, setActionId] = useState<string | null>(null);
+    const [docPreviewUrl, setDocPreviewUrl] = useState<string | null>(null);
 
-    // Rejection modal state
+    // Property rejection modal state
     const [rejectModalProp, setRejectModalProp] = useState<VerificationProperty | null>(null);
     const [rejectReason, setRejectReason] = useState("");
+
+    // KYC rejection modal state
+    const [rejectKycUser, setRejectKycUser] = useState<PendingUser | null>(null);
+    const [rejectKycReason, setRejectKycReason] = useState("");
 
     const fetchQueue = () => {
         setLoading(true);
@@ -83,6 +109,7 @@ export default function AdminVerificationsPage() {
                 } else if (data?.properties) {
                     setProperties(data.properties);
                     if (data.recentlyVerified) setRecentlyVerified(data.recentlyVerified);
+                    if (data.pendingUsers) setPendingUsers(data.pendingUsers);
                     if (data.stats) setStats(data.stats);
                 }
             })
@@ -93,6 +120,37 @@ export default function AdminVerificationsPage() {
     useEffect(() => {
         fetchQueue();
     }, []);
+
+    const handleApproveKyc = async (userId: string) => {
+        setActionId(userId);
+        try {
+            await api.post(`/users/${userId}/verify`);
+            toast.success("User ID verified — TrustScore updated");
+            fetchQueue();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Verification failed");
+        } finally {
+            setActionId(null);
+        }
+    };
+
+    const confirmRejectKyc = async () => {
+        if (!rejectKycUser) return;
+        setActionId(rejectKycUser.id);
+        try {
+            await api.post(`/users/${rejectKycUser.id}/reject-doc`, {
+                reason: rejectKycReason.trim() || undefined,
+            });
+            toast.success("ID document rejected — user notified");
+            setRejectKycUser(null);
+            setRejectKycReason("");
+            fetchQueue();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Rejection failed");
+        } finally {
+            setActionId(null);
+        }
+    };
 
     const handleApprove = async (id: string) => {
         setActionId(id);
@@ -159,7 +217,7 @@ export default function AdminVerificationsPage() {
 
             <div className="flex-1 p-6 space-y-6 overflow-auto">
                 {/* KPI Stat Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <StatCard
                         label="Pending Inspections"
                         value={stats.pendingReview}
@@ -169,6 +227,17 @@ export default function AdminVerificationsPage() {
                             stats.pendingReview > 0
                                 ? "Paid inspections awaiting field agent"
                                 : "Queue clean — zero pending"
+                        }
+                    />
+                    <StatCard
+                        label="KYC Docs Pending"
+                        value={stats.pendingUsers ?? 0}
+                        icon={FileText}
+                        accent={(stats.pendingUsers ?? 0) > 0 ? "orange" : "green"}
+                        trend={
+                            (stats.pendingUsers ?? 0) > 0
+                                ? `${stats.pendingUsers} user ID(s) awaiting admin review`
+                                : "No pending ID submissions"
                         }
                     />
                     <StatCard
@@ -195,7 +264,7 @@ export default function AdminVerificationsPage() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex items-center gap-2 border-b border-[var(--border-color)] pb-3">
+                <div className="flex items-center gap-2 border-b border-[var(--border-color)] pb-3 flex-wrap">
                     <button
                         onClick={() => setActiveTab("pending")}
                         className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
@@ -205,6 +274,21 @@ export default function AdminVerificationsPage() {
                         }`}
                     >
                         Inspection Queue ({properties.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("kyc")}
+                        className={`relative px-4 py-2 text-xs font-bold rounded-lg transition-colors ${
+                            activeTab === "kyc"
+                                ? "bg-amber-500 text-white shadow-xs"
+                                : "bg-[var(--bg-card)] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-color)]"
+                        }`}
+                    >
+                        KYC Documents ({pendingUsers.length})
+                        {pendingUsers.length > 0 && activeTab !== "kyc" && (
+                            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                                {pendingUsers.length}
+                            </span>
+                        )}
                     </button>
                     <button
                         onClick={() => setActiveTab("certified")}
@@ -360,6 +444,134 @@ export default function AdminVerificationsPage() {
                     </>
                 )}
 
+                {/* Tab: KYC Documents */}
+                {activeTab === "kyc" && (
+                    <>
+                        {loading ? (
+                            <div className="flex justify-center py-20">
+                                <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                            </div>
+                        ) : pendingUsers.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] p-8">
+                                <UserCheck className="h-12 w-12 text-[var(--color-brand-green)] mb-3" />
+                                <h2 className="text-base font-bold text-[var(--text-primary)]">No Pending KYC Submissions</h2>
+                                <p className="text-xs text-[var(--text-muted)] mt-1 max-w-sm">
+                                    All uploaded government IDs have been reviewed.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {pendingUsers.map((user) => {
+                                    const isActing = actionId === user.id;
+                                    return (
+                                        <div
+                                            key={user.id}
+                                            className="rounded-xl border border-amber-500/30 bg-[var(--bg-card)] overflow-hidden shadow-[var(--shadow-sm)]"
+                                        >
+                                            <div className="flex flex-col lg:flex-row">
+                                                {/* Document Preview */}
+                                                <div
+                                                    className="relative h-48 lg:h-auto lg:w-56 shrink-0 bg-[var(--bg-muted)] cursor-pointer group"
+                                                    onClick={() => setDocPreviewUrl(user.idDocumentUrl)}
+                                                >
+                                                    <img
+                                                        src={user.idDocumentUrl}
+                                                        alt="Government ID"
+                                                        className="h-full w-full object-cover lg:object-contain p-2 transition-transform group-hover:scale-105"
+                                                    />
+                                                    <div className="absolute inset-0 flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="text-[10px] font-semibold bg-black/70 text-white px-2 py-0.5 rounded-md">
+                                                            Click to enlarge
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Details */}
+                                                <div className="flex-1 p-5">
+                                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                                        <div>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <h3 className="font-bold text-[var(--text-primary)]">
+                                                                    {user.firstName} {user.lastName}
+                                                                </h3>
+                                                                <Badge variant="outline" className="border-amber-500/40 text-amber-400">
+                                                                    Awaiting Review
+                                                                </Badge>
+                                                                <Badge variant="outline" className="border-[var(--border-color)] text-[var(--text-muted)] capitalize">
+                                                                    {user.role.toLowerCase()}
+                                                                </Badge>
+                                                            </div>
+                                                            <p className="text-sm text-[var(--text-muted)] mt-1">
+                                                                {user.email}{user.phone ? ` · ${user.phone}` : ""}
+                                                            </p>
+                                                        </div>
+                                                        <p className="text-xs text-[var(--text-muted)]">
+                                                            Submitted {new Date(user.updatedAt).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* ID Details */}
+                                                    <div className="mt-4 rounded-lg bg-[var(--bg-muted)] p-3 grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+                                                                ID Type
+                                                            </p>
+                                                            <p className="text-sm font-semibold text-[var(--text-primary)] mt-0.5">
+                                                                {user.idType || "Not specified"}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+                                                                ID Number
+                                                            </p>
+                                                            <p className="text-sm font-semibold text-[var(--text-primary)] mt-0.5 font-mono">
+                                                                {user.idNumber || "—"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Actions */}
+                                                    <div className="mt-4 flex flex-wrap gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={isActing}
+                                                            onClick={() => handleApproveKyc(user.id)}
+                                                            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                        >
+                                                            <UserCheck className="h-4 w-4" />
+                                                            Approve ID
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            disabled={isActing}
+                                                            onClick={() => {
+                                                                setRejectKycUser(user);
+                                                                setRejectKycReason("");
+                                                            }}
+                                                            className="gap-1.5"
+                                                        >
+                                                            <UserX className="h-4 w-4" />
+                                                            Reject ID
+                                                        </Button>
+                                                        <button
+                                                            onClick={() => setDocPreviewUrl(user.idDocumentUrl)}
+                                                            className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-semibold rounded-md border border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] transition-colors"
+                                                        >
+                                                            <FileText className="h-3.5 w-3.5" />
+                                                            View Full Document
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
+                )}
+
                 {/* Tab 2: Certified Badges Audit */}
                 {activeTab === "certified" && (
                     <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] shadow-[var(--shadow-sm)] overflow-hidden">
@@ -472,7 +684,7 @@ export default function AdminVerificationsPage() {
                 )}
             </div>
 
-            {/* Rejection Modal */}
+            {/* Property Rejection Modal */}
             {rejectModalProp && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
                     <div className="w-full max-w-md rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] p-6 space-y-4 shadow-2xl">
@@ -524,6 +736,87 @@ export default function AdminVerificationsPage() {
                                 Confirm Rejection
                             </Button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* KYC Rejection Modal */}
+            {rejectKycUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+                    <div className="w-full max-w-md rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] p-6 space-y-4 shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+                            <h3 className="text-base font-bold text-[var(--text-primary)]">Reject Government ID</h3>
+                            <button
+                                onClick={() => setRejectKycUser(null)}
+                                className="h-7 w-7 rounded-lg border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-muted)]"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div>
+                            <p className="text-xs text-[var(--text-muted)]">
+                                Rejecting ID document for:
+                            </p>
+                            <p className="text-sm font-semibold text-[var(--text-primary)] mt-0.5">
+                                {rejectKycUser.firstName} {rejectKycUser.lastName} — {rejectKycUser.email}
+                            </p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                                Rejection Reason (Optional — helps the user resubmit correctly):
+                            </label>
+                            <textarea
+                                value={rejectKycReason}
+                                onChange={(e) => setRejectKycReason(e.target.value)}
+                                rows={3}
+                                placeholder="E.g., ID is blurry, name mismatch, document expired..."
+                                className="w-full rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] p-2.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-placeholder)] focus:border-[var(--color-brand-blue)] focus:outline-none"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--border-color)]">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setRejectKycUser(null)}
+                                className="text-xs"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={actionId === rejectKycUser.id}
+                                onClick={confirmRejectKyc}
+                                className="text-xs"
+                            >
+                                Reject Document
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Document Full Preview Lightbox */}
+            {docPreviewUrl && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                    onClick={() => setDocPreviewUrl(null)}
+                >
+                    <div className="relative max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={() => setDocPreviewUrl(null)}
+                            className="absolute -top-3 -right-3 z-10 h-8 w-8 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-muted)] shadow-lg"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                        <img
+                            src={docPreviewUrl}
+                            alt="Government ID Document"
+                            className="w-full rounded-xl object-contain max-h-[80vh] border border-[var(--border-color)] bg-[var(--bg-card)] p-2 shadow-2xl"
+                        />
+                        <p className="text-center text-xs text-white/60 mt-3">
+                            Click outside to close
+                        </p>
                     </div>
                 </div>
             )}

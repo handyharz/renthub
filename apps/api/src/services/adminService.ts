@@ -71,6 +71,7 @@ export class AdminService {
             agentPending,
             agentStrikes,
             agentCommissionAgg,
+            pendingUserVerifications,
         ] = await Promise.all([
             prisma.property.count({ where: { status: PropertyStatus.PENDING_REVIEW, deletedAt: null } }),
             prisma.transaction.count({ where: { disputed: true } }),
@@ -147,6 +148,13 @@ export class AdminService {
                 _sum: { commissionAmount: true },
                 where: { status: "COMPLETED" },
             }),
+            prisma.user.count({
+                where: {
+                    idDocumentUrl: { not: null },
+                    verified: false,
+                    deletedAt: null,
+                },
+            }),
         ]);
 
         const tenantFees = settledEscrowVolumeAgg._sum.platformFee || 0;
@@ -158,6 +166,8 @@ export class AdminService {
 
         return {
             pendingVerifications,
+            pendingPropertyVerifications: pendingVerifications,
+            pendingUserVerifications,
             activeDisputes,
             disputeRate,
             totalUsers,
@@ -200,6 +210,8 @@ export class AdminService {
             verifiedProps,
             unverifiedProps,
             verifiedLandlords,
+            pendingUsers,
+            pendingUsersCount,
         ] = await Promise.all([
             prisma.property.findMany({
                 where: { status: PropertyStatus.PENDING_REVIEW, deletedAt: null },
@@ -250,16 +262,47 @@ export class AdminService {
             prisma.property.count({ where: { verified: true, deletedAt: null } }),
             prisma.property.count({ where: { verified: false, deletedAt: null } }),
             prisma.user.count({ where: { role: "LANDLORD", verified: true, deletedAt: null } }),
+            prisma.user.findMany({
+                where: {
+                    idDocumentUrl: { not: null },
+                    verified: false,
+                    deletedAt: null,
+                },
+                select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    role: true,
+                    avatar: true,
+                    idType: true,
+                    idNumber: true,
+                    idDocumentUrl: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+                orderBy: { updatedAt: "desc" },
+            }),
+            prisma.user.count({
+                where: {
+                    idDocumentUrl: { not: null },
+                    verified: false,
+                    deletedAt: null,
+                },
+            }),
         ]);
 
         return {
             properties,
             recentlyVerified,
+            pendingUsers,
             stats: {
                 pendingReview,
                 verifiedProps,
                 unverifiedProps,
                 verifiedLandlords,
+                pendingUsers: pendingUsersCount,
             },
         };
     }

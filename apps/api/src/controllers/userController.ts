@@ -235,13 +235,14 @@ export class UserController {
      */
     async getAllUsers(req: Request, res: Response) {
         try {
-            const { role, status, verified, search, limit, offset } = req.query;
+            const { role, status, verified, hasIdDocument, search, limit, offset } = req.query;
 
             const result = await userService.getAllUsers({
                 search: typeof search === "string" ? search : undefined,
                 role: typeof role === "string" ? (role as UserRole) : undefined,
                 status: typeof status === "string" ? (status as UserStatus) : undefined,
                 verified: verified !== undefined ? verified === "true" : undefined,
+                hasIdDocument: hasIdDocument !== undefined ? hasIdDocument === "true" : undefined,
                 limit: limit && typeof limit === "string" ? parseInt(limit) : 50,
                 offset: offset && typeof offset === "string" ? parseInt(offset) : 0,
             });
@@ -341,6 +342,32 @@ export class UserController {
             return res.status(500).json({
                 success: false,
                 message: "Failed to verify user",
+                error: error.message,
+            });
+        }
+    }
+
+    /**
+     * Reject user document (admin only)
+     * POST /api/users/:id/reject-doc
+     */
+    async rejectUserDocument(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const { reason } = req.body;
+
+            const user = await userService.rejectUserDocument(id, reason);
+
+            return res.status(200).json({
+                success: true,
+                message: "User ID document rejected",
+                data: user,
+            });
+        } catch (error: any) {
+            console.error("Error rejecting user document:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to reject user document",
                 error: error.message,
             });
         }

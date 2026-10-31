@@ -14,5 +14,6 @@ router.get("/:id", userController.getUserById.bind(userController));
 router.get("/:id/stats", requireAuth, userController.getUserStats.bind(userController));
 router.get("/:id/activity", requireAuth, userController.getUserActivity.bind(userController));
 router.post("/:id/verify", requireAuth, requireRole("ADMIN"), userController.verifyUser.bind(userController));
+router.post("/:id/reject-doc", requireAuth, requireRole("ADMIN"), userController.rejectUserDocument.bind(userController));
 
 export default router;

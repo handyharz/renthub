@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { User, UserRole, UserStatus, Prisma } from "@prisma/client";
+import { trustScoreService } from "./trustScoreService";
 
 export class UserService {
     /**
@@ -105,6 +106,7 @@ export class UserService {
         role?: UserRole;
         status?: UserStatus;
         verified?: boolean;
+        hasIdDocument?: boolean;
         limit?: number;
         offset?: number;
     }) {
@@ -113,6 +115,7 @@ export class UserService {
             role,
             status,
             verified,
+            hasIdDocument,
             limit = 50,
             offset = 0,
         } = filters || {};
@@ -122,6 +125,9 @@ export class UserService {
             ...(role && { role }),
             ...(status && { status }),
             ...(verified !== undefined && { verified }),
+            ...(hasIdDocument !== undefined && {
+                idDocumentUrl: hasIdDocument ? { not: null } : null,
+            }),
             ...(search && {
                 OR: [
                     { firstName: { contains: search, mode: "insensitive" } },
@@ -132,7 +138,7 @@ export class UserService {
             }),
         };
 
-        const [users, total, totalPlatformUsers, countsByRole, verifiedCount, landlordsWalletLinkedCount] = await Promise.all([
+        const [users, total, totalPlatformUsers, countsByRole, verifiedCount, landlordsWalletLinkedCount, pendingKycDocCount] = await Promise.all([
             prisma.user.findMany({
                 where,
                 select: {
@@ -146,6 +152,11 @@ export class UserService {
                     role: true,
                     status: true,
                     verified: true,
+                    verifiedAt: true,
+                    idDocumentUrl: true,
+                    idType: true,
+                    idNumber: true,
+                    trustScore: true,
                     afriExchangeAccountEmail: true,
                     afriExchangeWalletAddress: true,
                     settlementLinkedAt: true,
@@ -179,6 +190,13 @@ export class UserService {
                     deletedAt: null,
                 },
             }),
+            prisma.user.count({
+                where: {
+                    idDocumentUrl: { not: null },
+                    verified: false,
+                    deletedAt: null,
+                },
+            }),
         ]);
 
         const roleCounts = countsByRole.reduce((acc, curr) => {
@@ -208,6 +226,7 @@ export class UserService {
                 verificationRate,
                 landlordsWalletLinked: landlordsWalletLinkedCount,
                 landlordsWalletRate,
+                pendingKycDocCount,
             },
             limit,
             offset,
@@ -231,13 +250,44 @@ export class UserService {
      * Verify user (KYC)
      */
     async verifyUser(id: string): Promise<User> {
-        return await prisma.user.update({
+        const user = await prisma.user.update({
             where: { id },
             data: {
                 verified: true,
                 verifiedAt: new Date(),
             },
         });
+
+        // Recalculate user trust score so verified KYC (+40 pts) takes effect immediately
+        try {
+            await trustScoreService.calculateAndSaveUserTrustScore(id);
+        } catch (err) {
+            console.error(`Failed to update trust score for verified user ${id}:`, err);
+        }
+
+        return user;
+    }
+
+    /**
+     * Reject user submitted ID document
+     */
+    async rejectUserDocument(id: string, reason?: string): Promise<User> {
+        const user = await prisma.user.update({
+            where: { id },
+            data: {
+                verified: false,
+                verifiedAt: null,
+                idDocumentUrl: null, // Clear unapproved document so user can re-upload
+            },
+        });
+
+        try {
+            await trustScoreService.calculateAndSaveUserTrustScore(id);
+        } catch (err) {
+            console.error(`Failed to update trust score for rejected user ${id}:`, err);
+        }
+
+        return user;
     }
 
     /**
