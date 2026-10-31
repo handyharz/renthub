@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { anchorService } from "../services/anchorService";
 import { logger } from "../utils/logger";
+import { trustScoreService } from "../services/trustScoreService";
 
 export interface ReconciliationReport {
     timestamp: Date;
@@ -129,6 +130,11 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
                 },
             },
         });
+
+        // Trigger asynchronous TrustScore batch indexing
+        trustScoreService.recalculateAllTrustScores().catch((err) =>
+            logger.warn(`[reconcile-escrow] Asynchronous TrustScore update failed: ${err.message}`)
+        );
 
         return {
             timestamp: new Date(),

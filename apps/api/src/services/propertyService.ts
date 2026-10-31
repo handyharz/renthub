@@ -57,7 +57,7 @@ export class PropertyService {
         polygon?: string; // JSON string of coordinates [[lng, lat], ...]
         landlordId?: string;
         q?: string;
-        sortBy?: "newest" | "price_asc" | "price_desc" | "featured";
+        sortBy?: "newest" | "price_asc" | "price_desc" | "featured" | "trust_score";
         limit?: number;
         offset?: number;
     }) {
@@ -177,12 +177,14 @@ export class PropertyService {
 
         const getOrderBy = () => {
             const baseOrder: any[] = [];
-            if (sortBy === "price_asc") baseOrder.push({ pricePerYear: "asc" });
+            if (sortBy === "trust_score") baseOrder.push({ trustScore: "desc" });
+            else if (sortBy === "price_asc") baseOrder.push({ pricePerYear: "asc" });
             else if (sortBy === "price_desc") baseOrder.push({ pricePerYear: "desc" });
             else if (sortBy === "newest") baseOrder.push({ createdAt: "desc" });
 
             baseOrder.push({ featured: "desc" });
             baseOrder.push({ verified: "desc" });
+            baseOrder.push({ trustScore: "desc" });
             return baseOrder;
         };
 

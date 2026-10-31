@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { prisma } from "../config/database";
 import { runAnchorEscrowReconciliation, getEscrowHealthStatus } from "../jobs/reconcileAnchorEscrow";
 import { logger } from "../utils/logger";
+import { trustScoreService } from "../services/trustScoreService";
 
 const router: Router = Router();
 
@@ -165,6 +166,24 @@ router.get("/stats", async (req: Request, res: Response) => {
     } catch (error: any) {
         logger.error(`[transparency/stats] Failed to fetch stats: ${error.message}`);
         res.status(500).json({ success: false, message: "Error fetching transparency statistics" });
+    }
+});
+
+/**
+ * GET /api/transparency/trustscores
+ * Public distribution histogram and neighborhood leaderboard.
+ * Zero-PII public endpoint for transparency audit dashboard.
+ */
+router.get("/trustscores", async (req: Request, res: Response) => {
+    try {
+        const data = await trustScoreService.getTrustScoreDistribution();
+        res.json({
+            success: true,
+            data,
+        });
+    } catch (error: any) {
+        logger.error(`[transparency/trustscores] Failed to fetch trust score distribution: ${error.message}`);
+        res.status(500).json({ success: false, message: "Error fetching trust score metrics" });
     }
 });
 

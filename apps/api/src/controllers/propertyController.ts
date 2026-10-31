@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { propertyService } from "../services/propertyService";
 import { PropertyStatus, PropertyType } from "@prisma/client";
 import { prisma } from "../config/database";
+import { trustScoreService } from "../services/trustScoreService";
 
 export class PropertyController {
     /**
@@ -466,6 +467,34 @@ export class PropertyController {
             return res.status(500).json({
                 success: false,
                 message: "Failed to fetch locations",
+                error: error.message,
+            });
+        }
+    }
+
+    /**
+     * Get property TrustScore & verified factors (Public, zero-PII)
+     * GET /api/properties/:id/trustscore
+     */
+    async getPropertyTrustScore(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const data = await trustScoreService.getPropertyTrustScore(id);
+            if (!data) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Property not found",
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                data,
+            });
+        } catch (error: any) {
+            console.error("Error fetching property trust score:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetch property trust score",
                 error: error.message,
             });
         }

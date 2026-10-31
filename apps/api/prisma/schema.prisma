@@ -61,10 +61,15 @@ model User {
   agentStrikesReceived    AgentStrike[]  @relation("AgentStrikes")
   agentReportsFiled       AgentStrike[]  @relation("TenantAgentReports")
 
+  // TrustScore Engine
+  trustScore              Int            @default(50)
+  trustFactors            Json?
+
   @@index([clerkId])
   @@index([email])
   @@index([phone])
   @@index([role])
+  @@index([trustScore])
   @@index([createdAt])
   @@map("users")
 }
@@ -130,6 +135,10 @@ model Property {
   agentStrikes  AgentStrike[]
   proof         PropertyProof?
 
+  // TrustScore Engine
+  trustScore    Int               @default(30)
+  trustFactors  Json?
+
   @@index([landlordId])
   @@index([city, state])
   @@index([status])
@@ -138,6 +147,7 @@ model Property {
   @@index([bedrooms])
   @@index([featured])
   @@index([verified])
+  @@index([trustScore])
   @@index([latitude, longitude])
   @@index([createdAt])
   @@map("properties")

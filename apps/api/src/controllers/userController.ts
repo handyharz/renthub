@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { userService } from "../services/userService";
 import { UserRole, UserStatus } from "@prisma/client";
 import { sanitizeSelfServiceRole } from "../utils/identity";
+import { trustScoreService } from "../services/trustScoreService";
 
 export class UserController {
     /**
@@ -340,6 +341,38 @@ export class UserController {
             return res.status(500).json({
                 success: false,
                 message: "Failed to verify user",
+                error: error.message,
+            });
+        }
+    }
+
+    /**
+     * Get user TrustScore
+     * GET /api/users/:id/trustscore
+     */
+    async getUserTrustScore(req: Request, res: Response) {
+        try {
+            const id = req.params.id as string;
+            const callerId = (req as any).dbUser?.id || (req as any).user?.id;
+            const isAdmin = (req as any).dbUser?.role === "ADMIN" || (req as any).user?.role === "ADMIN";
+
+            const data = await trustScoreService.getUserTrustScore(id, callerId, isAdmin);
+            if (!data) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found",
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                data,
+            });
+        } catch (error: any) {
+            console.error("Error fetching user trust score:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to fetch user trust score",
                 error: error.message,
             });
         }

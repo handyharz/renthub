@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc --noEmit false",
+    "build": "prisma generate && tsc -p tsconfig.build.json --noEmit false",
     "start": "node dist/index.js",
     "start:prod": "prisma migrate deploy && node dist/index.js",
     "prisma:generate": "prisma generate",

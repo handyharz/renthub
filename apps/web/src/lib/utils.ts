@@ -15,7 +15,8 @@ export function formatPrice(price?: number | null): string {
     }).format(safePrice); // Price is in Naira
 }
 
-export function calculateTrustScore(user: {
+export function calculateTrustScore(user?: {
+    trustScore?: number | null;
     avatar?: string | null;
     firstName?: string | null;
     lastName?: string | null;
@@ -23,7 +24,11 @@ export function calculateTrustScore(user: {
     phoneVerified?: boolean;
     idDocumentUrl?: string | null;
     verified?: boolean;
-}) {
+} | null) {
+    if (!user) return 10;
+    if (typeof user.trustScore === "number" && user.trustScore > 0) {
+        return Math.min(Math.max(user.trustScore, 0), 100);
+    }
     let score = 10; // Base score for signing up
     if (user?.avatar) score += 10;
     if (user?.firstName && user?.lastName) score += 10;

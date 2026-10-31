@@ -22,6 +22,7 @@ export interface PropertyCardProps {
     image?: string;
     images?: Array<{ url: string; isPrimary?: boolean } | string>;
     verified?: boolean;
+    trustScore?: number;
     featured?: boolean;
     landlordVerified?: boolean;
     landlord?: { verified?: boolean; firstName?: string; lastName?: string };
@@ -108,13 +109,27 @@ export function PropertyCard({ property }: { property: PropertyCardProps }) {
 
                 {/* Top Badges */}
                 <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 items-start max-w-[70%]">
+                    {typeof property.trustScore === "number" && property.trustScore > 0 && (
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-white font-black text-[11px] shadow-md backdrop-blur-xs ${
+                            property.trustScore >= 90
+                                ? "bg-emerald-600"
+                                : property.trustScore >= 70
+                                ? "bg-[var(--color-brand-green)]"
+                                : property.trustScore >= 60
+                                ? "bg-teal-600"
+                                : "bg-amber-600"
+                        }`}>
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            Trust {property.trustScore}
+                        </span>
+                    )}
                     {property.featured && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500 text-white font-black text-[11px] shadow-md">
                             <Sparkles className="w-3 h-3 fill-current" />
                             Featured
                         </span>
                     )}
-                    {isPropertyVerified && (
+                    {isPropertyVerified && (!property.trustScore || property.trustScore < 60) && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--color-brand-green)] text-white font-black text-[11px] shadow-md">
                             <ShieldCheck className="w-3.5 h-3.5" />
                             Verified

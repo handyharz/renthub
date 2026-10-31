@@ -15,6 +15,7 @@ router.get("/landlord/:landlordId", propertyController.getPropertiesByLandlord.b
 // CRUD routes
 router.post("/", requireAuth, requireDbUser, propertyController.createProperty.bind(propertyController));
 router.get("/", propertyController.getProperties.bind(propertyController));
+router.get("/:id/trustscore", propertyController.getPropertyTrustScore.bind(propertyController));
 router.get("/:id", optionalAuth, propertyController.getPropertyById.bind(propertyController));
 router.patch("/:id", requireAuth, requireDbUser, propertyController.updateProperty.bind(propertyController));
 router.delete("/:id", requireAuth, requireDbUser, propertyController.deleteProperty.bind(propertyController));
