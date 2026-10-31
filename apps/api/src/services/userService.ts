@@ -260,7 +260,7 @@ export class UserService {
 
         // Recalculate user trust score so verified KYC (+40 pts) takes effect immediately
         try {
-            await trustScoreService.calculateAndSaveUserTrustScore(id);
+            await trustScoreService.recalculateUserTrustScore(id);
         } catch (err) {
             console.error(`Failed to update trust score for verified user ${id}:`, err);
         }
@@ -282,7 +282,7 @@ export class UserService {
         });
 
         try {
-            await trustScoreService.calculateAndSaveUserTrustScore(id);
+            await trustScoreService.recalculateUserTrustScore(id);
         } catch (err) {
             console.error(`Failed to update trust score for rejected user ${id}:`, err);
         }
