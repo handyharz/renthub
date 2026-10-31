@@ -293,10 +293,37 @@ export class AdminService {
             }),
         ]);
 
+        // Recently KYC-verified users (verified=true with an uploaded ID doc)
+        const verifiedUsers = await prisma.user.findMany({
+            where: {
+                idDocumentUrl: { not: null },
+                verified: true,
+                deletedAt: null,
+            },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                role: true,
+                avatar: true,
+                idType: true,
+                idNumber: true,
+                idDocumentUrl: true,
+                verifiedAt: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+            orderBy: { verifiedAt: "desc" },
+            take: 50,
+        });
+
         return {
             properties,
             recentlyVerified,
             pendingUsers,
+            verifiedUsers,
             stats: {
                 pendingReview,
                 verifiedProps,

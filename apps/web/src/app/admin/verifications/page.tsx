@@ -63,6 +63,7 @@ interface PendingUser {
     idType?: string;
     idNumber?: string;
     idDocumentUrl: string;
+    verifiedAt?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -79,6 +80,7 @@ export default function AdminVerificationsPage() {
     const [properties, setProperties] = useState<VerificationProperty[]>([]);
     const [recentlyVerified, setRecentlyVerified] = useState<VerificationProperty[]>([]);
     const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+    const [verifiedUsers, setVerifiedUsers] = useState<PendingUser[]>([]);
     const [stats, setStats] = useState<VerificationStats>({
         pendingReview: 0,
         verifiedProps: 0,
@@ -110,6 +112,7 @@ export default function AdminVerificationsPage() {
                     setProperties(data.properties);
                     if (data.recentlyVerified) setRecentlyVerified(data.recentlyVerified);
                     if (data.pendingUsers) setPendingUsers(data.pendingUsers);
+                    if (data.verifiedUsers) setVerifiedUsers(data.verifiedUsers);
                     if (data.stats) setStats(data.stats);
                 }
             })
@@ -567,6 +570,68 @@ export default function AdminVerificationsPage() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        )}
+
+                        {/* ── Verified KYC History ─────────────────────────── */}
+                        {verifiedUsers.length > 0 && (
+                            <div className="mt-8">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                                    <h3 className="text-sm font-bold text-[var(--text-primary)]">
+                                        Verified KYC History
+                                    </h3>
+                                    <span className="ml-1 inline-flex items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold px-2 py-0.5">
+                                        {verifiedUsers.length}
+                                    </span>
+                                </div>
+                                <div className="rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] overflow-hidden shadow-[var(--shadow-sm)]">
+                                    <table className="min-w-full divide-y divide-[var(--border-color)] text-left">
+                                        <thead className="bg-[var(--bg-primary)]">
+                                            <tr>
+                                                <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">User</th>
+                                                <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Role</th>
+                                                <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">ID Type</th>
+                                                <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">ID Number</th>
+                                                <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Verified On</th>
+                                                <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Document</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[var(--border-color)] bg-[var(--bg-card)]">
+                                            {verifiedUsers.map((user) => (
+                                                <tr key={user.id} className="hover:bg-[var(--bg-primary)]/50 transition-colors">
+                                                    <td className="px-5 py-3 whitespace-nowrap">
+                                                        <p className="text-sm font-semibold text-[var(--text-primary)]">
+                                                            {user.firstName} {user.lastName}
+                                                        </p>
+                                                        <p className="text-[11px] text-[var(--text-muted)]">{user.email}</p>
+                                                    </td>
+                                                    <td className="px-5 py-3 whitespace-nowrap">
+                                                        <span className="text-xs capitalize text-[var(--text-secondary)]">{user.role.toLowerCase()}</span>
+                                                    </td>
+                                                    <td className="px-5 py-3 whitespace-nowrap text-xs text-[var(--text-primary)]">
+                                                        {user.idType || "—"}
+                                                    </td>
+                                                    <td className="px-5 py-3 whitespace-nowrap font-mono text-xs text-[var(--text-primary)]">
+                                                        {user.idNumber || "—"}
+                                                    </td>
+                                                    <td className="px-5 py-3 whitespace-nowrap text-xs text-emerald-400 font-semibold">
+                                                        {user.verifiedAt ? new Date(user.verifiedAt).toLocaleDateString() : "—"}
+                                                    </td>
+                                                    <td className="px-5 py-3 whitespace-nowrap">
+                                                        <button
+                                                            onClick={() => setDocPreviewUrl(user.idDocumentUrl)}
+                                                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--color-brand-blue)] hover:underline"
+                                                        >
+                                                            <FileText className="h-3 w-3" />
+                                                            View
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
                     </>
