@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Upload, X, CheckCircle2, Loader2, FileText, ShieldAlert, ArrowUpRight, Clock } from "lucide-react";
+import { Upload, X, CheckCircle2, Loader2, FileText, ArrowUpRight, Clock } from "lucide-react";
 import { StatusModal } from "@/components/ui/StatusModal";
 import api from "@/lib/api";
 
@@ -16,9 +16,10 @@ interface DocumentUploaderProps {
 export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified }: DocumentUploaderProps) {
     const [uploading, setUploading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
+    // Tracks ONLY the newly-selected file blob URL — never initialised to currentUrl
+    // so the dropzone is always accessible even when a saved doc already exists
+    const [newPreviewUrl, setNewPreviewUrl] = useState<string | null>(null);
 
-    // Modal State
     const [modal, setModal] = useState<{
         open: boolean;
         title: string;
@@ -35,7 +36,7 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
             setFile(selectedFile);
-            setPreviewUrl(URL.createObjectURL(selectedFile));
+            setNewPreviewUrl(URL.createObjectURL(selectedFile));
         }
     };
 
@@ -49,18 +50,18 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
             formData.append("userId", userId);
 
             const res = await api.post("/upload/id-document", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
+                headers: { "Content-Type": "multipart/form-data" },
             });
 
             if (res.data.success) {
                 setFile(null);
+                setNewPreviewUrl(null);
                 onUploadSuccess(res.data.data.idDocumentUrl);
                 setModal({
                     open: true,
                     title: "Document Uploaded",
-                    message: "Your government ID document has been submitted and is currently being verified by our compliance team. Your TrustScore +40 pts will unlock once confirmed by admin.",
+                    message:
+                        "Your government ID document has been submitted and is currently being verified by our compliance team. Your TrustScore +40 pts will unlock once confirmed by admin.",
                     type: "success",
                 });
             }
@@ -69,7 +70,9 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
             setModal({
                 open: true,
                 title: "Upload Failed",
-                message: error.response?.data?.message || "We couldn't upload your document. Please check your file and try again.",
+                message:
+                    error.response?.data?.message ||
+                    "We couldn't upload your document. Please check your file and try again.",
                 type: "error",
             });
         } finally {
@@ -77,21 +80,26 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
         }
     };
 
-    const clearFile = () => {
+    // Clear the newly-selected file — always returns to the dropzone
+    const clearNewFile = () => {
         setFile(null);
-        setPreviewUrl(currentUrl || null);
+        setNewPreviewUrl(null);
     };
 
     return (
         <div className="space-y-4">
-            {!previewUrl ? (
+            {/* ── Upload area ─────────────────────────────────────────────────── */}
+            {/* Shows dropzone when no new file is selected, even if currentUrl exists */}
+            {!newPreviewUrl ? (
                 <label className="group flex flex-col items-center justify-center w-full h-44 border-2 border-dashed border-[var(--border-color)] hover:border-[var(--color-brand-green)] rounded-2xl cursor-pointer bg-[var(--bg-muted)]/40 hover:bg-[var(--bg-muted)] transition-all">
                     <div className="flex flex-col items-center justify-center p-5 text-center">
                         <div className="h-11 w-11 rounded-2xl bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                             <Upload className="w-5 h-5" />
                         </div>
                         <p className="text-xs font-bold text-[var(--text-primary)] mb-1">
-                            Click to upload or drag & drop document
+                            {currentUrl
+                                ? "Click to replace existing document"
+                                : "Click to upload or drag & drop document"}
                         </p>
                         <p className="text-[11px] text-[var(--text-muted)] font-medium">
                             Supported: PNG, JPG, or PDF (Max 10MB)
@@ -105,8 +113,9 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
                     />
                 </label>
             ) : (
+                /* ── New file preview (only while user hasn't confirmed yet) ── */
                 <div className="relative rounded-2xl border border-[var(--border-color)] overflow-hidden bg-[var(--bg-card)]">
-                    {previewUrl.toLowerCase().endsWith(".pdf") || file?.type === "application/pdf" ? (
+                    {file?.type === "application/pdf" ? (
                         <div className="h-44 flex items-center justify-center bg-[var(--bg-muted)]/50 p-4">
                             <div className="text-center">
                                 <div className="h-12 w-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-2">
@@ -115,14 +124,14 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
                                 <p className="text-xs font-bold text-[var(--text-primary)] truncate max-w-xs">
                                     {file?.name || "Official ID Document (PDF)"}
                                 </p>
-                                <p className="text-[11px] text-[var(--text-muted)]">PDF Document Attached</p>
+                                <p className="text-[11px] text-[var(--text-muted)]">PDF Document Ready to Upload</p>
                             </div>
                         </div>
                     ) : (
                         <div className="relative h-44 bg-[var(--bg-muted)]">
                             <img
-                                src={previewUrl}
-                                alt="ID Preview"
+                                src={newPreviewUrl}
+                                alt="New ID Preview"
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -131,9 +140,9 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
                     {!uploading && (
                         <button
                             type="button"
-                            onClick={clearFile}
+                            onClick={clearNewFile}
                             className="absolute top-3 right-3 p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur-sm transition-all"
-                            title="Remove file"
+                            title="Cancel — choose a different file"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -150,6 +159,7 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
                 </div>
             )}
 
+            {/* ── Confirm upload button ─────────────────────────────────────── */}
             {file && !uploading && (
                 <Button
                     className="w-full h-11 bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold rounded-xl text-xs gap-2 shadow-sm transition-all"
@@ -160,6 +170,8 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified
                 </Button>
             )}
 
+            {/* ── Existing saved doc status banner ────────────────────────── */}
+            {/* Always shown when a saved doc exists, independent of upload area */}
             {currentUrl && !file && (
                 <div
                     className={`flex items-center justify-between gap-3 text-xs p-3.5 rounded-xl font-bold border transition-all ${
