@@ -1,6 +1,6 @@
 "use client";
 
-import { ShieldCheck, CheckCircle2, Circle, Sparkles, TrendingUp } from "lucide-react";
+import { ShieldCheck, CheckCircle2, Circle, Sparkles, TrendingUp, Clock } from "lucide-react";
 
 interface TrustScoreProps {
     user?: {
@@ -23,11 +23,14 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
         if (user.avatar) score += 10;
         if (user.phone) score += 15;
         if (user.phoneVerified) score += 25;
-        if (user.idDocumentUrl) score += 40; // Government ID
+        // Government ID +40 pts is ONLY awarded once confirmed & verified by admin/compliance
+        if (user.idDocumentUrl && user.verified) score += 40;
         return Math.min(score, 100);
     };
 
     const score = calculateScore();
+    const hasIdUploaded = Boolean(user?.idDocumentUrl);
+    const isIdVerified = Boolean(user?.verified);
 
     const getTier = () => {
         if (score < 40) {
@@ -35,15 +38,19 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
                 label: "Basic Profile",
                 badgeBg: "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400",
                 strokeColor: "#f43f5e",
-                hint: "Complete your phone & ID verification to become trusted.",
+                hint: hasIdUploaded && !isIdVerified
+                    ? "Government ID uploaded & under review. +40 pts unlocks upon admin confirmation."
+                    : "Complete your phone & ID verification to become trusted.",
             };
         }
         if (score < 80) {
             return {
-                label: "Partially Verified",
+                label: hasIdUploaded && !isIdVerified ? "Review In Progress" : "Partially Verified",
                 badgeBg: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",
                 strokeColor: "#f59e0b",
-                hint: "Upload a valid government ID to unlock the 100% Verified badge.",
+                hint: hasIdUploaded && !isIdVerified
+                    ? "Government ID is submitted and currently under compliance review. Full +40 pts will unlock upon admin confirmation."
+                    : "Upload a valid government ID to unlock the 100% Verified badge.",
             };
         }
         return {
@@ -59,10 +66,23 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
     const strokeDashoffset = circumference - (circumference * score) / 100;
 
     const checklist = [
-        { label: "Account Created", completed: true, points: "+10%" },
-        { label: "Profile Photo", completed: Boolean(user?.avatar), points: "+10%" },
-        { label: "Phone Verified", completed: Boolean(user?.phoneVerified), points: "+40%" },
-        { label: "Government ID", completed: Boolean(user?.idDocumentUrl), points: "+40%" },
+        { label: "Account Created", completed: true, pending: false, points: "+10%" },
+        { label: "Profile Photo", completed: Boolean(user?.avatar), pending: false, points: "+10%" },
+        { label: "Phone Verified", completed: Boolean(user?.phoneVerified), pending: false, points: "+40%" },
+        {
+            label: isIdVerified
+                ? "Government ID Verified"
+                : hasIdUploaded
+                ? "Government ID (Under Review)"
+                : "Government ID",
+            completed: isIdVerified,
+            pending: hasIdUploaded && !isIdVerified,
+            points: isIdVerified
+                ? "+40%"
+                : hasIdUploaded
+                ? "Under Review (0 pts)"
+                : "+40%",
+        },
     ];
 
     return (
@@ -135,25 +155,33 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
                 {checklist.map((item, idx) => (
                     <div
                         key={idx}
-                        className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
                             item.completed
-                                ? "bg-emerald-500/5 border-emerald-500/15 text-[var(--text-primary)]"
+                                ? "bg-emerald-500/5 border-emerald-500/20 text-[var(--text-primary)]"
+                                : item.pending
+                                ? "bg-amber-500/10 border-amber-500/30 text-[var(--text-primary)]"
                                 : "bg-[var(--bg-card)] border-[var(--border-color)] text-[var(--text-muted)]"
                         }`}
                     >
                         <div className="flex items-center gap-2">
                             {item.completed ? (
                                 <CheckCircle2 className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
+                            ) : item.pending ? (
+                                <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400 shrink-0 animate-pulse" />
                             ) : (
                                 <Circle className="h-4 w-4 text-[var(--text-muted)] shrink-0" />
                             )}
-                            <span className={item.completed ? "font-bold text-[var(--text-primary)]" : ""}>
+                            <span className={item.completed || item.pending ? "font-bold text-[var(--text-primary)]" : ""}>
                                 {item.label}
                             </span>
                         </div>
                         <span
                             className={`text-[10px] font-mono font-bold ${
-                                item.completed ? "text-[var(--color-brand-green)]" : "text-[var(--text-muted)]"
+                                item.completed
+                                    ? "text-[var(--color-brand-green)]"
+                                    : item.pending
+                                    ? "text-amber-700 dark:text-amber-300 font-extrabold"
+                                    : "text-[var(--text-muted)]"
                             }`}
                         >
                             {item.points}

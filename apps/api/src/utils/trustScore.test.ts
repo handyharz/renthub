@@ -84,6 +84,19 @@ describe("TrustScore Engine & Anti-Gaming Guardrails", () => {
             assert.equal(landlord.score, 85); // 50 + 20 + 10 + 5
         });
 
+        it("does not award full KYC score when document is uploaded without admin verification", () => {
+            const pendingLandlord = calculateLandlordTrustScore({
+                verified: false, // admin has not confirmed
+                phoneVerified: true,
+                idDocumentUrl: "https://example.com/id.jpg",
+                completedEscrowsCount: 0,
+                disputeStrikesCount: 0,
+            });
+
+            assert.equal(pendingLandlord.factors.baseKyc, 25);
+            assert.equal(pendingLandlord.score, 25);
+        });
+
         it("enforces anti-gaming cap on completed escrows (max +25)", () => {
             const gamingAttempt = calculateLandlordTrustScore({
                 verified: true,

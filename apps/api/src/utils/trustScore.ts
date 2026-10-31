@@ -137,7 +137,7 @@ export function calculatePropertyTrustScore(input: PropertyTrustInput): Property
             breakdown.push("Field Ops coordinate inspection verified (+10)");
         }
 
-        if (input.landlordVerified || input.landlordHasId) {
+        if (input.landlordVerified) {
             landlordKyc = 10;
             breakdown.push("Owner identity & title KYC passed (+10)");
         }
@@ -193,11 +193,12 @@ export function calculateLandlordTrustScore(input: LandlordTrustInput): Landlord
     let baseKyc = 25;
     const breakdown: string[] = [];
 
-    if (input.verified || (input.idDocumentUrl && input.phoneVerified)) {
+    if (input.verified) {
         baseKyc = 50;
         breakdown.push("Landlord government ID & phone KYC completed (+50)");
     } else {
-        breakdown.push("Basic profile (KYC pending) (+25)");
+        baseKyc = 25;
+        breakdown.push("Basic profile (KYC pending admin verification) (+25)");
     }
 
     // +5 per completed escrow release, max +25 per rolling year to prevent farming

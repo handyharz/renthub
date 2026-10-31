@@ -471,6 +471,7 @@ export default function ProfilePage() {
                                     <DocumentUploader
                                         userId={dbUser?.id}
                                         currentUrl={dbUser?.idDocumentUrl}
+                                        verified={dbUser?.verified}
                                         onUploadSuccess={() => {
                                             fetchUserProfile();
                                         }}

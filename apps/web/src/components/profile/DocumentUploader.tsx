@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Upload, X, CheckCircle2, Loader2, FileText, ShieldAlert, ArrowUpRight } from "lucide-react";
+import { Upload, X, CheckCircle2, Loader2, FileText, ShieldAlert, ArrowUpRight, Clock } from "lucide-react";
 import { StatusModal } from "@/components/ui/StatusModal";
 import api from "@/lib/api";
 
 interface DocumentUploaderProps {
-    userId: string;
+    userId?: string;
     onUploadSuccess: (url: string) => void;
     currentUrl?: string | null;
+    verified?: boolean;
 }
 
-export function DocumentUploader({ userId, onUploadSuccess, currentUrl }: DocumentUploaderProps) {
+export function DocumentUploader({ userId, onUploadSuccess, currentUrl, verified }: DocumentUploaderProps) {
     const [uploading, setUploading] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
@@ -59,7 +60,7 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl }: Docume
                 setModal({
                     open: true,
                     title: "Document Uploaded",
-                    message: "Your government ID document has been submitted and is currently being verified by our compliance team.",
+                    message: "Your government ID document has been submitted and is currently being verified by our compliance team. Your TrustScore +40 pts will unlock once confirmed by admin.",
                     type: "success",
                 });
             }
@@ -160,16 +161,37 @@ export function DocumentUploader({ userId, onUploadSuccess, currentUrl }: Docume
             )}
 
             {currentUrl && !file && (
-                <div className="flex items-center justify-between gap-3 text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl font-bold">
-                    <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 shrink-0" />
-                        <span>Government ID submitted & attached to profile</span>
+                <div
+                    className={`flex items-center justify-between gap-3 text-xs p-3.5 rounded-xl font-bold border transition-all ${
+                        verified
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
+                            : "bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200"
+                    }`}
+                >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        {verified ? (
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        ) : (
+                            <Clock className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                        )}
+                        <div className="min-w-0">
+                            <span className="block font-bold text-xs truncate">
+                                {verified
+                                    ? "Government ID Verified & Approved"
+                                    : "Government ID Submitted — Under Compliance Review"}
+                            </span>
+                            <span className="block text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                                {verified
+                                    ? "Full TrustScore +40 pts unlocked"
+                                    : "Pending admin confirmation (+40 pts unlocks upon approval)"}
+                            </span>
+                        </div>
                     </div>
                     <a
                         href={currentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] hover:underline"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold hover:underline shrink-0 text-[var(--color-brand-green)]"
                     >
                         View <ArrowUpRight className="h-3 w-3" />
                     </a>

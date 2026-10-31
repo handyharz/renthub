@@ -34,7 +34,7 @@ export function calculateTrustScore(user?: {
     if (user?.firstName && user?.lastName) score += 10;
     if (user?.phone) score += 10;
     if (user?.phoneVerified) score += 20;
-    if (user?.idDocumentUrl) score += 20;
-    if (user?.verified) score += 20;
+    // Government ID score requires admin confirmation before awarding points
+    if (user?.idDocumentUrl && user?.verified) score += 40;
     return Math.min(score, 100);
 }
