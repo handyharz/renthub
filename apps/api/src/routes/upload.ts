@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { uploadController, uploadMiddleware } from "../controllers/uploadController";
+import { uploadController, uploadMiddleware, uploadIdMiddleware } from "../controllers/uploadController";
 import { requireAuth, requireDbUser } from "../middleware/auth";
 
 const router: Router = Router();
@@ -20,7 +20,7 @@ router.post(
 
 router.post(
     "/id-document",
-    uploadMiddleware.single("idDocument"),
+    uploadIdMiddleware.single("idDocument"),
     uploadController.uploadIdDocument.bind(uploadController)
 );
 

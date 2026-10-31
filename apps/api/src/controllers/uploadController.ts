@@ -5,13 +5,12 @@ import multer from "multer";
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
+
+// For property images and avatars — images only
 const upload = multer({
     storage,
-    limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
-    },
-    fileFilter: (req, file, cb) => {
-        // Accept images only
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith("image/")) {
             return cb(new Error("Only image files are allowed"));
         }
@@ -19,7 +18,21 @@ const upload = multer({
     },
 });
 
+// For KYC / ID documents — accepts images AND PDFs
+const uploadId = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (_req, file, cb) => {
+        const allowed = file.mimetype.startsWith("image/") || file.mimetype === "application/pdf";
+        if (!allowed) {
+            return cb(new Error("Only image or PDF files are allowed for ID documents"));
+        }
+        cb(null, true);
+    },
+});
+
 export const uploadMiddleware = upload;
+export const uploadIdMiddleware = uploadId;
 
 export class UploadController {
     /**
