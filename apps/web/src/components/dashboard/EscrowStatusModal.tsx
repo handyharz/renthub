@@ -127,12 +127,12 @@ export function EscrowStatusModal({
                                     </div>
                                 </div>
                             ) : (
-                                <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border-color)]">
-                                    <div>
+                                <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-[var(--border-color)]">
+                                    <div className="min-w-0 flex-1">
                                         <span className="text-sm font-bold text-[var(--text-primary)] block">Total Secured in Escrow</span>
                                         <span className="text-[10px] text-[var(--text-muted)] font-medium">Includes Rent + 2% Escrow Protection Fee + Caution</span>
                                     </div>
-                                    <span className="text-lg font-extrabold text-[var(--color-brand-green)]">{formatPrice(transaction.totalAmount)}</span>
+                                    <span className="text-base sm:text-lg font-extrabold text-[var(--color-brand-green)] shrink-0">{formatPrice(transaction.totalAmount)}</span>
                                 </div>
                             )}
 

@@ -1276,7 +1276,7 @@ export function ApplicationsTab() {
                                                         </p>
                                                     </div>
 
-                                                    <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                                                         <Button
                                                             disabled={otpLoading === tx.id}
                                                             onClick={() => handleRequestOtp(tx.id)}
@@ -1318,7 +1318,7 @@ export function ApplicationsTab() {
                                                             Your 6-Digit Key Release OTP
                                                         </div>
                                                         <div className="flex items-center justify-center gap-3">
-                                                            <div className="text-3xl sm:text-4xl font-black tracking-[0.4em] text-[var(--color-brand-green)] py-1 font-mono">
+                                                            <div className="text-2xl sm:text-4xl font-black tracking-[0.2em] sm:tracking-[0.4em] text-[var(--color-brand-green)] py-1 font-mono">
                                                                 {activeOtps[tx.id] || tx.releaseOtp}
                                                             </div>
                                                             <Button

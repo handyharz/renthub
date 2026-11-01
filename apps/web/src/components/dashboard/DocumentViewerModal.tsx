@@ -74,15 +74,15 @@ export function DocumentViewerModal({
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b border-[var(--border-color)] bg-[var(--bg-muted)]/30">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-2xl bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] flex items-center justify-center border border-[var(--color-brand-green)]/20 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
+                        <div className="h-10 w-10 rounded-2xl bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] flex items-center justify-center border border-[var(--color-brand-green)]/20 shadow-xs shrink-0">
                             <FileText className="h-5 w-5" />
                         </div>
-                        <div>
-                            <h2 className="text-base sm:text-lg font-extrabold text-[var(--text-primary)]">
+                        <div className="min-w-0 flex-1">
+                            <h2 className="text-base sm:text-lg font-extrabold text-[var(--text-primary)] truncate">
                                 Institutional Tenancy & Tax Records
                             </h2>
-                            <p className="text-xs text-[var(--text-secondary)] font-medium">
+                            <p className="text-xs text-[var(--text-secondary)] font-medium truncate">
                                 Audit-grade documentation compliant with the Nigeria Tax Act 2025
                             </p>
                         </div>
@@ -177,7 +177,7 @@ export function DocumentViewerModal({
                                                 {taxPackData.statutoryAuthority}
                                             </p>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-left sm:text-right">
                                             <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Certificate No.</span>
                                             <span className="font-mono text-xs font-black text-[var(--text-primary)] block mt-0.5">
                                                 {taxPackData.certificateNumber}
@@ -275,7 +275,7 @@ export function DocumentViewerModal({
                                                 Issued by RentHub Segregated Escrow Protocol
                                             </p>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-left sm:text-right">
                                             <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Receipt No.</span>
                                             <span className="font-mono text-xs font-black text-[var(--text-primary)] block mt-0.5">
                                                 {receiptData.receiptNumber}

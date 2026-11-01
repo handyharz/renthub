@@ -253,20 +253,20 @@ export function RenewalsSection({ role, properties = [] }: RenewalsSectionProps)
                                 className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-4 sm:p-5 shadow-xs hover:border-[var(--color-brand-green)]/30 transition-all space-y-3.5"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border-color)] pb-3">
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
                                         <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-[var(--color-brand-green)] flex items-center justify-center shrink-0">
                                             <Home className="h-4 w-4" />
                                         </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-[var(--text-primary)]">
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="text-sm font-bold text-[var(--text-primary)] truncate">
                                                 {item.property?.title}
                                             </h4>
-                                            <p className="text-[11px] text-[var(--text-muted)]">
+                                            <p className="text-[11px] text-[var(--text-muted)] truncate">
                                                 {item.property?.address}, {item.property?.city}
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 shrink-0">
                                         {getStatusBadge(item.status)}
                                     </div>
                                 </div>
@@ -344,15 +344,15 @@ export function RenewalsSection({ role, properties = [] }: RenewalsSectionProps)
                                 )}
 
                                 {role === "TENANT" && item.status === "ACCEPTED" && (
-                                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border-color)]">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-[var(--border-color)]">
                                         <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                            <CheckCircle2 className="h-4 w-4" /> Renewal accepted! Pay into escrow to commence next term.
+                                            <CheckCircle2 className="h-4 w-4 shrink-0" /> Renewal accepted! Pay into escrow to commence next term.
                                         </span>
                                         <Button
                                             size="sm"
                                             disabled={actionLoading === item.id}
                                             onClick={() => handlePayRenewal(item.id)}
-                                            className="rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-bold flex items-center gap-1.5"
+                                            className="rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-bold flex items-center gap-1.5 shrink-0"
                                         >
                                             {actionLoading === item.id ? (
                                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

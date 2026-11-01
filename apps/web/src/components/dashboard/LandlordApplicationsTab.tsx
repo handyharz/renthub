@@ -652,7 +652,7 @@ export function LandlordApplicationsTab() {
                                                 <span>Approving will lock the listing to <strong>Under Offer</strong> and prompt the tenant to deposit funds into Escrow.</span>
                                             </div>
 
-                                            <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                                            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-end">
                                                 <Button
                                                     variant="outline"
                                                     disabled={actionLoading === app.id}

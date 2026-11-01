@@ -801,7 +801,7 @@ function OverviewTab({
                                         key={property.id}
                                         className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 hover:bg-[var(--bg-muted)]/70 border border-[var(--border-color)] transition-all gap-3.5 group"
                                     >
-                                        <div className="flex items-center gap-3.5 min-w-0">
+                                        <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto flex-1">
                                             <div className="relative h-16 w-16 sm:h-18 sm:w-18 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-color)]">
                                                 <Image
                                                     src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80"}
@@ -1276,7 +1276,7 @@ function TenantOverviewTab({
                                         key={property.id}
                                         className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 hover:bg-[var(--bg-muted)]/70 border border-[var(--border-color)] transition-all gap-3.5 group"
                                     >
-                                        <div className="flex items-center gap-3.5 min-w-0">
+                                        <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto flex-1">
                                             <div className="relative h-16 w-16 sm:h-18 sm:w-18 rounded-xl overflow-hidden bg-[var(--bg-secondary)] shrink-0 border border-[var(--border-color)]">
                                                 <Image
                                                     src={property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=400&q=80"}
@@ -3450,7 +3450,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                            <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center mt-1 sm:mt-0">
                                                 {displayUser?.phone && (
                                                     <a
                                                         href={`tel:${displayUser.phone}`}
@@ -3497,7 +3497,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                             </span>
                                         </div>
 
-                                        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-end">
                                             {/* Landlord Pending Actions */}
                                             {role === "LANDLORD" && tour.status === "PENDING" && (
                                                 <>
@@ -4018,8 +4018,8 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                                 </div>
 
                                 {/* Action Buttons Footer */}
-                                <div className="flex items-center gap-1.5 pt-4 mt-3 border-t border-[var(--border-color)]">
-                                    <Link href={`/properties/${property.id}/edit`} className="flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5 pt-4 mt-3 border-t border-[var(--border-color)]">
+                                    <Link href={`/properties/${property.id}/edit`} className="flex-1 min-w-[70px]">
                                         <Button
                                             variant="outline"
                                             size="sm"

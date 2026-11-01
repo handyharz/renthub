@@ -792,7 +792,7 @@ export function TransactionsTab() {
                                             </Button>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-end sm:self-center">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-end">
                                             {/* Key Handover Release OTP Button */}
                                             {(tx.status === "ESCROWED" || tx.status === "SUCCESSFUL") && !tx.escrowReleased && !tx.disputed && (
                                                 <>

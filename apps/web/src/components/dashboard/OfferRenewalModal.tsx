@@ -145,11 +145,11 @@ export function OfferRenewalModal({
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl max-w-lg w-full p-6 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4 mb-4">
-                    <div>
+                    <div className="min-w-0 flex-1 mr-3">
                         <h2 className="text-xl font-extrabold text-[var(--text-primary)] flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-[var(--color-brand-green)]" /> Offer Lease Renewal
+                            <Sparkles className="h-5 w-5 text-[var(--color-brand-green)] shrink-0" /> Offer Lease Renewal
                         </h2>
-                        <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate max-w-sm">
+                        <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate" title={activeProperty?.title}>
                             {activeProperty?.title || "Select a property"}
                         </p>
                     </div>
@@ -201,7 +201,7 @@ export function OfferRenewalModal({
 
                     {/* Proposed Annual Rent */}
                     <div>
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
                             <label className="text-xs font-bold text-[var(--text-primary)]">
                                 Proposed Annual Rent (₦/yr) *
                             </label>
@@ -225,7 +225,7 @@ export function OfferRenewalModal({
                             className="w-full px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl text-sm font-bold text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--color-brand-green)]/20 focus:border-[var(--color-brand-green)] outline-none transition-colors"
                         />
                         {/* Quick adjust percentage buttons */}
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
                             <button
                                 type="button"
                                 onClick={() => applyPercentage(0)}

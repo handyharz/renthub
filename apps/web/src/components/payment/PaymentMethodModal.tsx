@@ -199,22 +199,22 @@ export function PaymentMethodModal({
                 </DialogHeader>
 
                 {/* Amount & Property Summary */}
-                <div className="bg-[var(--bg-muted)]/70 rounded-2xl p-4 border border-[var(--border-color)] flex items-center justify-between">
-                    <div>
+                <div className="bg-[var(--bg-muted)]/70 rounded-2xl p-4 border border-[var(--border-color)] flex items-center justify-between gap-3 min-w-0">
+                    <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                             Total Escrow Amount
                         </p>
-                        <p className="text-xs font-bold text-[var(--text-primary)] truncate max-w-[200px]">
+                        <p className="text-xs font-bold text-[var(--text-primary)] truncate" title={propertyTitle}>
                             {propertyTitle}
                         </p>
                         {selectedMethod === "AFRIEXCHANGE" && (
-                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-0.5">
+                            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-bold mt-0.5 truncate">
                                 Rate: {TOKEN_RATES[tokenType].rateDesc}
                             </p>
                         )}
                     </div>
-                    <div className="text-right">
-                        <p className="text-xl font-extrabold text-[var(--color-brand-green)] tabular-nums">
+                    <div className="text-right shrink-0">
+                        <p className="text-lg sm:text-xl font-extrabold text-[var(--color-brand-green)] tabular-nums">
                             {formatPrice(totalAmount)}
                         </p>
                         {selectedMethod === "AFRIEXCHANGE" && (
