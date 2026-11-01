@@ -192,18 +192,87 @@ function AddPropertyModal({ clerkId, onClose, onSuccess }: { clerkId: string; on
                 {/* Body */}
                 <div className="overflow-y-auto flex-1 p-6">
                     {loadingLandlords ? (
-                        <div className="text-center py-10 text-[var(--text-muted)] text-sm">Loading authorized landlords...</div>
+                        <div className="text-center py-10 text-[var(--text-muted)] text-sm">Loading landlord relationships...</div>
                     ) : landlords.length === 0 ? (
-                        <div className="text-center py-10">
-                            <Building2 className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
-                            <p className="text-[var(--text-secondary)] font-semibold">No authorized landlords</p>
-                            <p className="text-[var(--text-muted)] text-sm mt-1">
-                                You need at least one AUTHORIZED delegation before you can create listings on a landlord's behalf.
-                            </p>
+                        // No delegations at all
+                        <div className="space-y-4">
+                            <div className="text-center py-8">
+                                <Building2 className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
+                                <p className="text-[var(--text-secondary)] font-semibold text-lg">No landlord relationships yet</p>
+                                <p className="text-[var(--text-muted)] text-sm mt-2 max-w-sm mx-auto">
+                                    To add a property for a client, you first need to request delegation on one of their existing properties.
+                                    Once they authorize you, you can create new listings on their behalf.
+                                </p>
+                            </div>
+                            <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-300">
+                                <p className="font-semibold mb-1">📋 How to get started:</p>
+                                <ol className="list-decimal list-inside space-y-1 text-xs">
+                                    <li>Ask the landlord to share their property ID (found in the property URL)</li>
+                                    <li>Click <strong>"Request to List Property"</strong> and enter the property ID</li>
+                                    <li>The landlord goes to their dashboard → <strong>Agent Partners</strong> tab → clicks <strong>"Authorize Agent"</strong></li>
+                                    <li>Come back here and you'll see them in the landlord dropdown</li>
+                                </ol>
+                            </div>
+                            <button onClick={onClose} className="w-full py-2.5 rounded-xl border border-[var(--border-color)] text-[var(--text-secondary)] text-sm font-semibold hover:bg-[var(--bg-muted)] transition-colors">
+                                Close
+                            </button>
+                        </div>
+                    ) : landlords.every((l: any) => l.pendingApproval) ? (
+                        // Has delegations but all are still pending landlord approval
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                                    <p className="font-bold text-amber-800 dark:text-amber-300">Waiting for landlord approval</p>
+                                </div>
+                                <p className="text-xs text-amber-700 dark:text-amber-400">
+                                    You've requested delegation, but the landlord hasn't authorized you yet.
+                                    They need to go to their dashboard → <strong>Agent Partners</strong> tab and click <strong>"Authorize Agent"</strong>.
+                                </p>
+                            </div>
+
+                            <p className="text-sm font-semibold text-[var(--text-secondary)]">Your pending requests:</p>
+                            <div className="space-y-3">
+                                {landlords.map((l: any) => (
+                                    <div key={l.id} className="p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-700 dark:text-amber-400 font-bold text-xs shrink-0">
+                                                {l.firstName?.[0]}{l.lastName?.[0]}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-sm text-[var(--text-primary)]">{l.firstName} {l.lastName}</p>
+                                                <p className="text-xs text-[var(--text-muted)]">{l.phone || l.email}</p>
+                                            </div>
+                                            <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-700">
+                                                Awaiting Auth
+                                            </span>
+                                        </div>
+                                        {l.pendingProperties?.length > 0 && (
+                                            <div className="mt-2 pl-10">
+                                                {l.pendingProperties.map((p: any) => (
+                                                    <p key={p.id} className="text-[11px] text-[var(--text-muted)]">• {p.title} — {p.city}</p>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <button onClick={onClose} className="w-full py-2.5 rounded-xl border border-[var(--border-color)] text-[var(--text-secondary)] text-sm font-semibold hover:bg-[var(--bg-muted)] transition-colors">
+                                Close
+                            </button>
                         </div>
                     ) : (
+                        // Has at least one AUTHORIZED landlord — show the form
                         <form onSubmit={handleSubmit} className="space-y-5">
-                            {/* Landlord picker */}
+                            {/* Pending approval notice (if some are still pending) */}
+                            {landlords.some((l: any) => l.pendingApproval) && (
+                                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+                                    <span className="font-semibold">⏳ Some landlords still pending:</span>{" "}
+                                    {landlords.filter((l: any) => l.pendingApproval).map((l: any) => `${l.firstName} ${l.lastName}`).join(", ")} — they haven't authorized you yet and won't appear below.
+                                </div>
+                            )}
+
+                            {/* Landlord picker (AUTHORIZED only) */}
                             <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
                                 <label className={labelCls + " text-blue-800 dark:text-blue-300"}>Select Landlord / Client *</label>
                                 <select
@@ -213,14 +282,14 @@ function AddPropertyModal({ clerkId, onClose, onSuccess }: { clerkId: string; on
                                     required
                                 >
                                     <option value="">— Pick an authorized landlord —</option>
-                                    {landlords.map((l: any) => (
+                                    {landlords.filter((l: any) => !l.pendingApproval).map((l: any) => (
                                         <option key={l.id} value={l.id}>
                                             {l.firstName} {l.lastName} ({l.phone || l.email}) · {l.agreedCommissionPct}% commission
                                         </option>
                                     ))}
                                 </select>
                                 <p className="text-[11px] text-blue-700 dark:text-blue-400 mt-1.5">
-                                    Only landlords who have authorized you on at least one property appear here.
+                                    Only landlords who have authorized you appear here.
                                 </p>
                             </div>
 

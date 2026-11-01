@@ -172,6 +172,7 @@ function DashboardContent() {
     const [dbUser, setDbUser] = useState<any>(null);
     const [role, setRole] = useState<string | null>(null);
     const [userVerified, setUserVerified] = useState(false);
+    const [pendingAgentRequests, setPendingAgentRequests] = useState(0);
     const [stats, setStats] = useState({
         total: 0,
         views: 0,
@@ -236,6 +237,14 @@ function DashboardContent() {
                 const res = await api.get(`/properties?landlordId=${dbUserId}`);
                 const userProperties = res.data.data.properties || [];
                 setProperties(userProperties);
+
+                // Fetch pending agent delegation count for badge on tab
+                api.get(`/agents/landlord/delegations?clerkId=${user.id}`)
+                    .then(r => {
+                        const pending = (r.data.data || []).filter((d: any) => d.status === "PENDING_LANDLORD").length;
+                        setPendingAgentRequests(pending);
+                    })
+                    .catch(() => {});
 
                 let unreadCount = 0;
                 let toursCount = 0;
@@ -436,8 +445,13 @@ function DashboardContent() {
                                                 : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]/30"
                                         )}
                                     >
-                                        <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                                    <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
                                         <span>{tab.label}</span>
+                                        {tab.id === "agent-delegations" && pendingAgentRequests > 0 && (
+                                            <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-black leading-none">
+                                                {pendingAgentRequests}
+                                            </span>
+                                        )}
                                     </button>
                                 );
                             })}

@@ -377,15 +377,26 @@ export class AgentService {
     // ─── AGENT-CREATED LISTINGS ON BEHALF OF LANDLORD ────────────────────────────
 
     /**
-     * Returns distinct landlords for whom this agent has an AUTHORIZED delegation.
-     * Used to populate the "Select Landlord" dropdown when creating a listing.
+     * Returns landlords for whom this agent has an AUTHORIZED delegation (can create listings)
+     * OR a PENDING_LANDLORD delegation (awaiting landlord approval — shown as pending in UI).
+     * Used to populate the "Select Landlord" dropdown and pending-approval status list.
      */
     async getAuthorizedLandlords(agentId: string) {
         const delegations = await prisma.agentListing.findMany({
-            where: { agentId, status: AgentListingStatus.AUTHORIZED },
+            where: {
+                agentId,
+                status: { in: [AgentListingStatus.AUTHORIZED, AgentListingStatus.PENDING_LANDLORD] }
+            },
             select: {
+                id: true,
+                status: true,
                 landlordId: true,
                 commissionPct: true,
+                requestedAt: true,
+                authorizedAt: true,
+                property: {
+                    select: { id: true, title: true, city: true }
+                },
                 landlord: {
                     select: {
                         id: true, firstName: true, lastName: true,
@@ -393,11 +404,39 @@ export class AgentService {
                     }
                 }
             },
-            distinct: ["landlordId"],
-            orderBy: { authorizedAt: "desc" }
+            orderBy: { createdAt: "desc" }
         });
-        return delegations.map(d => ({ ...d.landlord, agreedCommissionPct: d.commissionPct }));
+
+        // Build a de-duped landlord list, with pendingApproval and pendingProperties metadata
+        const landlordMap = new Map<string, any>();
+        for (const d of delegations) {
+            const existing = landlordMap.get(d.landlordId);
+            if (!existing) {
+                landlordMap.set(d.landlordId, {
+                    ...d.landlord,
+                    agreedCommissionPct: d.commissionPct,
+                    pendingApproval: d.status === AgentListingStatus.PENDING_LANDLORD,
+                    authorizedAt: d.authorizedAt,
+                    pendingProperties: d.status === AgentListingStatus.PENDING_LANDLORD
+                        ? [{ id: d.property.id, title: d.property.title, city: d.property.city }]
+                        : [],
+                });
+            } else {
+                // If we already have this landlord as AUTHORIZED, keep them as authorized
+                if (d.status === AgentListingStatus.AUTHORIZED) {
+                    existing.pendingApproval = false;
+                    existing.agreedCommissionPct = d.commissionPct;
+                    existing.authorizedAt = d.authorizedAt;
+                } else if (existing.pendingApproval) {
+                    existing.pendingProperties.push({
+                        id: d.property.id, title: d.property.title, city: d.property.city
+                    });
+                }
+            }
+        }
+        return Array.from(landlordMap.values());
     }
+
 
     /**
      * Agent creates a new property listing on behalf of an authorized landlord.
