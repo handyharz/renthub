@@ -455,6 +455,9 @@ export class AgentService {
         address: string;
         city: string;
         state: string;
+        zipCode?: string;
+        latitude?: number;
+        longitude?: number;
         propertyType: string;
         bedrooms: number;
         bathrooms: number;
@@ -465,6 +468,7 @@ export class AgentService {
         cautionFee?: number;
         legalFee?: number;
         agentFee?: number;
+        serviceFee?: number;
         paymentTerms?: string;
         negotiable?: boolean;
         furnished?: boolean;
@@ -473,6 +477,7 @@ export class AgentService {
         powerSupply?: string;
         waterSupply?: string;
         amenities?: string[];
+        images?: string[];
         agentNote?: string;
     }) {
         // 1. Verify agent is ACTIVE
@@ -508,6 +513,9 @@ export class AgentService {
                 address: data.address,
                 city: data.city,
                 state: data.state,
+                zipCode: data.zipCode,
+                latitude: data.latitude,
+                longitude: data.longitude,
                 propertyType: data.propertyType as any,
                 bedrooms: data.bedrooms,
                 bathrooms: data.bathrooms,
@@ -518,6 +526,7 @@ export class AgentService {
                 cautionFee: data.cautionFee ?? 0,
                 legalFee: data.legalFee ?? 0,
                 agentFee: data.agentFee ?? 0,
+                serviceFee: data.serviceFee ?? 0,
                 paymentTerms: data.paymentTerms as any ?? "TWO_YEARS",
                 negotiable: data.negotiable ?? false,
                 furnished: data.furnished ?? false,
@@ -527,6 +536,14 @@ export class AgentService {
                 waterSupply: data.waterSupply as any ?? "BOREHOLE",
                 status: "DRAFT" as any,
                 landlord: { connect: { id: data.landlordId } },
+                images: data.images?.length ? {
+                    create: data.images.map((url: string, index: number) => ({
+                        url,
+                        publicId: `ag_img_${Date.now()}_${index}`,
+                        isPrimary: index === 0,
+                        order: index,
+                    }))
+                } : undefined,
                 amenities: data.amenities?.length ? {
                     create: data.amenities.map((name: string) => ({ amenity: { connect: { name } } }))
                 } : undefined,

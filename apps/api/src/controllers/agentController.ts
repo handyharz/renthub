@@ -193,9 +193,10 @@ export const createListingForLandlord = async (req: Request, res: Response) => {
         const {
             landlordId, title, description, address, city, state,
             propertyType, bedrooms, bathrooms, toilets, parkingSpaces,
-            floorArea, pricePerYear, cautionFee, legalFee, agentFee,
+            floorArea, pricePerYear, cautionFee, legalFee, agentFee, serviceFee,
             paymentTerms, negotiable, furnished, serviced, petsAllowed,
             powerSupply, waterSupply, amenities, agentNote,
+            zipCode, latitude, longitude, images,
         } = req.body;
 
         if (!landlordId) return fail(res, "landlordId is required", 400);
@@ -210,6 +211,9 @@ export const createListingForLandlord = async (req: Request, res: Response) => {
             address: String(address),
             city: String(city),
             state: String(state),
+            zipCode: zipCode ? String(zipCode) : undefined,
+            latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : undefined,
+            longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : undefined,
             propertyType: String(propertyType),
             bedrooms: parseInt(bedrooms),
             bathrooms: parseInt(bathrooms),
@@ -220,6 +224,7 @@ export const createListingForLandlord = async (req: Request, res: Response) => {
             cautionFee: cautionFee ? parseInt(cautionFee) : undefined,
             legalFee: legalFee ? parseInt(legalFee) : undefined,
             agentFee: agentFee ? parseInt(agentFee) : undefined,
+            serviceFee: serviceFee ? parseInt(serviceFee) : undefined,
             paymentTerms: paymentTerms ? String(paymentTerms) : undefined,
             negotiable: negotiable === true || negotiable === "true",
             furnished: furnished === true || furnished === "true",
@@ -228,6 +233,7 @@ export const createListingForLandlord = async (req: Request, res: Response) => {
             powerSupply: powerSupply ? String(powerSupply) : undefined,
             waterSupply: waterSupply ? String(waterSupply) : undefined,
             amenities: Array.isArray(amenities) ? amenities.map(String) : undefined,
+            images: Array.isArray(images) ? images.map(String) : undefined,
             agentNote: agentNote ? String(agentNote) : undefined,
         });
 

@@ -1119,14 +1119,15 @@ export default function AgentDashboard() {
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                         <h3 className="text-lg font-bold text-[var(--text-primary)]">My Listings</h3>
                         <div className="flex gap-2">
-                            <Button
-                                onClick={() => setShowAddPropertyModal(true)}
-                                size="sm"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 text-xs font-semibold"
-                            >
-                                <PlusSquare className="h-3.5 w-3.5 mr-1" />
-                                Add Property for Client
-                            </Button>
+                            <Link href="/properties/new-for-client">
+                                <Button
+                                    size="sm"
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 text-xs font-semibold"
+                                >
+                                    <PlusSquare className="h-3.5 w-3.5 mr-1" />
+                                    Add Property for Client
+                                </Button>
+                            </Link>
                             <Button
                                 onClick={() => setShowDelegationModal(true)}
                                 size="sm"
