@@ -573,6 +573,16 @@ export default function AdminAgentsPage() {
                                                                     License: {agent.licenseNumber}
                                                                 </span>
                                                             )}
+                                                            {agent.user.idDocumentUrl && (
+                                                                <a
+                                                                    href={agent.user.idDocumentUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200 dark:border-emerald-800 hover:underline"
+                                                                >
+                                                                    <ShieldCheck className="h-3 w-3" /> Gov ID
+                                                                </a>
+                                                            )}
                                                             {agent.addressDocUrl && (
                                                                 <a
                                                                     href={agent.addressDocUrl}
@@ -581,6 +591,16 @@ export default function AdminAgentsPage() {
                                                                     className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 rounded-full font-semibold border border-blue-200 dark:border-blue-800 hover:underline"
                                                                 >
                                                                     <FileText className="h-3 w-3" /> Address Proof
+                                                                </a>
+                                                            )}
+                                                            {agent.licenseDocUrl && (
+                                                                <a
+                                                                    href={agent.licenseDocUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 rounded-full font-semibold border border-indigo-200 dark:border-indigo-800 hover:underline"
+                                                                >
+                                                                    <ShieldCheck className="h-3 w-3" /> License Doc
                                                                 </a>
                                                             )}
                                                             {agent.cacDocUrl && (
@@ -698,6 +718,12 @@ export default function AdminAgentsPage() {
                                                                 {agent.businessName}
                                                             </p>
                                                         )}
+                                                        {agent.businessAddress && (
+                                                            <p className="text-xs text-[var(--text-secondary)] mt-1 flex items-center gap-1.5 font-medium">
+                                                                <MapPin className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                                                <span className="text-[var(--text-muted)] font-normal">Stated Office:</span> {agent.businessAddress}
+                                                            </p>
+                                                        )}
                                                         <div className="flex flex-wrap gap-3 mt-2 text-xs text-[var(--text-muted)]">
                                                             {agent.user.email && (
                                                                 <span className="flex items-center gap-1">
@@ -760,6 +786,21 @@ export default function AdminAgentsPage() {
                                                                     <AlertCircle className="h-3 w-3" /> Missing Address Proof (Required)
                                                                 </span>
                                                             )}
+
+                                                            {agent.licenseDocUrl ? (
+                                                                <a
+                                                                    href={agent.licenseDocUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-bold hover:underline"
+                                                                >
+                                                                    <ShieldCheck className="h-3.5 w-3.5" /> View License Certificate <ExternalLink className="h-2.5 w-2.5" />
+                                                                </a>
+                                                            ) : agent.licenseNumber ? (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px] font-semibold">
+                                                                    <AlertCircle className="h-3 w-3" /> Stated License (No Doc Uploaded)
+                                                                </span>
+                                                            ) : null}
 
                                                             {agent.cacDocUrl ? (
                                                                 <a
