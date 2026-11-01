@@ -3315,8 +3315,8 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                 >
                                     {/* Top Bar: Property Thumbnail, Title, Address & Status */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
-                                        <div className="flex items-center gap-3.5 min-w-0">
-                                            <div className="h-14 w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
+                                        <div className="flex items-center gap-3 sm:gap-3.5 w-full sm:w-auto flex-1 min-w-0">
+                                            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
                                                 <Image
                                                     src={primaryImage}
                                                     alt={tour.property?.title || "Property"}
@@ -3324,8 +3324,8 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                     className="object-cover"
                                                 />
                                             </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 min-w-0">
                                                     <h3 className="font-extrabold text-[var(--text-primary)] text-sm sm:text-base leading-snug truncate">
                                                         {tour.property?.title}
                                                     </h3>
@@ -3340,10 +3340,12 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                         </Link>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-0.5 truncate">
+                                                <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-0.5 min-w-0">
                                                     <MapPin className="h-3 w-3 shrink-0 text-[var(--color-brand-orange)]" />
-                                                    {tour.property?.address ? `${tour.property.address}, ` : ""}
-                                                    {tour.property?.city}, {tour.property?.state}
+                                                    <span className="truncate">
+                                                        {tour.property?.address ? `${tour.property.address}, ` : ""}
+                                                        {tour.property?.city}, {tour.property?.state}
+                                                    </span>
                                                 </p>
                                                 {tour.property?.pricePerYear && (
                                                     <div className="text-xs font-black text-[var(--color-brand-green)] mt-1">

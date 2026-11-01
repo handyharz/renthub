@@ -233,17 +233,17 @@ export function LandlordApplicationsTab() {
             </div>
 
             {/* Sub-navigation Switcher: Applications vs Renewals */}
-            <div className="flex border-b border-[var(--border-color)] gap-2">
+            <div className="flex border-b border-[var(--border-color)] gap-2 overflow-x-auto no-scrollbar scroll-smooth">
                 <button
                     type="button"
                     onClick={() => setActiveSection("applications")}
-                    className={`pb-3 px-3 text-xs sm:text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
+                    className={`shrink-0 whitespace-nowrap pb-3 px-3 text-xs sm:text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
                         activeSection === "applications"
                             ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)]"
                             : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     }`}
                 >
-                    <FileText className="h-4 w-4" />
+                    <FileText className="h-4 w-4 shrink-0" />
                     Incoming Applications
                     {stats.pending > 0 && (
                         <span className="ml-1 px-1.5 py-0.5 text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-full font-black">
@@ -254,13 +254,13 @@ export function LandlordApplicationsTab() {
                 <button
                     type="button"
                     onClick={() => setActiveSection("renewals")}
-                    className={`pb-3 px-3 text-xs sm:text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
+                    className={`shrink-0 whitespace-nowrap pb-3 px-3 text-xs sm:text-sm font-extrabold flex items-center gap-2 border-b-2 transition-all ${
                         activeSection === "renewals"
                             ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)]"
                             : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                     }`}
                 >
-                    <Sparkles className="h-4 w-4 text-[var(--color-brand-green)]" />
+                    <Sparkles className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
                     Lease Renewals & Extensions
                 </button>
             </div>
@@ -477,8 +477,8 @@ export function LandlordApplicationsTab() {
                                 >
                                     {/* Top Bar: Property info & status badge */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
-                                        <div className="flex items-center gap-3.5 min-w-0">
-                                            <div className="h-14 w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
+                                        <div className="flex items-center gap-3 sm:gap-3.5 w-full sm:w-auto flex-1 min-w-0">
+                                            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
                                                 {primaryImage ? (
                                                     <Image
                                                         src={primaryImage}
@@ -492,8 +492,8 @@ export function LandlordApplicationsTab() {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 min-w-0">
                                                     <h3 className="font-extrabold text-[var(--text-primary)] text-sm sm:text-base leading-snug truncate">
                                                         {app.property.title}
                                                     </h3>
@@ -506,9 +506,9 @@ export function LandlordApplicationsTab() {
                                                         <ExternalLink className="h-3.5 w-3.5" />
                                                     </Link>
                                                 </div>
-                                                <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-0.5 truncate">
+                                                <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-0.5 min-w-0">
                                                     <MapPin className="h-3 w-3 shrink-0 text-[var(--text-muted)]" />
-                                                    {app.property.address}, {app.property.city}
+                                                    <span className="truncate">{app.property.address}, {app.property.city}</span>
                                                 </p>
                                                 <div className="text-xs font-black text-[var(--color-brand-green)] mt-1">
                                                     {formatPrice(app.property.pricePerYear)}{" "}

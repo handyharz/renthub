@@ -322,7 +322,7 @@ export function AgentPayoutsSection({ dbUser, onRefreshUser }: { dbUser: any; on
                                 key={item.id}
                                 className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[var(--bg-card-hover)] transition-colors"
                             >
-                                <div className="flex items-center gap-3.5 min-w-0">
+                                <div className="flex items-center gap-3 sm:gap-3.5 w-full sm:w-auto flex-1 min-w-0">
                                     <div className="relative h-12 w-12 rounded-xl bg-[var(--bg-muted)] shrink-0 overflow-hidden border border-[var(--border-color)]">
                                         {item.propertyImage ? (
                                             <Image
@@ -337,34 +337,34 @@ export function AgentPayoutsSection({ dbUser, onRefreshUser }: { dbUser: any; on
                                             </div>
                                         )}
                                     </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap min-w-0">
                                             <Link
                                                 href={`/properties/${item.propertyId}`}
-                                                className="font-bold text-sm text-[var(--text-primary)] hover:text-purple-600 dark:hover:text-purple-400 transition-colors truncate"
+                                                className="font-bold text-sm text-[var(--text-primary)] hover:text-purple-600 dark:hover:text-purple-400 transition-colors truncate max-w-full"
                                             >
                                                 {item.propertyTitle}
                                             </Link>
                                             {item.status === "COMPLETED" && (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">
                                                     <CheckCircle2 className="h-3 w-3" />
                                                     Disbursed
                                                 </span>
                                             )}
                                             {item.status === "AUTHORIZED" && (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0">
                                                     <Clock className="h-3 w-3" />
                                                     Active Deal
                                                 </span>
                                             )}
                                             {item.status === "PENDING_LANDLORD" && (
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0">
                                                     <Clock className="h-3 w-3" />
                                                     Pending Auth
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+                                        <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate max-w-full">
                                             Landlord: {item.landlordName} · {item.propertyAddress}
                                         </p>
                                     </div>

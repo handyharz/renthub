@@ -600,8 +600,8 @@ export function TransactionsTab() {
                                 >
                                     {/* Top Bar: Property Thumbnail, Title, Address & Status */}
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
-                                        <div className="flex items-center gap-3.5 min-w-0">
-                                            <div className="h-14 w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
+                                        <div className="flex items-center gap-3 sm:gap-3.5 w-full sm:w-auto flex-1 min-w-0">
+                                            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
                                                 {primaryImage ? (
                                                     <Image
                                                         src={primaryImage}
@@ -615,8 +615,8 @@ export function TransactionsTab() {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 min-w-0">
                                                     <h3 className="font-extrabold text-[var(--text-primary)] text-sm sm:text-base leading-snug truncate">
                                                         {tx.property?.title}
                                                     </h3>
@@ -629,12 +629,13 @@ export function TransactionsTab() {
                                                         <ExternalLink className="h-3.5 w-3.5" />
                                                     </Link>
                                                 </div>
-                                                <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-0.5 truncate">
+                                                <p className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1 mt-0.5 min-w-0">
                                                     <MapPin className="h-3 w-3 shrink-0 text-[var(--text-muted)]" />
-                                                    {tx.property?.address}, {tx.property?.city}
+                                                    <span className="truncate">{tx.property?.address}, {tx.property?.city}</span>
                                                 </p>
-                                                <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">
-                                                    Transaction Reference: <span className="font-mono font-bold text-[var(--text-secondary)]">{tx.id.slice(0, 12)}...</span> • {new Date(tx.createdAt).toLocaleDateString()}
+                                                <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5 flex flex-wrap items-center gap-1">
+                                                    <span>Ref: <strong className="font-mono text-[var(--text-secondary)]">{tx.id.slice(0, 12)}...</strong></span>
+                                                    <span>• {new Date(tx.createdAt).toLocaleDateString()}</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -734,12 +735,12 @@ export function TransactionsTab() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center justify-between pt-0.5">
-                                                <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
-                                                    <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)]" />
-                                                    <span className="font-medium">Net Payout to Your Bank upon OTP Handover:</span>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pt-0.5">
+                                                <div className="flex items-center gap-1.5 text-[var(--text-secondary)] min-w-0">
+                                                    <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
+                                                    <span className="font-medium text-xs">Net Payout to Your Bank upon OTP Handover:</span>
                                                 </div>
-                                                <span className="text-base sm:text-lg font-black text-[var(--color-brand-green)]">
+                                                <span className="text-base sm:text-lg font-black text-[var(--color-brand-green)] shrink-0">
                                                     {formatPrice(netRentPayout)}
                                                 </span>
                                             </div>
