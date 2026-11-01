@@ -130,6 +130,12 @@ export class UserController {
                 onboardingCompleted: true,
             });
 
+            // Recalculate trust score asynchronously after any profile update
+            // (avatar, phone, names, idType etc. all affect the score)
+            trustScoreService.recalculateUserTrustScore(user.id).catch((err) =>
+                console.error(`Failed to recalculate trust score for user ${user.id}:`, err)
+            );
+
             return res.status(200).json({
                 success: true,
                 message: "User updated successfully",

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { verificationService } from "../services/verificationService";
 import { prisma } from "../config/database";
+import { trustScoreService } from "../services/trustScoreService";
 
 export const verificationController = {
     // Request OTP
@@ -76,7 +77,14 @@ export const verificationController = {
                     data: { phoneVerified: true },
                 });
 
+                // Recalculate trust score asynchronously so phone verification
+                // immediately reflects in the DB (30 → 45 or higher)
+                trustScoreService.recalculateUserTrustScore(user.id).catch((err) =>
+                    console.error(`Failed to recalculate trust score for user ${user.id}:`, err)
+                );
+
                 res.json({ success: true, message: "Phone number verified successfully!" });
+
             } else {
                 res.status(400).json({ success: false, message: "Invalid or expired OTP." });
             }

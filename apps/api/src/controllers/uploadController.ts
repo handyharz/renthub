@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { uploadService } from "../services/uploadService";
 import { prisma } from "../config/database";
 import multer from "multer";
+import { trustScoreService } from "../services/trustScoreService";
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -352,6 +353,11 @@ export class UploadController {
                     idDocumentUrl: result.secureUrl,
                 },
             });
+
+            // Trigger async trust score recalculation so UI shows "Under Review" state immediately
+            trustScoreService.recalculateUserTrustScore(userId).catch((err) =>
+                console.error(`Failed to recalculate trust score for user ${userId} after ID upload:`, err)
+            );
 
             return res.status(200).json({
                 success: true,

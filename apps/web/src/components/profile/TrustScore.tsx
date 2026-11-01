@@ -1,9 +1,11 @@
 "use client";
 
-import { ShieldCheck, CheckCircle2, Circle, Sparkles, TrendingUp, Clock } from "lucide-react";
+import { ShieldCheck, CheckCircle2, Circle, TrendingUp, Clock } from "lucide-react";
+import { calculateTrustScore } from "@/lib/utils";
 
 interface TrustScoreProps {
     user?: {
+        trustScore?: number | null;
         avatar?: string | null;
         firstName?: string | null;
         lastName?: string | null;
@@ -17,18 +19,7 @@ interface TrustScoreProps {
 }
 
 export function TrustScore({ user, className = "" }: TrustScoreProps) {
-    const calculateScore = () => {
-        if (!user) return 10;
-        let score = 10; // Base score for signing up
-        if (user.avatar) score += 10;
-        if (user.phone) score += 15;
-        if (user.phoneVerified) score += 25;
-        // Government ID +40 pts is ONLY awarded once confirmed & verified by admin/compliance
-        if (user.idDocumentUrl && user.verified) score += 40;
-        return Math.min(score, 100);
-    };
-
-    const score = calculateScore();
+    const score = calculateTrustScore(user);
     const hasIdUploaded = Boolean(user?.idDocumentUrl);
     const isIdVerified = Boolean(user?.verified);
 
@@ -39,18 +30,28 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
                 badgeBg: "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-400",
                 strokeColor: "#f43f5e",
                 hint: hasIdUploaded && !isIdVerified
-                    ? "Government ID uploaded & under review. +40 pts unlocks upon admin confirmation."
-                    : "Complete your phone & ID verification to become trusted.",
+                    ? "Government ID uploaded & under review. Messaging unlocks at 60% — reached by verifying your phone."
+                    : "Verify your phone (+25%) to reach 60% and unlock messaging. Add a Government ID for full trust.",
             };
         }
-        if (score < 80) {
+        if (score < 60) {
             return {
                 label: hasIdUploaded && !isIdVerified ? "Review In Progress" : "Partially Verified",
                 badgeBg: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",
                 strokeColor: "#f59e0b",
                 hint: hasIdUploaded && !isIdVerified
-                    ? "Government ID is submitted and currently under compliance review. Full +40 pts will unlock upon admin confirmation."
-                    : "Upload a valid government ID to unlock the 100% Verified badge.",
+                    ? "Government ID is under compliance review. Verify your phone to unlock messaging at 60%."
+                    : "Verify your phone number to reach 60% and unlock direct messaging with landlords.",
+            };
+        }
+        if (score < 80) {
+            return {
+                label: hasIdUploaded && !isIdVerified ? "Review In Progress" : "Messaging Unlocked",
+                badgeBg: "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400",
+                strokeColor: "#f59e0b",
+                hint: hasIdUploaded && !isIdVerified
+                    ? "Government ID is submitted and under compliance review. Full +40 pts unlock upon admin confirmation."
+                    : "Upload a valid government ID to unlock the 100% Verified badge and full platform trust.",
             };
         }
         return {
@@ -61,6 +62,7 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
         };
     };
 
+
     const tier = getTier();
     const circumference = 2 * Math.PI * 34; // r=34 -> ~213.6
     const strokeDashoffset = circumference - (circumference * score) / 100;
@@ -68,7 +70,8 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
     const checklist = [
         { label: "Account Created", completed: true, pending: false, points: "+10%" },
         { label: "Profile Photo", completed: Boolean(user?.avatar), pending: false, points: "+10%" },
-        { label: "Phone Verified", completed: Boolean(user?.phoneVerified), pending: false, points: "+40%" },
+        { label: "Phone Number", completed: Boolean(user?.phone), pending: false, points: "+15%" },
+        { label: "Phone Verified", completed: Boolean(user?.phoneVerified), pending: false, points: "+25%" },
         {
             label: isIdVerified
                 ? "Government ID Verified"
@@ -139,7 +142,7 @@ export function TrustScore({ user, className = "" }: TrustScoreProps) {
                 <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-primary)]">
                         <TrendingUp className="h-3.5 w-3.5 text-[var(--color-brand-green)]" />
-                        <span>Profile Strength</span>
+                        <span>Trust Score</span>
                     </div>
                     <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-medium">
                         {tier.hint}

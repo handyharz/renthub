@@ -24,17 +24,20 @@ export function calculateTrustScore(user?: {
     phoneVerified?: boolean;
     idDocumentUrl?: string | null;
     verified?: boolean;
-} | null) {
+} | null): number {
     if (!user) return 10;
-    if (typeof user.trustScore === "number" && user.trustScore > 0) {
+    // Prefer the persisted DB trust score once the backend has calculated it (> 30 default)
+    // The Prisma default for a brand-new user is 30, so > 30 means the backend has run a
+    // real calculation. We trust the backend over the local heuristic in that case.
+    if (typeof user.trustScore === "number" && user.trustScore > 30) {
         return Math.min(Math.max(user.trustScore, 0), 100);
     }
+    // Fallback local calculation (mirrors TrustScore.tsx milestones exactly)
     let score = 10; // Base score for signing up
     if (user?.avatar) score += 10;
-    if (user?.firstName && user?.lastName) score += 10;
-    if (user?.phone) score += 10;
-    if (user?.phoneVerified) score += 20;
-    // Government ID score requires admin confirmation before awarding points
+    if (user?.phone) score += 15;
+    if (user?.phoneVerified) score += 25;
+    // Government ID +40 pts ONLY once admin-confirmed (verified flag)
     if (user?.idDocumentUrl && user?.verified) score += 40;
     return Math.min(score, 100);
 }

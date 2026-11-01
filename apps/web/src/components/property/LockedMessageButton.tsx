@@ -21,6 +21,8 @@ export function LockedMessageButton({ landlordId, propertyId, propertyTitle, cla
     const { user } = useUser();
     const router = useRouter();
     const [trustScore, setTrustScore] = useState(0);
+    const [hasIdUploaded, setHasIdUploaded] = useState(false);
+    const [isIdVerified, setIsIdVerified] = useState(false);
     const [loading, setLoading] = useState(true);
     const [initiating, setInitiating] = useState(false);
     const [showLockModal, setShowLockModal] = useState(false);
@@ -36,8 +38,11 @@ export function LockedMessageButton({ landlordId, propertyId, propertyTitle, cla
     const fetchUserScore = async () => {
         try {
             const res = await api.get(`/users/me?clerkId=${user?.id}`);
-            const score = calculateTrustScore(res.data.data);
+            const userData = res.data.data;
+            const score = calculateTrustScore(userData);
             setTrustScore(score);
+            setHasIdUploaded(Boolean(userData?.idDocumentUrl));
+            setIsIdVerified(Boolean(userData?.verified));
         } catch (error) {
             console.error("Failed to fetch user score:", error);
         } finally {
@@ -147,13 +152,28 @@ export function LockedMessageButton({ landlordId, propertyId, propertyTitle, cla
                             </div>
                         </div>
 
-                        <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
-                            Complete your profile verification with your Government ID or BVN/NIN to unlock instant messaging.
-                        </p>
+                        {hasIdUploaded && !isIdVerified ? (
+                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 text-left">
+                                <p className="text-xs font-bold text-amber-700 dark:text-amber-300 mb-1 flex items-center gap-1.5">
+                                    <Lock className="h-3.5 w-3.5" />
+                                    Government ID Under Review
+                                </p>
+                                <p className="text-xs text-[var(--text-secondary)] font-medium">
+                                    Your ID document has been submitted and is awaiting compliance review.
+                                    Once approved by our team, your trust score will automatically update and unlock messaging.
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium">
+                                {!hasIdUploaded
+                                    ? "Complete your profile verification with your Government ID or BVN/NIN to unlock instant messaging."
+                                    : "Complete your phone verification to unlock messaging access."}
+                            </p>
+                        )}
 
                         <Link href="/dashboard/profile" onClick={() => setShowLockModal(false)}>
                             <Button className="w-full bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-black h-12 rounded-2xl shadow-md">
-                                Complete Profile Verification
+                                {hasIdUploaded && !isIdVerified ? "Check Verification Status" : "Complete Profile Verification"}
                             </Button>
                         </Link>
                     </div>
