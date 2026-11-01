@@ -308,7 +308,7 @@ export default function PropertyDetailsPage() {
             </div>
 
             {/* Main Content Layout */}
-            <div className="container-wide py-8">
+            <div className="container-wide py-8 pb-24 lg:pb-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     {/* LEFT 2 COLUMNS: Property Deep-Dive */}
                     <div className="lg:col-span-2 space-y-8">
@@ -383,83 +383,84 @@ export default function PropertyDetailsPage() {
                             </div>
 
                             {/* Key Specifications Grid (6 Stat Cards) */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 border-t border-[var(--border-color)]">
-                                <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
-                                        <Bed className="w-5 h-5" />
+                            <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-3 pt-4 border-t border-[var(--border-color)]">
+                                <div className="p-2.5 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-2 sm:gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
+                                        <Bed className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Bedrooms</p>
-                                        <p className="text-base sm:text-lg font-black text-[var(--text-primary)]">
-                                            {property.bedrooms} {property.bedrooms === 1 ? "Bed" : "Beds"}
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Beds</p>
+                                        <p className="text-sm sm:text-lg font-black text-[var(--text-primary)] truncate">
+                                            {property.bedrooms}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
-                                        <Bath className="w-5 h-5" />
+                                <div className="p-2.5 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-2 sm:gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
+                                        <Bath className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Bathrooms</p>
-                                        <p className="text-base sm:text-lg font-black text-[var(--text-primary)]">
-                                            {property.bathrooms} {property.bathrooms === 1 ? "Bath" : "Baths"}
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Baths</p>
+                                        <p className="text-sm sm:text-lg font-black text-[var(--text-primary)] truncate">
+                                            {property.bathrooms}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
-                                        <Sparkles className="w-5 h-5" />
+                                <div className="p-2.5 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-2 sm:gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-purple-500/10 text-purple-500 shrink-0">
+                                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Toilets</p>
-                                        <p className="text-base sm:text-lg font-black text-[var(--text-primary)]">
-                                            {property.toilets || property.bathrooms} Toilets
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Toilets</p>
+                                        <p className="text-sm sm:text-lg font-black text-[var(--text-primary)] truncate">
+                                            {property.toilets || property.bathrooms}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
-                                        <Car className="w-5 h-5" />
+                                <div className="p-2.5 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-2 sm:gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
+                                        <Car className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Parking</p>
-                                        <p className="text-base sm:text-lg font-black text-[var(--text-primary)]">
-                                            {property.parkingSpaces > 0 ? `${property.parkingSpaces} Cars` : "Available"}
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Parking</p>
+                                        <p className="text-sm sm:text-lg font-black text-[var(--text-primary)] truncate">
+                                            {property.parkingSpaces > 0 ? `${property.parkingSpaces}` : "—"}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500 shrink-0">
-                                        <Maximize className="w-5 h-5" />
+                                <div className="p-2.5 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-2 sm:gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-rose-500/10 text-rose-500 shrink-0">
+                                        <Maximize className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Floor Area</p>
-                                        <p className="text-base sm:text-lg font-black text-[var(--text-primary)]">
-                                            {property.floorArea ? `${property.floorArea} m²` : "Full Compound"}
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Area</p>
+                                        <p className="text-sm sm:text-lg font-black text-[var(--text-primary)] truncate">
+                                            {property.floorArea ? `${property.floorArea}m²` : "Full"}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-500 shrink-0">
-                                        <Building2 className="w-5 h-5" />
+                                <div className="p-2.5 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-2 sm:gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-teal-500/10 text-teal-500 shrink-0">
+                                        <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <p className="text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Type</p>
-                                        <p className="text-base sm:text-lg font-black text-[var(--text-primary)] truncate">
-                                            {property.propertyType?.replace(/_/g, " ")}
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] sm:text-xs text-[var(--text-muted)] font-bold uppercase tracking-wider">Type</p>
+                                        <p className="text-sm sm:text-lg font-black text-[var(--text-primary)] truncate capitalize">
+                                            {property.propertyType?.replace(/_/g, " ").toLowerCase()}
                                         </p>
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
                         {/* 2. Nigerian Living & Infrastructure Blueprint */}
-                        <div className="bg-[var(--bg-card)] p-6 sm:p-8 rounded-3xl border border-[var(--border-color)] shadow-sm space-y-6">
+                        <div className="bg-[var(--bg-card)] p-5 sm:p-8 rounded-3xl border border-[var(--border-color)] shadow-sm space-y-5">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h2 className="text-xl font-black text-[var(--text-primary)]">
@@ -469,68 +470,68 @@ export default function PropertyDetailsPage() {
                                         Crucial Nigerian utilities and compound infrastructure verified for this home.
                                     </p>
                                 </div>
-                                <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-500">
+                                <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-500 shrink-0">
                                     <ShieldCheck className="w-5 h-5" />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3.5">
-                                    <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 shrink-0 mt-0.5">
-                                        <Zap className="w-5 h-5" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-amber-500/10 text-amber-500 shrink-0 mt-0.5">
+                                        <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <h3 className="text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Power System</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="text-[10px] sm:text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Power System</h3>
                                         <p className="text-sm font-black text-[var(--text-primary)] capitalize mt-0.5">
                                             {powerSupplyLabel}
                                         </p>
-                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                                            Equipped with reliable power support to maintain continuous supply.
+                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium leading-snug">
+                                            Reliable power support for continuous supply.
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3.5">
-                                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500 shrink-0 mt-0.5">
-                                        <Droplets className="w-5 h-5" />
+                                <div className="p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-blue-500/10 text-blue-500 shrink-0 mt-0.5">
+                                        <Droplets className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <h3 className="text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Water System</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="text-[10px] sm:text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Water System</h3>
                                         <p className="text-sm font-black text-[var(--text-primary)] capitalize mt-0.5">
                                             {waterSupplyLabel}
                                         </p>
-                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                                            Dedicated clean water source with overhead storage capacity.
+                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium leading-snug">
+                                            Clean water source with overhead storage.
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3.5">
-                                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0 mt-0.5">
-                                        <Shield className="w-5 h-5" />
+                                <div className="p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0 mt-0.5">
+                                        <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <h3 className="text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Perimeter Security</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="text-[10px] sm:text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Perimeter Security</h3>
                                         <p className="text-sm font-black text-[var(--text-primary)] mt-0.5">
                                             Gated Compound & Security Fence
                                         </p>
-                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                                            Secured access control with reinforced boundary infrastructure.
+                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium leading-snug">
+                                            Secured access control with reinforced boundary.
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3.5">
-                                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-500 shrink-0 mt-0.5">
-                                        <Building2 className="w-5 h-5" />
+                                <div className="p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] flex items-start gap-3">
+                                    <div className="p-2 sm:p-2.5 rounded-xl bg-purple-500/10 text-purple-500 shrink-0 mt-0.5">
+                                        <Building2 className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </div>
-                                    <div>
-                                        <h3 className="text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Facility Management</h3>
+                                    <div className="min-w-0">
+                                        <h3 className="text-[10px] sm:text-xs uppercase font-extrabold text-[var(--text-muted)] tracking-wider">Facility Management</h3>
                                         <p className="text-sm font-black text-[var(--text-primary)] mt-0.5">
                                             {property.serviced ? "Fully Serviced Estate" : "Self-Managed Compound"}
                                         </p>
-                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium">
-                                            {property.petsAllowed ? "Pets are warmly welcomed on compound rules." : "Strict no-pets policy maintained."}
+                                        <p className="text-xs text-[var(--text-secondary)] mt-1 font-medium leading-snug">
+                                            {property.petsAllowed ? "Pets welcome on compound rules." : "Strict no-pets policy maintained."}
                                         </p>
                                     </div>
                                 </div>
@@ -555,81 +556,81 @@ export default function PropertyDetailsPage() {
                                 </div>
 
                                 <div className="divide-y divide-[var(--border-color)] border border-[var(--border-color)] rounded-2xl overflow-hidden bg-[var(--bg-muted)]/20">
-                                    <div className="p-4 flex items-center justify-between text-sm">
-                                        <div>
-                                            <p className="font-extrabold text-[var(--text-primary)]">Annual Rent</p>
-                                            <p className="text-xs text-[var(--text-secondary)]">Base tenancy rate per year</p>
+                                    <div className="px-4 py-3.5 flex items-center justify-between gap-3 text-sm">
+                                        <div className="min-w-0">
+                                            <p className="font-extrabold text-[var(--text-primary)] text-xs sm:text-sm">Annual Rent</p>
+                                            <p className="text-[10px] sm:text-xs text-[var(--text-secondary)]">Base tenancy rate per year</p>
                                         </div>
-                                        <p className="font-black text-base text-[var(--text-primary)]">
+                                        <p className="font-black text-sm sm:text-base text-[var(--text-primary)] shrink-0">
                                             {formatPrice(feeCalculation.rent)}
                                         </p>
                                     </div>
 
-                                    <div className="p-4 flex items-center justify-between text-sm">
-                                        <div>
-                                            <p className="font-extrabold text-[var(--text-primary)]">Refundable Caution Deposit</p>
-                                            <p className="text-xs text-[var(--text-secondary)]">100% refundable upon exit inspection</p>
+                                    <div className="px-4 py-3.5 flex items-center justify-between gap-3 text-sm">
+                                        <div className="min-w-0">
+                                            <p className="font-extrabold text-[var(--text-primary)] text-xs sm:text-sm">Refundable Caution</p>
+                                            <p className="text-[10px] sm:text-xs text-[var(--text-secondary)]">100% refundable upon exit inspection</p>
                                         </div>
-                                        <p className="font-black text-base text-[var(--text-primary)]">
+                                        <p className="font-black text-sm sm:text-base text-[var(--text-primary)] shrink-0">
                                             {formatPrice(feeCalculation.caution)}
                                         </p>
                                     </div>
 
-                                    <div className="p-4 flex items-center justify-between text-sm">
-                                        <div>
-                                            <p className="font-extrabold text-[var(--text-primary)]">Legal & Tenancy Documentation</p>
-                                            <p className="text-xs text-[var(--text-secondary)]">Agreement drafting & legal stamp duty</p>
+                                    <div className="px-4 py-3.5 flex items-center justify-between gap-3 text-sm">
+                                        <div className="min-w-0">
+                                            <p className="font-extrabold text-[var(--text-primary)] text-xs sm:text-sm">Legal & Documentation</p>
+                                            <p className="text-[10px] sm:text-xs text-[var(--text-secondary)]">Agreement drafting & legal stamp duty</p>
                                         </div>
-                                        <p className="font-black text-base text-[var(--text-primary)]">
+                                        <p className="font-black text-sm sm:text-base text-[var(--text-primary)] shrink-0">
                                             {formatPrice(feeCalculation.legal)}
                                         </p>
                                     </div>
 
-                                    <div className="p-4 flex items-center justify-between text-sm">
-                                        <div>
-                                            <p className="font-extrabold text-[var(--text-primary)]">Agency / Brokerage Fee</p>
-                                            <p className="text-xs text-[var(--text-secondary)]">
-                                                {feeCalculation.agent === 0 ? "Direct landlord listing • Zero agency markup" : "Standard agency fee"}
+                                    <div className="px-4 py-3.5 flex items-center justify-between gap-3 text-sm">
+                                        <div className="min-w-0">
+                                            <p className="font-extrabold text-[var(--text-primary)] text-xs sm:text-sm">Agency / Brokerage Fee</p>
+                                            <p className="text-[10px] sm:text-xs text-[var(--text-secondary)]">
+                                                {feeCalculation.agent === 0 ? "Direct listing • Zero agency markup" : "Standard agency fee"}
                                             </p>
                                         </div>
-                                        <p className={`font-black text-base ${feeCalculation.agent === 0 ? "text-emerald-500" : "text-[var(--text-primary)]"}`}>
-                                            {feeCalculation.agent === 0 ? "₦0 (Free)" : formatPrice(feeCalculation.agent)}
+                                        <p className={`font-black text-sm sm:text-base shrink-0 ${feeCalculation.agent === 0 ? "text-emerald-500" : "text-[var(--text-primary)]"}`}>
+                                            {feeCalculation.agent === 0 ? "₦0" : formatPrice(feeCalculation.agent)}
                                         </p>
                                     </div>
 
-                                    <div className="p-4 flex items-center justify-between text-sm bg-emerald-500/5">
-                                        <div>
-                                            <p className="font-extrabold text-[var(--color-brand-green)]">RentHub Escrow Protection (2%)</p>
-                                            <p className="text-xs text-[var(--text-secondary)]">100% fraud immunity • Key handover OTP protection</p>
+                                    <div className="px-4 py-3.5 flex items-center justify-between gap-3 text-sm bg-emerald-500/5">
+                                        <div className="min-w-0">
+                                            <p className="font-extrabold text-[var(--color-brand-green)] text-xs sm:text-sm">Escrow Protection (2%)</p>
+                                            <p className="text-[10px] sm:text-xs text-[var(--text-secondary)]">100% fraud immunity • Key handover OTP</p>
                                         </div>
-                                        <p className="font-black text-base text-[var(--color-brand-green)]">
+                                        <p className="font-black text-sm sm:text-base text-[var(--color-brand-green)] shrink-0">
                                             {formatPrice(feeCalculation.platformFee)}
                                         </p>
                                     </div>
 
                                     {feeCalculation.service > 0 && (
-                                        <div className="p-4 flex items-center justify-between text-sm">
-                                            <div>
-                                                <p className="font-extrabold text-[var(--text-primary)]">Annual Service Charge</p>
-                                                <p className="text-xs text-[var(--text-secondary)]">Compound maintenance, security, & waste</p>
+                                        <div className="px-4 py-3.5 flex items-center justify-between gap-3 text-sm">
+                                            <div className="min-w-0">
+                                                <p className="font-extrabold text-[var(--text-primary)] text-xs sm:text-sm">Annual Service Charge</p>
+                                                <p className="text-[10px] sm:text-xs text-[var(--text-secondary)]">Compound maintenance, security & waste</p>
                                             </div>
-                                            <p className="font-black text-base text-[var(--text-primary)]">
+                                            <p className="font-black text-sm sm:text-base text-[var(--text-primary)] shrink-0">
                                                 {formatPrice(feeCalculation.service)}
                                             </p>
                                         </div>
                                     )}
 
                                     {/* Total Move-In Cost Row */}
-                                    <div className="p-5 bg-[var(--bg-muted)]/60 flex items-center justify-between">
-                                        <div>
-                                            <p className="font-black text-base text-[var(--text-primary)]">
-                                                Total Estimated Move-In Cost
+                                    <div className="px-4 py-4 sm:p-5 bg-[var(--bg-muted)]/60 flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="font-black text-sm sm:text-base text-[var(--text-primary)]">
+                                                Total Move-In Cost
                                             </p>
-                                            <p className="text-xs text-[var(--text-secondary)] font-medium">
-                                                Equivalent to approx. {formatPrice(feeCalculation.monthlyEq)}/month
+                                            <p className="text-[10px] sm:text-xs text-[var(--text-secondary)] font-medium">
+                                                ≈ {formatPrice(feeCalculation.monthlyEq)}/month
                                             </p>
                                         </div>
-                                        <p className="text-xl sm:text-2xl font-black text-[var(--color-brand-green)]">
+                                        <p className="text-lg sm:text-2xl font-black text-[var(--color-brand-green)] shrink-0">
                                             {formatPrice(feeCalculation.total)}
                                         </p>
                                     </div>
@@ -655,13 +656,13 @@ export default function PropertyDetailsPage() {
                             </div>
 
                             {property.amenities && property.amenities.length > 0 ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                                     {property.amenities.map((pa: any, idx: number) => {
                                         const name = pa.amenity?.name || "Amenity";
                                         return (
                                             <div
                                                 key={idx}
-                                                className="flex items-center gap-3 p-3.5 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] text-[var(--text-primary)] font-bold text-xs sm:text-sm hover:border-[var(--color-brand-green)]/30 transition-all"
+                                                className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] text-[var(--text-primary)] font-bold text-xs hover:border-[var(--color-brand-green)]/30 transition-all"
                                             >
                                                 {getAmenityIcon(name)}
                                                 <span className="truncate">{name}</span>
@@ -685,8 +686,8 @@ export default function PropertyDetailsPage() {
                                         {property.address}, {property.city}, {property.state}, Nigeria
                                     </p>
                                 </div>
-                                <Badge variant="outline" className="border-[var(--border-color)] text-[var(--text-secondary)] font-bold text-xs self-start sm:self-auto">
-                                    Coordinates: {coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)}
+                                <Badge variant="outline" className="hidden sm:inline-flex border-[var(--border-color)] text-[var(--text-secondary)] font-bold text-xs">
+                                    {coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)}
                                 </Badge>
                             </div>
 
@@ -993,7 +994,7 @@ export default function PropertyDetailsPage() {
                 {/* Similar Properties in this Area */}
                 {similarProperties.length > 0 && (
                     <div className="mt-16 pt-12 border-t border-[var(--border-color)] space-y-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">
                                     Similar Homes in {property.city || property.state}
@@ -1002,7 +1003,7 @@ export default function PropertyDetailsPage() {
                                     Explore other verified listings in this neighborhood.
                                 </p>
                             </div>
-                            <Button asChild variant="outline" className="rounded-xl border-[var(--border-color)] font-bold text-xs">
+                            <Button asChild variant="outline" className="rounded-xl border-[var(--border-color)] font-bold text-xs self-start sm:self-auto">
                                 <Link href={`/search?city=${encodeURIComponent(property.city)}`}>
                                     View All in {property.city}
                                 </Link>
@@ -1019,36 +1020,43 @@ export default function PropertyDetailsPage() {
             </div>
 
             {/* Mobile Fixed Bottom Action Bar */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-card)]/95 backdrop-blur-md border-t border-[var(--border-color)] p-4 shadow-2xl flex items-center justify-between gap-3">
-                <div>
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block">
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-card)]/95 backdrop-blur-md border-t border-[var(--border-color)] px-4 py-3 shadow-2xl flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] block leading-none mb-0.5">
                         Annual Rent
                     </span>
-                    <span className="text-lg font-black text-[var(--color-brand-green)]">
+                    <span className="text-base font-black text-[var(--color-brand-green)] leading-none">
                         {formatPrice(property.pricePerYear)}
                     </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                     {isOwner ? (
                         <Button
                             asChild
-                            className="h-11 px-5 text-xs font-black bg-[var(--color-brand-green)] text-white rounded-xl shadow-md"
+                            className="h-10 px-4 text-xs font-black bg-[var(--color-brand-green)] text-white rounded-xl shadow-md"
                         >
                             <Link href={`/properties/${property.id}/edit`}>Edit Listing</Link>
+                        </Button>
+                    ) : property.status === "RENTED" ? (
+                        <Button
+                            disabled
+                            className="h-10 px-4 text-xs font-black bg-[var(--bg-muted)] text-[var(--text-muted)] border border-[var(--border-color)] rounded-xl cursor-not-allowed"
+                        >
+                            Already Rented
                         </Button>
                     ) : (
                         <>
                             <Button
                                 asChild
                                 variant="outline"
-                                className="h-11 px-4 text-xs font-black rounded-xl border-[var(--border-color)]"
+                                className="h-10 px-3 text-xs font-black rounded-xl border-[var(--border-color)]"
                             >
                                 <Link href={`/properties/${property.id}/tour`}>Tour</Link>
                             </Button>
                             <Button
                                 onClick={() => setIsAppModalOpen(true)}
-                                className="h-11 px-5 text-xs font-black bg-[var(--color-brand-green)] text-white rounded-xl shadow-md"
+                                className="h-10 px-4 text-xs font-black bg-[var(--color-brand-green)] text-white rounded-xl shadow-md"
                             >
                                 Apply Now
                             </Button>
