@@ -10,6 +10,8 @@ import {
     getLandlordDelegations,
     authorizeDelegation,
     revokeDelegation,
+    getMyAuthorizedLandlords,
+    createListingForLandlord,
     listActiveAgents,
     getAgentPublicProfile,
     adminListPendingAgents,
@@ -44,6 +46,8 @@ router.get("/me/strikes", requireAuth, requireDbUser, getMyStrikes);
 router.post("/me/delegations", requireAuth, requireDbUser, requestDelegation);
 router.get("/me/deactivation-check", requireAuth, requireDbUser, checkAgentDeactivationEligibility);
 router.post("/me/deactivate", requireAuth, requireDbUser, deactivateAgentAccount);
+router.get("/me/authorized-landlords", requireAuth, requireDbUser, getMyAuthorizedLandlords);
+router.post("/me/properties", requireAuth, requireDbUser, createListingForLandlord);
 
 router.get("/landlord/delegations", requireAuth, requireDbUser, getLandlordDelegations);
 router.patch("/delegations/:id/authorize", requireAuth, requireDbUser, authorizeDelegation);

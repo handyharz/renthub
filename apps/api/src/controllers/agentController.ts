@@ -171,6 +171,76 @@ export const revokeDelegation = async (req: Request, res: Response) => {
     }
 };
 
+/** Agent: get distinct landlords for whom they have an AUTHORIZED delegation */
+export const getMyAuthorizedLandlords = async (req: Request, res: Response) => {
+    try {
+        const userId = await resolveDbUserId(req);
+        if (!userId) return fail(res, "Unauthorized", 401);
+
+        const landlords = await agentService.getAuthorizedLandlords(userId);
+        return ok(res, landlords);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};
+
+/** Agent: create a new DRAFT property listing on behalf of an authorized landlord */
+export const createListingForLandlord = async (req: Request, res: Response) => {
+    try {
+        const userId = await resolveDbUserId(req);
+        if (!userId) return fail(res, "Unauthorized", 401);
+
+        const {
+            landlordId, title, description, address, city, state,
+            propertyType, bedrooms, bathrooms, toilets, parkingSpaces,
+            floorArea, pricePerYear, cautionFee, legalFee, agentFee,
+            paymentTerms, negotiable, furnished, serviced, petsAllowed,
+            powerSupply, waterSupply, amenities, agentNote,
+        } = req.body;
+
+        if (!landlordId) return fail(res, "landlordId is required", 400);
+        if (!title || !description || !address || !city || !state) return fail(res, "Missing required property fields", 400);
+        if (!propertyType) return fail(res, "propertyType is required", 400);
+        if (!bedrooms || !bathrooms || !pricePerYear) return fail(res, "Missing bedrooms, bathrooms, or pricePerYear", 400);
+
+        const property = await agentService.createPropertyForLandlord(userId, {
+            landlordId: String(landlordId),
+            title: String(title),
+            description: String(description),
+            address: String(address),
+            city: String(city),
+            state: String(state),
+            propertyType: String(propertyType),
+            bedrooms: parseInt(bedrooms),
+            bathrooms: parseInt(bathrooms),
+            toilets: parseInt(toilets || bathrooms),
+            parkingSpaces: parkingSpaces ? parseInt(parkingSpaces) : undefined,
+            floorArea: floorArea ? parseFloat(floorArea) : undefined,
+            pricePerYear: parseInt(pricePerYear),
+            cautionFee: cautionFee ? parseInt(cautionFee) : undefined,
+            legalFee: legalFee ? parseInt(legalFee) : undefined,
+            agentFee: agentFee ? parseInt(agentFee) : undefined,
+            paymentTerms: paymentTerms ? String(paymentTerms) : undefined,
+            negotiable: negotiable === true || negotiable === "true",
+            furnished: furnished === true || furnished === "true",
+            serviced: serviced === true || serviced === "true",
+            petsAllowed: petsAllowed === true || petsAllowed === "true",
+            powerSupply: powerSupply ? String(powerSupply) : undefined,
+            waterSupply: waterSupply ? String(waterSupply) : undefined,
+            amenities: Array.isArray(amenities) ? amenities.map(String) : undefined,
+            agentNote: agentNote ? String(agentNote) : undefined,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Property listing created as DRAFT. The landlord has been notified to review and publish it.",
+            data: property,
+        });
+    } catch (e: any) {
+        return fail(res, e.message, e.message.includes("not currently active") || e.message.includes("do not have") ? 403 : 500);
+    }
+};
+
 // ─── PUBLIC ENDPOINTS ─────────────────────────────────────────────────────────
 
 /** Public: list active/verified agents (for landlords to browse) */

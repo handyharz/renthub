@@ -7,7 +7,7 @@ import {
     Building2, Phone, ChevronRight, AlertCircle, Plus,
     TrendingUp, Users, FileCheck, Wallet, Edit3, Send,
     ShieldCheck, ArrowRight, RefreshCw, X, Home,
-    Upload, FileText, ExternalLink
+    Upload, FileText, ExternalLink, PlusSquare
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -96,6 +96,272 @@ function StatusBadge({ status }: { status: string }) {
             <Icon className="h-3 w-3" />
             {cfg.label}
         </span>
+    );
+}
+
+// ─── ADD PROPERTY FOR LANDLORD MODAL ─────────────────────────────────────────
+
+const PROPERTY_TYPES = [
+    "SELF_CONTAIN", "ROOM_AND_PARLOUR", "MINI_FLAT", "APARTMENT_2BED", "APARTMENT_3BED",
+    "APARTMENT_4BED", "DUPLEX", "BUNGALOW", "DETACHED_HOUSE", "SEMI_DETACHED", "TERRACE",
+    "PENTHOUSE", "STUDIO"
+];
+
+function AddPropertyModal({ clerkId, onClose, onSuccess }: { clerkId: string; onClose: () => void; onSuccess: () => void }) {
+    const [landlords, setLandlords] = useState<any[]>([]);
+    const [loadingLandlords, setLoadingLandlords] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [form, setForm] = useState({
+        landlordId: "",
+        title: "",
+        description: "",
+        address: "",
+        city: "",
+        state: "",
+        propertyType: "APARTMENT_2BED",
+        bedrooms: "2",
+        bathrooms: "2",
+        toilets: "2",
+        parkingSpaces: "1",
+        pricePerYear: "",
+        cautionFee: "",
+        legalFee: "",
+        paymentTerms: "TWO_YEARS",
+        furnished: false,
+        serviced: false,
+        negotiable: false,
+        agentNote: "",
+    });
+
+    useEffect(() => {
+        api.get(`/agents/me/authorized-landlords?clerkId=${clerkId}`)
+            .then(r => setLandlords(r.data.data || []))
+            .catch(() => setLandlords([]))
+            .finally(() => setLoadingLandlords(false));
+    }, [clerkId]);
+
+    const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!form.landlordId) { toast.error("Please select a landlord"); return; }
+        setSubmitting(true);
+        try {
+            await api.post(`/agents/me/properties?clerkId=${clerkId}`, {
+                ...form,
+                bedrooms: parseInt(form.bedrooms),
+                bathrooms: parseInt(form.bathrooms),
+                toilets: parseInt(form.toilets),
+                parkingSpaces: parseInt(form.parkingSpaces || "0"),
+                pricePerYear: parseInt(form.pricePerYear),
+                cautionFee: form.cautionFee ? parseInt(form.cautionFee) : 0,
+                legalFee: form.legalFee ? parseInt(form.legalFee) : 0,
+            });
+            toast.success("Property created as DRAFT! Landlord has been notified to review and publish.");
+            onSuccess();
+            onClose();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to create property");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const inputCls = "w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500";
+    const labelCls = "block text-xs font-semibold text-[var(--text-secondary)] mb-1.5";
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-[var(--border-color)]">
+                    <div>
+                        <h2 className="text-xl font-bold text-[var(--text-primary)] flex items-center gap-2">
+                            <PlusSquare className="h-5 w-5 text-blue-600" />
+                            Add Property for Client
+                        </h2>
+                        <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                            Property will be created as DRAFT — landlord reviews & publishes it
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="overflow-y-auto flex-1 p-6">
+                    {loadingLandlords ? (
+                        <div className="text-center py-10 text-[var(--text-muted)] text-sm">Loading authorized landlords...</div>
+                    ) : landlords.length === 0 ? (
+                        <div className="text-center py-10">
+                            <Building2 className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
+                            <p className="text-[var(--text-secondary)] font-semibold">No authorized landlords</p>
+                            <p className="text-[var(--text-muted)] text-sm mt-1">
+                                You need at least one AUTHORIZED delegation before you can create listings on a landlord's behalf.
+                            </p>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            {/* Landlord picker */}
+                            <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                                <label className={labelCls + " text-blue-800 dark:text-blue-300"}>Select Landlord / Client *</label>
+                                <select
+                                    value={form.landlordId}
+                                    onChange={e => set("landlordId", e.target.value)}
+                                    className={inputCls + " bg-white dark:bg-blue-950/20"}
+                                    required
+                                >
+                                    <option value="">— Pick an authorized landlord —</option>
+                                    {landlords.map((l: any) => (
+                                        <option key={l.id} value={l.id}>
+                                            {l.firstName} {l.lastName} ({l.phone || l.email}) · {l.agreedCommissionPct}% commission
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-[11px] text-blue-700 dark:text-blue-400 mt-1.5">
+                                    Only landlords who have authorized you on at least one property appear here.
+                                </p>
+                            </div>
+
+                            {/* Basic Info */}
+                            <div className="grid grid-cols-1 gap-4">
+                                <div>
+                                    <label className={labelCls}>Property Title *</label>
+                                    <input type="text" value={form.title} onChange={e => set("title", e.target.value)}
+                                        placeholder="e.g. Spacious 3-Bed Flat in Lekki Phase 1"
+                                        className={inputCls} required />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Description *</label>
+                                    <textarea value={form.description} onChange={e => set("description", e.target.value)}
+                                        placeholder="Describe the property..."
+                                        rows={3}
+                                        className={inputCls + " resize-none"} required />
+                                </div>
+                            </div>
+
+                            {/* Location */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="sm:col-span-3">
+                                    <label className={labelCls}>Street Address *</label>
+                                    <input type="text" value={form.address} onChange={e => set("address", e.target.value)}
+                                        placeholder="12 Palm Avenue, Victoria Island"
+                                        className={inputCls} required />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>City *</label>
+                                    <input type="text" value={form.city} onChange={e => set("city", e.target.value)}
+                                        placeholder="Lagos" className={inputCls} required />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>State *</label>
+                                    <input type="text" value={form.state} onChange={e => set("state", e.target.value)}
+                                        placeholder="Lagos" className={inputCls} required />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Property Type *</label>
+                                    <select value={form.propertyType} onChange={e => set("propertyType", e.target.value)} className={inputCls}>
+                                        {PROPERTY_TYPES.map(t => (
+                                            <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Specs */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {[
+                                    { label: "Bedrooms *", key: "bedrooms", min: 0, max: 20 },
+                                    { label: "Bathrooms *", key: "bathrooms", min: 1, max: 20 },
+                                    { label: "Toilets", key: "toilets", min: 1, max: 20 },
+                                    { label: "Parking Spaces", key: "parkingSpaces", min: 0, max: 20 },
+                                ].map(f => (
+                                    <div key={f.key}>
+                                        <label className={labelCls}>{f.label}</label>
+                                        <input type="number" min={f.min} max={f.max}
+                                            value={(form as any)[f.key]}
+                                            onChange={e => set(f.key, e.target.value)}
+                                            className={inputCls} required={f.label.endsWith("*")} />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Pricing */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label className={labelCls}>Annual Rent (₦) *</label>
+                                    <input type="number" value={form.pricePerYear} onChange={e => set("pricePerYear", e.target.value)}
+                                        placeholder="1500000" className={inputCls} required />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Caution Fee (₦)</label>
+                                    <input type="number" value={form.cautionFee} onChange={e => set("cautionFee", e.target.value)}
+                                        placeholder="100000" className={inputCls} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Legal Fee (₦)</label>
+                                    <input type="number" value={form.legalFee} onChange={e => set("legalFee", e.target.value)}
+                                        placeholder="50000" className={inputCls} />
+                                </div>
+                            </div>
+
+                            {/* Payment Terms */}
+                            <div>
+                                <label className={labelCls}>Payment Terms</label>
+                                <select value={form.paymentTerms} onChange={e => set("paymentTerms", e.target.value)} className={inputCls}>
+                                    {["ONE_YEAR", "TWO_YEARS", "THREE_YEARS", "FLEXIBLE"].map(t => (
+                                        <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Toggles */}
+                            <div className="flex flex-wrap gap-4">
+                                {[
+                                    { label: "Furnished", key: "furnished" },
+                                    { label: "Serviced", key: "serviced" },
+                                    { label: "Negotiable", key: "negotiable" },
+                                ].map(t => (
+                                    <label key={t.key} className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={(form as any)[t.key]}
+                                            onChange={e => set(t.key, e.target.checked)}
+                                            className="rounded border-[var(--border-color)] text-blue-600" />
+                                        <span className="text-sm font-medium text-[var(--text-primary)]">{t.label}</span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            {/* Agent note */}
+                            <div>
+                                <label className={labelCls}>Agent Note (internal)</label>
+                                <input type="text" value={form.agentNote} onChange={e => set("agentNote", e.target.value)}
+                                    placeholder="Any notes for this listing..."
+                                    className={inputCls} />
+                            </div>
+
+                            {/* Info banner */}
+                            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+                                <strong>📋 What happens next:</strong> This property will be saved as DRAFT under the landlord's account.
+                                They will receive a notification to review details and publish the listing.
+                                Your delegation is automatically set to AUTHORIZED at the agreed commission rate.
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-2">
+                                <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-[var(--border-color)]">
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={submitting} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold">
+                                    {submitting ? "Creating..." : "Create Listing for Client"}
+                                    <PlusSquare className="ml-1.5 h-4 w-4" />
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -533,6 +799,7 @@ export default function AgentDashboard() {
     const [showDelegationModal, setShowDelegationModal] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+    const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
@@ -780,16 +1047,26 @@ export default function AgentDashboard() {
             {/* Delegations */}
             {profile?.status === "ACTIVE" && (
                 <div>
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                         <h3 className="text-lg font-bold text-[var(--text-primary)]">My Listings</h3>
-                        <Button
-                            onClick={() => setShowDelegationModal(true)}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs font-semibold"
-                        >
-                            <Plus className="h-3.5 w-3.5 mr-1" />
-                            Request to List Property
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => setShowAddPropertyModal(true)}
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 text-xs font-semibold"
+                            >
+                                <PlusSquare className="h-3.5 w-3.5 mr-1" />
+                                Add Property for Client
+                            </Button>
+                            <Button
+                                onClick={() => setShowDelegationModal(true)}
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white h-9 text-xs font-semibold"
+                            >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                Request to List Property
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Filter tabs */}
@@ -842,6 +1119,13 @@ export default function AgentDashboard() {
                 <RequestDelegationModal
                     clerkId={user?.id || ""}
                     onClose={() => setShowDelegationModal(false)}
+                    onSuccess={fetchData}
+                />
+            )}
+            {showAddPropertyModal && (
+                <AddPropertyModal
+                    clerkId={user?.id || ""}
+                    onClose={() => setShowAddPropertyModal(false)}
                     onSuccess={fetchData}
                 />
             )}

@@ -374,7 +374,160 @@ export class AgentService {
         });
     }
 
+    // ─── AGENT-CREATED LISTINGS ON BEHALF OF LANDLORD ────────────────────────────
+
+    /**
+     * Returns distinct landlords for whom this agent has an AUTHORIZED delegation.
+     * Used to populate the "Select Landlord" dropdown when creating a listing.
+     */
+    async getAuthorizedLandlords(agentId: string) {
+        const delegations = await prisma.agentListing.findMany({
+            where: { agentId, status: AgentListingStatus.AUTHORIZED },
+            select: {
+                landlordId: true,
+                commissionPct: true,
+                landlord: {
+                    select: {
+                        id: true, firstName: true, lastName: true,
+                        avatar: true, phone: true, email: true
+                    }
+                }
+            },
+            distinct: ["landlordId"],
+            orderBy: { authorizedAt: "desc" }
+        });
+        return delegations.map(d => ({ ...d.landlord, agreedCommissionPct: d.commissionPct }));
+    }
+
+    /**
+     * Agent creates a new property listing on behalf of an authorized landlord.
+     *
+     * Rules:
+     * - Agent must be ACTIVE.
+     * - Agent must have at least one AUTHORIZED delegation for that landlordId.
+     * - Property is created in DRAFT status — landlord must publish it.
+     * - An AUTHORIZED AgentListing is auto-created at the agent's default commission rate.
+     * - A notification is sent to the landlord to review and publish.
+     */
+    async createPropertyForLandlord(agentId: string, data: {
+        landlordId: string;
+        title: string;
+        description: string;
+        address: string;
+        city: string;
+        state: string;
+        propertyType: string;
+        bedrooms: number;
+        bathrooms: number;
+        toilets: number;
+        parkingSpaces?: number;
+        floorArea?: number;
+        pricePerYear: number;
+        cautionFee?: number;
+        legalFee?: number;
+        agentFee?: number;
+        paymentTerms?: string;
+        negotiable?: boolean;
+        furnished?: boolean;
+        serviced?: boolean;
+        petsAllowed?: boolean;
+        powerSupply?: string;
+        waterSupply?: string;
+        amenities?: string[];
+        agentNote?: string;
+    }) {
+        // 1. Verify agent is ACTIVE
+        const ap = await prisma.agentProfile.findUnique({
+            where: { userId: agentId },
+            select: { status: true, defaultCommissionPct: true, businessName: true }
+        });
+        if (!ap || ap.status !== AgentStatus.ACTIVE) {
+            throw new Error("Agent is not currently active / verified");
+        }
+
+        // 2. Verify agent has an AUTHORIZED delegation with this landlord
+        const authorization = await prisma.agentListing.findFirst({
+            where: { agentId, landlordId: data.landlordId, status: AgentListingStatus.AUTHORIZED },
+            select: { id: true, commissionPct: true }
+        });
+        if (!authorization) {
+            throw new Error("You do not have an authorized delegation with this landlord. The landlord must first authorize you on an existing property.");
+        }
+
+        // 3. Validate landlord exists
+        const landlord = await prisma.user.findUnique({
+            where: { id: data.landlordId },
+            select: { id: true, firstName: true, lastName: true }
+        });
+        if (!landlord) throw new Error("Landlord not found");
+
+        // 4. Create property as DRAFT under the landlord's account
+        const property = await prisma.property.create({
+            data: {
+                title: data.title,
+                description: data.description,
+                address: data.address,
+                city: data.city,
+                state: data.state,
+                propertyType: data.propertyType as any,
+                bedrooms: data.bedrooms,
+                bathrooms: data.bathrooms,
+                toilets: data.toilets,
+                parkingSpaces: data.parkingSpaces ?? 0,
+                floorArea: data.floorArea,
+                pricePerYear: data.pricePerYear,
+                cautionFee: data.cautionFee ?? 0,
+                legalFee: data.legalFee ?? 0,
+                agentFee: data.agentFee ?? 0,
+                paymentTerms: data.paymentTerms as any ?? "TWO_YEARS",
+                negotiable: data.negotiable ?? false,
+                furnished: data.furnished ?? false,
+                serviced: data.serviced ?? false,
+                petsAllowed: data.petsAllowed ?? false,
+                powerSupply: data.powerSupply as any ?? "GRID_ONLY",
+                waterSupply: data.waterSupply as any ?? "BOREHOLE",
+                status: "DRAFT" as any,
+                landlord: { connect: { id: data.landlordId } },
+                amenities: data.amenities?.length ? {
+                    create: data.amenities.map((name: string) => ({ amenity: { connect: { name } } }))
+                } : undefined,
+            },
+            include: {
+                landlord: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+                images: true,
+            }
+        });
+
+        // 5. Auto-create an AUTHORIZED AgentListing for this new property
+        await prisma.agentListing.create({
+            data: {
+                propertyId: property.id,
+                agentId,
+                landlordId: data.landlordId,
+                status: AgentListingStatus.AUTHORIZED,
+                commissionPct: authorization.commissionPct,
+                agentNote: data.agentNote,
+                authorizedAt: new Date(),
+            }
+        });
+
+        // 6. Notify landlord to review and publish
+        await prisma.notification.create({
+            data: {
+                userId: data.landlordId,
+                type: "NEW_PROPERTY" as any,
+                title: "New Listing Created on Your Behalf",
+                message: `${ap.businessName || "Your agent"} has created a new property listing "${data.title}" for you. Please review the details and publish it when ready.`,
+                actionUrl: `/dashboard/properties`,
+                actionText: "Review & Publish"
+            }
+        }).catch(console.error);
+
+        return property;
+    }
+
     // ─── RECONCILIATION & STATS ──────────────────────────────────────────────────
+
 
     async reconcileCompletedAgentListings(agentId?: string) {
         try {
