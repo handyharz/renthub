@@ -26,6 +26,7 @@ import {
     adminListAllAgents,
     checkAgentDeactivationEligibility,
     deactivateAgentAccount,
+    adminGetAgentListings,
 } from "../controllers/agentController";
 import { requireAuth, requireDbUser, requireRole } from "../middleware/auth";
 
@@ -63,6 +64,7 @@ adminRouter.post("/:id/reject", adminRejectAgent);
 adminRouter.post("/:id/suspend", adminSuspendAgent);
 adminRouter.get("/strikes", adminListStrikes);
 adminRouter.post("/strikes/:id/review", adminReviewStrike);
+adminRouter.get("/:id/listings", adminGetAgentListings);
 router.use("/admin", adminRouter);
 
 export default router;

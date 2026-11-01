@@ -455,3 +455,20 @@ export const deactivateAgentAccount = async (req: Request, res: Response) => {
     }
 };
 
+/** Admin: get all delegated listings for a specific agent profile */
+export const adminGetAgentListings = async (req: Request, res: Response) => {
+    try {
+        const profileId = str(req.params.id);
+        const profile = await prisma.agentProfile.findUnique({
+            where: { id: profileId },
+            select: { userId: true, businessName: true }
+        });
+        if (!profile) return fail(res, "Agent profile not found", 404);
+
+        const listings = await agentService.getAgentDelegations(profile.userId);
+        return ok(res, listings);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};
+

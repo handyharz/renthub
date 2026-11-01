@@ -5,7 +5,8 @@ import {
     Briefcase, MapPin, Star, CheckCircle2, Clock, XCircle,
     ShieldCheck, Phone, Mail, Building2, Users, AlertCircle,
     ShieldAlert, AlertTriangle, Flag, DollarSign, Fuel, FileText,
-    Ban, Search, Filter, RotateCw, ExternalLink, ChevronDown
+    Ban, Search, Filter, RotateCw, ExternalLink, ChevronDown,
+    X, Home
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -103,6 +104,34 @@ const REASON_LABELS: Record<string, { label: string; icon: any; color: string }>
     OTHER: { label: "Other Side-Payment", icon: AlertTriangle, color: "text-slate-600 bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700" },
 };
 
+interface AgentDelegationListing {
+    id: string;
+    propertyId: string;
+    status: "PENDING_LANDLORD" | "AUTHORIZED" | "REVOKED" | "COMPLETED";
+    commissionPct: number;
+    authorizedAt?: string;
+    createdAt: string;
+    property: {
+        id: string;
+        title: string;
+        address: string;
+        city: string;
+        state: string;
+        pricePerYear: number;
+        status: string;
+        bedrooms: number;
+        bathrooms: number;
+        images: { url: string }[];
+    };
+    landlord: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        avatar?: string;
+        phone?: string;
+    };
+}
+
 export default function AdminAgentsPage() {
     const { user } = useUser();
     const [activeTab, setActiveTab] = useState<"DIRECTORY" | "APPLICATIONS" | "STRIKES">("DIRECTORY");
@@ -112,6 +141,11 @@ export default function AdminAgentsPage() {
     const [strikes, setStrikes] = useState<AgentStrikeItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+    // Delegated Listings Modal State
+    const [selectedAgentForListings, setSelectedAgentForListings] = useState<AgentProfile | null>(null);
+    const [agentListings, setAgentListings] = useState<AgentDelegationListing[]>([]);
+    const [loadingListings, setLoadingListings] = useState(false);
 
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
@@ -163,6 +197,22 @@ export default function AdminAgentsPage() {
         setLoading(true);
         await Promise.allSettled([fetchKPIs(), fetchAllAgents(), fetchPendingAgents(), fetchStrikes()]);
         setLoading(false);
+    };
+
+    const handleViewListings = async (agent: AgentProfile) => {
+        setSelectedAgentForListings(agent);
+        setLoadingListings(true);
+        setAgentListings([]);
+        try {
+            const res = await api.get(`/agents/admin/${agent.id}/listings?clerkId=${user?.id}`);
+            if (res.data?.success) {
+                setAgentListings(res.data.data || []);
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to load agent listings");
+        } finally {
+            setLoadingListings(false);
+        }
     };
 
     useEffect(() => {
@@ -619,6 +669,15 @@ export default function AdminAgentsPage() {
 
                                                 {/* Right Action Buttons */}
                                                 <div className="md:w-56 shrink-0 space-y-2">
+                                                    <Button
+                                                        onClick={() => handleViewListings(agent)}
+                                                        variant="outline"
+                                                        className="w-full text-xs font-bold border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] flex items-center justify-center gap-1.5"
+                                                    >
+                                                        <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                                                        View Delegated Listings
+                                                    </Button>
+
                                                     {agent.status === "ACTIVE" && (
                                                         <Button
                                                             onClick={() => handleSuspend(agent.id)}
@@ -1057,6 +1116,135 @@ export default function AdminAgentsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Delegated Listings Inspection Modal */}
+            {selectedAgentForListings && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+                    <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-[var(--border-color)]">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-2xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-black">
+                                    <Building2 className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-extrabold text-[var(--text-primary)] flex items-center gap-2">
+                                        Listings Managed by {selectedAgentForListings.user.firstName} {selectedAgentForListings.user.lastName}
+                                    </h2>
+                                    <p className="text-xs text-[var(--text-muted)]">
+                                        {selectedAgentForListings.businessName || "Independent Partner"} • {agentListings.length} listing{agentListings.length === 1 ? "" : "s"} total
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedAgentForListings(null)}
+                                className="h-8 w-8 rounded-xl border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)] transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="overflow-y-auto p-6 space-y-4 flex-1">
+                            {loadingListings ? (
+                                <div className="space-y-3 py-8">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="h-24 bg-[var(--bg-muted)] rounded-2xl animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : agentListings.length === 0 ? (
+                                <div className="text-center py-12 space-y-2">
+                                    <Building2 className="h-12 w-12 text-[var(--text-muted)] mx-auto opacity-50" />
+                                    <p className="font-bold text-[var(--text-primary)] text-sm">No delegated listings found</p>
+                                    <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
+                                        This agent has not been authorized on any properties yet and has not created any client listings.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid gap-3">
+                                    {agentListings.map(d => {
+                                        const isDraft = d.property.status === "DRAFT";
+                                        const isLive = d.property.status === "AVAILABLE";
+                                        const img = d.property.images?.[0]?.url;
+
+                                        return (
+                                            <div
+                                                key={d.id}
+                                                className="p-4 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-muted)]/40 hover:bg-[var(--bg-muted)] transition-colors flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between"
+                                            >
+                                                <div className="flex items-center gap-3.5 min-w-0">
+                                                    <div className="relative h-16 w-20 rounded-xl overflow-hidden bg-[var(--bg-muted)] border border-[var(--border-color)] shrink-0">
+                                                        {img ? (
+                                                            <Image src={img} alt="" fill className="object-cover" />
+                                                        ) : (
+                                                            <div className="flex items-center justify-center h-full">
+                                                                <Home className="h-5 w-5 text-[var(--text-muted)]" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 space-y-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <h4 className="font-bold text-sm text-[var(--text-primary)] truncate max-w-xs">
+                                                                {d.property.title}
+                                                            </h4>
+                                                            {/* Property Status */}
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider",
+                                                                isDraft ? "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800" :
+                                                                isLive ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800" :
+                                                                "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                                                            )}>
+                                                                {isDraft ? "Draft Listing" : d.property.status}
+                                                            </span>
+                                                            {/* Delegation Status */}
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                                                                d.status === "AUTHORIZED" ? "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400" :
+                                                                "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                                            )}>
+                                                                {d.status === "AUTHORIZED" ? "Authorized" : d.status}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                                                            <MapPin className="h-3 w-3 shrink-0" />
+                                                            {d.property.city}, {d.property.state} • {formatPrice(d.property.pricePerYear)}/yr • {d.commissionPct}% commission
+                                                        </p>
+                                                        {d.landlord && (
+                                                            <p className="text-[11px] text-[var(--text-secondary)] font-medium">
+                                                                Client / Landlord: <strong>{d.landlord.firstName} {d.landlord.lastName}</strong> {d.landlord.phone && `(${d.landlord.phone})`}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <Link href={`/properties/${d.property.id}`} target="_blank" className="shrink-0 w-full sm:w-auto">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="w-full sm:w-auto text-xs font-semibold gap-1.5 h-8 border-[var(--border-color)]"
+                                                    >
+                                                        Inspect Property <ExternalLink className="h-3 w-3" />
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-card)] flex justify-end">
+                            <Button
+                                onClick={() => setSelectedAgentForListings(null)}
+                                variant="outline"
+                                className="text-xs font-semibold px-4 h-9"
+                            >
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

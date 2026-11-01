@@ -796,53 +796,105 @@ function ProfileEditModal({
 
 function DelegationCard({ delegation }: { delegation: AgentDelegation }) {
     const img = delegation.property.images?.[0]?.url;
+    const isDraft = delegation.property.status === "DRAFT";
+    const isLive = delegation.property.status === "AVAILABLE";
+
     return (
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-            <div className="relative h-36 bg-[var(--bg-muted)]">
-                {img ? (
-                    <Image src={img} alt={delegation.property.title} fill className="object-cover" />
-                ) : (
-                    <div className="flex items-center justify-center h-full">
-                        <Home className="h-10 w-10 text-[var(--text-muted)]" />
+        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
+            <div>
+                <div className="relative h-36 bg-[var(--bg-muted)]">
+                    {img ? (
+                        <Image src={img} alt={delegation.property.title} fill className="object-cover" />
+                    ) : (
+                        <div className="flex items-center justify-center h-full">
+                            <Home className="h-10 w-10 text-[var(--text-muted)]" />
+                        </div>
+                    )}
+                    {/* Top Left: Property Live/Draft Status Badge */}
+                    <div className="absolute top-2 left-2 flex gap-1">
+                        {isDraft ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/90 text-white backdrop-blur-sm shadow-sm flex items-center gap-1">
+                                <Clock className="h-2.5 w-2.5" /> Draft (Pending Review)
+                            </span>
+                        ) : isLive ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600/90 text-white backdrop-blur-sm shadow-sm flex items-center gap-1">
+                                <CheckCircle2 className="h-2.5 w-2.5" /> Published & Live
+                            </span>
+                        ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700/90 text-white backdrop-blur-sm shadow-sm">
+                                {delegation.property.status}
+                            </span>
+                        )}
                     </div>
-                )}
-                <div className="absolute top-2 right-2">
-                    <StatusBadge status={delegation.status} />
+
+                    {/* Top Right: Delegation Status */}
+                    <div className="absolute top-2 right-2">
+                        <StatusBadge status={delegation.status} />
+                    </div>
+                </div>
+
+                <div className="p-4">
+                    <h3 className="font-bold text-[var(--text-primary)] text-sm line-clamp-1">{delegation.property.title}</h3>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {delegation.property.city}, {delegation.property.state}
+                    </p>
+
+                    <div className="mt-3 flex items-center justify-between">
+                        <div>
+                            <p className="text-xs text-[var(--text-muted)]">Annual Rent</p>
+                            <p className="font-bold text-[var(--text-primary)] text-sm">{formatPrice(delegation.property.pricePerYear)}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs text-[var(--text-muted)]">Your Commission</p>
+                            <p className="font-bold text-blue-600 dark:text-blue-400 text-sm">{delegation.commissionPct}%</p>
+                        </div>
+                    </div>
+
+                    {/* Client / Landlord Attribution */}
+                    {delegation.landlord && (
+                        <div className="mt-3 pt-2.5 border-t border-[var(--border-color)] flex items-center justify-between text-xs text-[var(--text-muted)]">
+                            <span className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--text-secondary)]">
+                                <Users className="h-3 w-3 text-blue-500" />
+                                Landlord: <strong className="text-[var(--text-primary)]">{delegation.landlord.firstName} {delegation.landlord.lastName}</strong>
+                            </span>
+                            {delegation.landlord.phone && (
+                                <span className="text-[10px] font-mono text-[var(--text-muted)]">{delegation.landlord.phone}</span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Explanatory Banners */}
+                    {isDraft && delegation.status === "AUTHORIZED" && (
+                        <div className="mt-3 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-700 dark:text-amber-300 font-medium flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                            <span>Listed for client — awaiting landlord to review & publish.</span>
+                        </div>
+                    )}
+
+                    {!isDraft && delegation.status === "AUTHORIZED" && (
+                        <div className="mt-3 p-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                            ✓ You are authorized to manage this listing
+                        </div>
+                    )}
+
+                    {delegation.status === "PENDING_LANDLORD" && (
+                        <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400">
+                            ⏳ Awaiting landlord authorization
+                        </div>
+                    )}
+
+                    {delegation.landlordNote && (
+                        <div className="mt-2 p-2 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-secondary)]">
+                            <span className="font-medium text-[var(--text-primary)]">Landlord note:</span> {delegation.landlordNote}
+                        </div>
+                    )}
                 </div>
             </div>
-            <div className="p-4">
-                <h3 className="font-bold text-[var(--text-primary)] text-sm line-clamp-1">{delegation.property.title}</h3>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5 flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {delegation.property.city}, {delegation.property.state}
-                </p>
-                <div className="mt-3 flex items-center justify-between">
-                    <div>
-                        <p className="text-xs text-[var(--text-muted)]">Annual Rent</p>
-                        <p className="font-bold text-[var(--text-primary)] text-sm">{formatPrice(delegation.property.pricePerYear)}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-xs text-[var(--text-muted)]">Your Commission</p>
-                        <p className="font-bold text-blue-600 dark:text-blue-400 text-sm">{delegation.commissionPct}%</p>
-                    </div>
-                </div>
-                {delegation.status === "AUTHORIZED" && (
-                    <div className="mt-3 p-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                        ✓ You are authorized to manage this listing
-                    </div>
-                )}
-                {delegation.status === "PENDING_LANDLORD" && (
-                    <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400">
-                        ⏳ Awaiting landlord authorization
-                    </div>
-                )}
-                {delegation.landlordNote && (
-                    <div className="mt-2 p-2 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-lg text-xs text-[var(--text-secondary)]">
-                        <span className="font-medium text-[var(--text-primary)]">Landlord note:</span> {delegation.landlordNote}
-                    </div>
-                )}
+
+            <div className="p-4 pt-0">
                 <Link href={`/properties/${delegation.property.id}`}>
-                    <Button variant="outline" size="sm" className="w-full mt-3 text-xs h-8 border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]">
+                    <Button variant="outline" size="sm" className="w-full text-xs h-8 border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]">
                         View Property <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>
                 </Link>
