@@ -233,6 +233,11 @@ function DashboardContent() {
             setRole(effectiveRole);
             setUserVerified(fetchedUser.verified);
 
+            // Default to 'agent' tab if user is an AGENT and no specific tab was requested in the URL
+            if (effectiveRole === "AGENT" && (!searchParams.get("tab") || searchParams.get("tab") === "overview")) {
+                setActiveTab("agent");
+            }
+
             if (effectiveRole === "LANDLORD") {
                 const res = await api.get(`/properties?landlordId=${dbUserId}`);
                 const userProperties = res.data.data.properties || [];
@@ -321,32 +326,32 @@ function DashboardContent() {
     };
 
     const landlordTabs = [
-        { id: "overview", label: "Overview", icon: BarChart3 },
-        { id: "properties", label: "My Properties", icon: Home },
-        { id: "applications", label: "Applications", icon: FileText },
-        { id: "tours", label: "Physical Tours", icon: Calendar },
-        { id: "transactions", label: "Transactions", icon: Receipt },
-        { id: "payouts", label: "Payouts & Settlements", icon: Wallet },
-        { id: "agent-delegations", label: "Agent Partners", icon: Briefcase },
-        { id: "messages", label: "Messages", icon: MessageSquare },
-        { id: "resources", label: "Resources", icon: BookOpen },
+        { id: "overview",          label: "Overview",             mobileLabel: "Overview",   icon: BarChart3 },
+        { id: "properties",        label: "My Properties",        mobileLabel: "Properties", icon: Home },
+        { id: "applications",      label: "Applications",         mobileLabel: "Apply",      icon: FileText },
+        { id: "tours",             label: "Physical Tours",       mobileLabel: "Tours",      icon: Calendar },
+        { id: "transactions",      label: "Transactions",         mobileLabel: "Payments",   icon: Receipt },
+        { id: "payouts",           label: "Payouts & Settlements", mobileLabel: "Payouts",   icon: Wallet },
+        { id: "agent-delegations", label: "Agent Partners",       mobileLabel: "Agents",     icon: Briefcase },
+        { id: "messages",          label: "Messages",             mobileLabel: "Messages",   icon: MessageSquare },
+        { id: "resources",         label: "Resources",            mobileLabel: "Guides",     icon: BookOpen },
     ];
 
     const tenantTabs = [
-        { id: "overview", label: "Overview", icon: BarChart3 },
-        { id: "for-rent", label: "For Rent", icon: Search },
-        { id: "favorites", label: "Saved Homes", icon: Home },
-        { id: "tours", label: "Physical Tours", icon: Calendar },
-        { id: "applications", label: "Applications", icon: FileText },
-        { id: "messages", label: "Messages", icon: MessageSquare },
-        { id: "resources", label: "Resources", icon: BookOpen },
+        { id: "overview",     label: "Overview",       mobileLabel: "Overview",  icon: BarChart3 },
+        { id: "for-rent",     label: "For Rent",       mobileLabel: "Search",    icon: Search },
+        { id: "favorites",    label: "Saved Homes",    mobileLabel: "Saved",     icon: Home },
+        { id: "tours",        label: "Physical Tours", mobileLabel: "Tours",     icon: Calendar },
+        { id: "applications", label: "Applications",   mobileLabel: "Apply",     icon: FileText },
+        { id: "messages",     label: "Messages",       mobileLabel: "Messages",  icon: MessageSquare },
+        { id: "resources",    label: "Resources",      mobileLabel: "Guides",    icon: BookOpen },
     ];
 
     const agentTabs = [
-        { id: "agent", label: "My Listings", icon: Briefcase },
-        { id: "payouts", label: "Payouts & Settlements", icon: Wallet },
-        { id: "messages", label: "Messages", icon: MessageSquare },
-        { id: "resources", label: "Resources", icon: BookOpen },
+        { id: "agent",     label: "My Listings",       mobileLabel: "Listings",  icon: Briefcase },
+        { id: "payouts",   label: "Payouts & Settlements", mobileLabel: "Payouts", icon: Wallet },
+        { id: "messages", label: "Messages",            mobileLabel: "Messages",  icon: MessageSquare },
+        { id: "resources", label: "Resources",          mobileLabel: "Guides",    icon: BookOpen },
     ];
 
     const tabs = role === "LANDLORD" ? landlordTabs : role === "AGENT" ? agentTabs : tenantTabs;
@@ -363,7 +368,7 @@ function DashboardContent() {
                             </h1>
                             {userVerified && (
                                 <Badge className="bg-[var(--color-brand-green)] text-white border-none px-2.5 py-0.5 text-xs font-bold flex items-center gap-1 rounded-full shadow-sm">
-                                    <ShieldCheck className="h-3.5 w-3.5" /> Verified Landlord
+                                    <ShieldCheck className="h-3.5 w-3.5" /> Verified {role === "LANDLORD" ? "Landlord" : role === "AGENT" ? "Agent" : "Renter"}
                                 </Badge>
                             )}
                         </div>
@@ -428,33 +433,40 @@ function DashboardContent() {
 
                 {/* Mobile & Desktop Scrollable Tabs */}
                 <div className="bg-[var(--bg-card)] rounded-2xl shadow-[var(--shadow-sm)] border border-[var(--border-color)] mb-6 font-bold overflow-hidden">
-                    <div className="border-b border-[var(--border-color)] px-2 sm:px-6">
-                        <div className="flex gap-2 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth py-1">
-                            {tabs.map((tab) => {
-                                const Icon = tab.icon;
-                                const isActive = activeTab === tab.id;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        type="button"
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={cn(
-                                            "flex items-center gap-2 py-3.5 px-3 sm:px-4 text-xs sm:text-sm border-b-2 font-bold transition-all whitespace-nowrap cursor-pointer rounded-t-lg",
-                                            isActive
-                                                ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-[var(--bg-muted)]/50"
-                                                : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]/30"
-                                        )}
-                                    >
-                                    <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-                                        <span>{tab.label}</span>
-                                        {tab.id === "agent-delegations" && pendingAgentRequests > 0 && (
-                                            <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-black leading-none">
-                                                {pendingAgentRequests}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
+                    <div className="border-b border-[var(--border-color)] px-2 sm:px-4">
+                        {/* Relative wrapper so we can overlay the fade gradient */}
+                        <div className="relative">
+                            <div className="flex gap-0.5 sm:gap-4 overflow-x-auto no-scrollbar scroll-smooth py-1">
+                                {tabs.map((tab) => {
+                                    const Icon = tab.icon;
+                                    const isActive = activeTab === tab.id;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={cn(
+                                                "flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2.5 sm:py-3.5 px-2.5 sm:px-4 text-[10px] sm:text-sm border-b-2 font-bold transition-all whitespace-nowrap cursor-pointer rounded-t-lg min-w-0 shrink-0",
+                                                isActive
+                                                    ? "border-[var(--color-brand-green)] text-[var(--color-brand-green)] bg-[var(--bg-muted)]/50"
+                                                    : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]/30"
+                                            )}
+                                        >
+                                            <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                                            {/* Short label on mobile, full label on sm+ */}
+                                            <span className="sm:hidden leading-none">{(tab as any).mobileLabel || tab.label}</span>
+                                            <span className="hidden sm:inline">{tab.label}</span>
+                                            {tab.id === "agent-delegations" && pendingAgentRequests > 0 && (
+                                                <span className="inline-flex items-center justify-center h-4 min-w-[1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-black leading-none">
+                                                    {pendingAgentRequests}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {/* Right-edge fade to indicate horizontal scroll */}
+                            <div className="sm:hidden pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--bg-card)] to-transparent" />
                         </div>
                     </div>
 
@@ -463,7 +475,9 @@ function DashboardContent() {
                         {activeTab === "overview" && (
                             role === "LANDLORD"
                                 ? <OverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} dbUser={dbUser} properties={properties} />
-                                : <TenantOverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} favorites={favorites} dbUser={dbUser} />
+                                : role === "AGENT"
+                                    ? <AgentDashboard />
+                                    : <TenantOverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} favorites={favorites} dbUser={dbUser} />
                         )}
                         {activeTab === "properties" && role === "LANDLORD" && <PropertiesTab properties={properties} loading={loading} onRefresh={fetchDashboardData} />}
                         {activeTab === "tours" && <ToursTab role={role as "LANDLORD" | "TENANT"} />}
@@ -491,7 +505,7 @@ function DashboardContent() {
                         {activeTab === "agent-delegations" && role === "LANDLORD" && <LandlordAgentDelegationsTab />}
                         {activeTab === "agent" && role === "AGENT" && <AgentDashboard />}
                         {activeTab === "messages" && <Inbox initialConversationId={activeConversationId} />}
-                        {activeTab === "resources" && <DashboardResourcesTab role={role as "LANDLORD" | "TENANT"} />}
+                        {activeTab === "resources" && <DashboardResourcesTab role={(role as "LANDLORD" | "TENANT" | "AGENT") || "TENANT"} />}
                     </div>
                 </div>
             </div>
@@ -1784,7 +1798,7 @@ function DashboardForRentTab() {
     );
 }
 
-function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" }) {
+function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT" }) {
     const [searchQuery, setSearchQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<"ALL" | "LEGAL" | "TENANTS" | "LANDLORDS" | "ESCROW">("ALL");
 
@@ -1907,14 +1921,14 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                 <ShieldCheck className="h-3.5 w-3.5" /> Verified Legal Intelligence
                             </Badge>
                             <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
-                                <BookOpen className="h-3.5 w-3.5" /> {role === "LANDLORD" ? "Landlord Toolkit" : "Tenant Toolkit"}
+                                <BookOpen className="h-3.5 w-3.5" /> {role === "LANDLORD" ? "Landlord Toolkit" : role === "AGENT" ? "Agent Toolkit" : "Tenant Toolkit"}
                             </Badge>
                         </div>
                         <h2 className="text-xl sm:text-3xl font-black text-[var(--text-primary)] tracking-tight">
                             Legal Contracts, Tenancy Rights & Knowledge Base
                         </h2>
                         <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-2xl leading-relaxed">
-                            Download legally vetted Nigerian tenancy agreements, access statutory tenant/landlord protections, and review escrow safety guides tailored for {role === "LANDLORD" ? "property owners" : "tenants"}.
+                            Download legally vetted Nigerian tenancy agreements, access statutory tenant/landlord protections, and review escrow safety guides tailored for {role === "LANDLORD" ? "property owners" : role === "AGENT" ? "agents & partners" : "tenants"}.
                         </p>
                     </div>
 
