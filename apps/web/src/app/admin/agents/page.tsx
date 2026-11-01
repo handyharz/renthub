@@ -741,8 +741,8 @@ export default function AdminAgentsPage() {
                                                                     <ShieldCheck className="h-3.5 w-3.5" /> View Gov ID <ExternalLink className="h-2.5 w-2.5" />
                                                                 </a>
                                                             ) : (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 text-[11px]">
-                                                                    No Gov ID
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-[11px] font-semibold">
+                                                                    <AlertCircle className="h-3 w-3" /> Missing Gov ID (Required)
                                                                 </span>
                                                             )}
 
@@ -756,20 +756,24 @@ export default function AdminAgentsPage() {
                                                                     <FileText className="h-3.5 w-3.5" /> View Address Proof <ExternalLink className="h-2.5 w-2.5" />
                                                                 </a>
                                                             ) : (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px]">
-                                                                    Address Proof Pending
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-[11px] font-semibold">
+                                                                    <AlertCircle className="h-3 w-3" /> Missing Address Proof (Required)
                                                                 </span>
                                                             )}
 
-                                                            {agent.cacDocUrl && (
+                                                            {agent.cacDocUrl ? (
                                                                 <a
                                                                     href={agent.cacDocUrl}
                                                                     target="_blank"
                                                                     rel="noreferrer"
                                                                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-bold hover:underline"
                                                                 >
-                                                                    <Building2 className="h-3.5 w-3.5" /> View CAC Doc <ExternalLink className="h-2.5 w-2.5" />
+                                                                    <Building2 className="h-3.5 w-3.5" /> View CAC Doc (Optional) <ExternalLink className="h-2.5 w-2.5" />
                                                                 </a>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 text-[11px]">
+                                                                    No CAC (Optional)
+                                                                </span>
                                                             )}
                                                         </div>
 
@@ -780,13 +784,30 @@ export default function AdminAgentsPage() {
                                                 </div>
 
                                                 <div className="md:w-64 shrink-0 space-y-3">
-                                                    <Button
-                                                        onClick={() => handleApprove(agent.id)}
-                                                        disabled={isApproving || isRejecting}
-                                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-10 text-xs font-bold"
-                                                    >
-                                                        {isApproving ? "Approving..." : "✓ Approve Partner"}
-                                                    </Button>
+                                                    {(() => {
+                                                        const canApprove = Boolean(agent.user.idDocumentUrl && agent.addressDocUrl);
+                                                        return (
+                                                            <div className="space-y-1.5">
+                                                                <Button
+                                                                    onClick={() => handleApprove(agent.id)}
+                                                                    disabled={!canApprove || isApproving || isRejecting}
+                                                                    className={cn(
+                                                                        "w-full h-10 text-xs font-bold transition-all",
+                                                                        canApprove
+                                                                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                                            : "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-dashed border-gray-300 dark:border-gray-700"
+                                                                    )}
+                                                                >
+                                                                    {isApproving ? "Approving..." : canApprove ? "✓ Approve Partner" : "⚠️ Incomplete Documents"}
+                                                                </Button>
+                                                                {!canApprove && (
+                                                                    <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium text-center leading-tight">
+                                                                        Cannot activate: Missing {!agent.user.idDocumentUrl && !agent.addressDocUrl ? "Gov ID & Address Proof" : !agent.user.idDocumentUrl ? "Gov ID" : "Address Proof"}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
 
                                                     <div className="space-y-2">
                                                         <input

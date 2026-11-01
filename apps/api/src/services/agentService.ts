@@ -60,20 +60,31 @@ export class AgentService {
             where: { userId },
             create: { userId, ...data },
             update: data,
-            include: { user: { select: { id: true, firstName: true, lastName: true } } }
+            include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true, phone: true, verified: true, idDocumentUrl: true } } }
         });
     }
 
     /**
-     * Submit profile for admin review (sets status to PENDING_REVIEW if fields complete)
+     * Submit profile for admin review (sets status to PENDING_REVIEW if fields and mandatory docs complete)
      */
     async submitForReview(userId: string) {
-        const profile = await prisma.agentProfile.findUnique({ where: { userId } });
+        const [profile, user] = await Promise.all([
+            prisma.agentProfile.findUnique({ where: { userId } }),
+            prisma.user.findUnique({ where: { id: userId }, select: { idDocumentUrl: true, verified: true } }),
+        ]);
+
         if (!profile) throw new Error("Agent profile not found");
         if (profile.status === AgentStatus.ACTIVE) throw new Error("Profile is already active");
 
-        if (!profile.businessName || !profile.operatingCities.length) {
-            throw new Error("Complete your business name and operating cities before submitting");
+        const missing: string[] = [];
+        if (!profile.businessName) missing.push("Business / Agency name");
+        if (!profile.businessAddress) missing.push("Business address");
+        if (!profile.operatingCities?.length) missing.push("Operating cities");
+        if (!profile.addressDocUrl) missing.push("Office address proof (utility bill / lease agreement)");
+        if (!user?.idDocumentUrl) missing.push("Government photo ID (uploaded on your profile)");
+
+        if (missing.length > 0) {
+            throw new Error(`Cannot submit application. Missing required items: ${missing.join(", ")}`);
         }
 
         return prisma.agentProfile.update({
@@ -98,8 +109,19 @@ export class AgentService {
     }
 
     async approveAgent(agentProfileId: string, adminClerkId: string) {
-        const profile = await prisma.agentProfile.findUnique({ where: { id: agentProfileId } });
+        const profile = await prisma.agentProfile.findUnique({
+            where: { id: agentProfileId },
+            include: { user: { select: { id: true, idDocumentUrl: true, verified: true } } }
+        });
         if (!profile) throw new Error("Agent profile not found");
+
+        const missing: string[] = [];
+        if (!profile.addressDocUrl) missing.push("Office address proof");
+        if (!profile.user?.idDocumentUrl) missing.push("Government photo ID");
+
+        if (missing.length > 0) {
+            throw new Error(`Cannot approve agent: Mandatory verification documents missing (${missing.join(", ")}).`);
+        }
 
         // Update profile to active
         const updated = await prisma.agentProfile.update({
@@ -112,10 +134,10 @@ export class AgentService {
             }
         });
 
-        // Update user role to AGENT
+        // Update user role to AGENT and ensure verified is true
         await prisma.user.update({
             where: { id: profile.userId },
-            data: { role: "AGENT" }
+            data: { role: "AGENT", verified: true }
         });
 
         return updated;

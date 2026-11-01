@@ -38,6 +38,11 @@ interface AgentProfile {
     totalListings: number;
     totalClosed: number;
     rejectionReason?: string;
+    user?: {
+        id?: string;
+        idDocumentUrl?: string | null;
+        verified?: boolean;
+    };
 }
 
 interface AgentDelegation {
@@ -639,31 +644,70 @@ export default function AgentDashboard() {
                     </div>
                 )}
 
-                {(!profile?.businessName || !profile?.operatingCities?.length) && profile?.status !== "ACTIVE" && (
-                    <div className="mt-4">
-                        <p className="text-sm opacity-80 mb-2">Complete your profile to apply for agent verification:</p>
-                        <Button
-                            onClick={() => setShowProfileModal(true)}
-                            className="bg-white text-blue-700 hover:bg-blue-50 h-9 text-sm font-semibold"
-                        >
-                            Complete Profile <ChevronRight className="ml-1 h-4 w-4" />
-                        </Button>
-                    </div>
-                )}
+                {profile?.status !== "ACTIVE" && profile?.status !== "PENDING_REVIEW" && (() => {
+                    const hasProfileInfo = Boolean(profile?.businessName && profile?.businessAddress && profile?.operatingCities?.length);
+                    const hasAddressDoc = Boolean(profile?.addressDocUrl);
+                    const hasGovId = Boolean(profile?.user?.idDocumentUrl);
+                    const allMandatoryDone = hasProfileInfo && hasAddressDoc && hasGovId;
 
-                {profile?.businessName && profile.operatingCities?.length > 0 &&
-                    profile.status !== "ACTIVE" && profile.status !== "PENDING_REVIEW" && (
-                        <div className="mt-4">
-                            <Button
-                                onClick={handleSubmitForReview}
-                                disabled={submitting}
-                                className="bg-white text-blue-700 hover:bg-blue-50 h-9 text-sm font-semibold"
-                            >
-                                {submitting ? "Submitting..." : "Submit for Verification"}
-                                <Send className="ml-1 h-4 w-4" />
-                            </Button>
+                    const items = [
+                        { label: "Agency info (name, address, cities)", done: hasProfileInfo, required: true },
+                        { label: "Office Address Proof (utility bill / lease)", done: hasAddressDoc, required: true },
+                        { label: "Government Photo ID (from your Profile)", done: hasGovId, required: true },
+                        { label: "CAC Registration Certificate", done: Boolean(profile?.cacDocUrl), required: false },
+                    ];
+
+                    return (
+                        <div className="mt-4 space-y-3">
+                            <p className="text-xs font-semibold opacity-80 uppercase tracking-wider">Verification Readiness</p>
+                            <div className="space-y-1.5">
+                                {items.map((item) => (
+                                    <div key={item.label} className="flex items-center gap-2 text-xs">
+                                        {item.done ? (
+                                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300 shrink-0" />
+                                        ) : (
+                                            <AlertCircle className={`h-3.5 w-3.5 shrink-0 ${item.required ? "text-red-300" : "text-white/40"}`} />
+                                        )}
+                                        <span className={item.done ? "opacity-80 line-through" : item.required ? "opacity-90 font-semibold" : "opacity-60"}>
+                                            {item.label}
+                                            {!item.required && " (optional)"}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            {!hasProfileInfo && (
+                                <Button
+                                    onClick={() => setShowProfileModal(true)}
+                                    className="bg-white text-blue-700 hover:bg-blue-50 h-9 text-sm font-semibold"
+                                >
+                                    Complete Profile <ChevronRight className="ml-1 h-4 w-4" />
+                                </Button>
+                            )}
+                            {hasProfileInfo && (
+                                <div className="space-y-2">
+                                    {!allMandatoryDone && (
+                                        <p className="text-[11px] text-red-200 font-medium">
+                                            ⚠️ Upload the missing required documents above before submitting.
+                                        </p>
+                                    )}
+                                    <Button
+                                        onClick={handleSubmitForReview}
+                                        disabled={!allMandatoryDone || submitting}
+                                        className={cn(
+                                            "h-9 text-sm font-semibold transition-all",
+                                            allMandatoryDone
+                                                ? "bg-white text-blue-700 hover:bg-blue-50"
+                                                : "bg-white/20 text-white/50 cursor-not-allowed border border-white/20"
+                                        )}
+                                    >
+                                        {submitting ? "Submitting..." : "Submit for Verification"}
+                                        <Send className="ml-1 h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    );
+                })()}
             </div>
 
             {/* Stats */}
