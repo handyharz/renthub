@@ -704,6 +704,8 @@ model AgentProfile {
   // KYC / business identity
   licenseNumber       String?     // e.g. NIESV/ESVARBON registration
   licenseDocUrl       String?
+  cacDocUrl           String?     // Optional CAC Business Registration Certificate (Form CAC 1.1 / Status Report)
+  addressDocUrl       String?     // Office utility bill or tenancy agreement for address verification
   businessName        String?
   businessAddress     String?
   yearsOfExperience   Int         @default(0)

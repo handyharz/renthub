@@ -24,6 +24,12 @@ router.post(
     uploadController.uploadIdDocument.bind(uploadController)
 );
 
+router.post(
+    "/agent-document",
+    uploadIdMiddleware.single("document"),
+    uploadController.uploadAgentDocument.bind(uploadController)
+);
+
 router.delete(
     "/image/:imageId",
     uploadController.deleteImage.bind(uploadController)

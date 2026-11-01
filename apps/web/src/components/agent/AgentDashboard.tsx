@@ -6,7 +6,8 @@ import {
     Briefcase, MapPin, Star, CheckCircle2, Clock, XCircle,
     Building2, Phone, ChevronRight, AlertCircle, Plus,
     TrendingUp, Users, FileCheck, Wallet, Edit3, Send,
-    ShieldCheck, ArrowRight, RefreshCw, X, Home
+    ShieldCheck, ArrowRight, RefreshCw, X, Home,
+    Upload, FileText, ExternalLink
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -25,6 +26,9 @@ interface AgentProfile {
     businessName?: string;
     businessAddress?: string;
     licenseNumber?: string;
+    licenseDocUrl?: string;
+    cacDocUrl?: string;
+    addressDocUrl?: string;
     yearsOfExperience: number;
     operatingCities: string[];
     bio?: string;
@@ -206,7 +210,36 @@ function ProfileEditModal({
         bio: profile?.bio || "",
         defaultCommissionPct: String(profile?.defaultCommissionPct || "5"),
     });
+    const [addressDocUrl, setAddressDocUrl] = useState(profile?.addressDocUrl || "");
+    const [cacDocUrl, setCacDocUrl] = useState(profile?.cacDocUrl || "");
+    const [uploadingAddress, setUploadingAddress] = useState(false);
+    const [uploadingCac, setUploadingCac] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const handleUploadDoc = async (file: File, docType: "address" | "cac") => {
+        const formData = new FormData();
+        formData.append("document", file);
+        formData.append("docType", docType);
+
+        if (docType === "address") setUploadingAddress(true);
+        else setUploadingCac(true);
+
+        try {
+            const res = await api.post(`/upload/agent-document?clerkId=${clerkId}`, formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            if (res.data?.success) {
+                toast.success(res.data.message);
+                if (docType === "address") setAddressDocUrl(res.data.data.url);
+                else setCacDocUrl(res.data.data.url);
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to upload document");
+        } finally {
+            if (docType === "address") setUploadingAddress(false);
+            else setUploadingCac(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -216,6 +249,8 @@ function ProfileEditModal({
                 businessName: form.businessName,
                 businessAddress: form.businessAddress,
                 licenseNumber: form.licenseNumber || undefined,
+                addressDocUrl: addressDocUrl || undefined,
+                cacDocUrl: cacDocUrl || undefined,
                 yearsOfExperience: parseInt(form.yearsOfExperience) || 0,
                 operatingCities: form.operatingCities
                     .split(",")
@@ -255,19 +290,111 @@ function ProfileEditModal({
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Business Address</label>
+                        <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">Business Address *</label>
                         <input
                             value={form.businessAddress}
                             onChange={e => setForm(f => ({ ...f, businessAddress: e.target.value }))}
+                            placeholder="e.g. Suite 4, Lekki Mall, Admiralty Way, Lagos"
                             className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            required
                         />
                     </div>
+
+                    {/* Office Address Verification Upload */}
+                    <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                Office Address Verification (Utility Bill or Tenancy Agreement)
+                            </label>
+                            {addressDocUrl && (
+                                <a
+                                    href={addressDocUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                                >
+                                    View Current <ExternalLink className="h-2.5 w-2.5" />
+                                </a>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                            Upload a recent electricity bill (EKEDC / IKEDC / AEDC), waste bill, or office tenancy agreement within 3 months to prove your physical office address.
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-xs font-semibold text-[var(--text-primary)] transition-colors">
+                                <Upload className="h-3 w-3 text-blue-600" />
+                                <span>{uploadingAddress ? "Uploading..." : addressDocUrl ? "Replace Address Doc" : "Upload Address Doc (PDF/Image)"}</span>
+                                <input
+                                    type="file"
+                                    accept=".pdf,image/*"
+                                    className="hidden"
+                                    disabled={uploadingAddress}
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) handleUploadDoc(e.target.files[0], "address");
+                                    }}
+                                />
+                            </label>
+                            {addressDocUrl && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Document Uploaded
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* CAC Business Registration Certificate (Optional) */}
+                    <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+                                <Building2 className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                                CAC Registration Certificate (Form CAC 1.1 / Status Report)
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300">
+                                    Optional
+                                </span>
+                            </label>
+                            {cacDocUrl && (
+                                <a
+                                    href={cacDocUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5"
+                                >
+                                    View Current <ExternalLink className="h-2.5 w-2.5" />
+                                </a>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                            Optional: Upload your CAC Certificate of Registration or Status Report showing your registered office address.
+                        </p>
+                        <div className="flex items-center gap-3">
+                            <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-xs font-semibold text-[var(--text-primary)] transition-colors">
+                                <Upload className="h-3 w-3 text-purple-600" />
+                                <span>{uploadingCac ? "Uploading..." : cacDocUrl ? "Replace CAC Doc" : "Upload CAC Certificate (PDF/Image)"}</span>
+                                <input
+                                    type="file"
+                                    accept=".pdf,image/*"
+                                    className="hidden"
+                                    disabled={uploadingCac}
+                                    onChange={(e) => {
+                                        if (e.target.files?.[0]) handleUploadDoc(e.target.files[0], "cac");
+                                    }}
+                                />
+                            </label>
+                            {cacDocUrl && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> CAC Uploaded
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1.5">NIESV / License Number</label>
                         <input
                             value={form.licenseNumber}
                             onChange={e => setForm(f => ({ ...f, licenseNumber: e.target.value }))}
-                            placeholder="Optional but builds trust"
+                            placeholder="Optional professional registration"
                             className="w-full bg-[var(--bg-input)] border border-[var(--border-color)] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>

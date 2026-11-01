@@ -11,13 +11,13 @@ export class AgentService {
     async getOrCreateProfile(userId: string) {
         const existing = await prisma.agentProfile.findUnique({
             where: { userId },
-            include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true, phone: true, verified: true } } }
+            include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true, phone: true, verified: true, idDocumentUrl: true } } }
         });
         if (existing) return existing;
 
         return prisma.agentProfile.create({
             data: { userId },
-            include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true, phone: true, verified: true } } }
+            include: { user: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true, phone: true, verified: true, idDocumentUrl: true } } }
         });
     }
 
@@ -29,7 +29,7 @@ export class AgentService {
                     select: {
                         id: true, firstName: true, lastName: true,
                         avatar: true, email: true, phone: true,
-                        verified: true, clerkId: true
+                        verified: true, clerkId: true, idDocumentUrl: true
                     }
                 }
             }
@@ -41,6 +41,8 @@ export class AgentService {
         data: {
             licenseNumber?: string;
             licenseDocUrl?: string;
+            cacDocUrl?: string;
+            addressDocUrl?: string;
             businessName?: string;
             businessAddress?: string;
             yearsOfExperience?: number;
@@ -87,7 +89,7 @@ export class AgentService {
             where: { status: AgentStatus.PENDING_REVIEW },
             include: {
                 user: {
-                    select: { id: true, firstName: true, lastName: true, email: true, phone: true, avatar: true, verified: true }
+                    select: { id: true, firstName: true, lastName: true, email: true, phone: true, avatar: true, verified: true, idDocumentUrl: true }
                 }
             },
             orderBy: { createdAt: "asc" },
@@ -199,7 +201,7 @@ export class AgentService {
                 user: {
                     select: {
                         id: true, firstName: true, lastName: true, email: true,
-                        phone: true, avatar: true, verified: true
+                        phone: true, avatar: true, verified: true, idDocumentUrl: true
                     }
                 }
             },

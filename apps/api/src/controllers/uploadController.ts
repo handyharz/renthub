@@ -370,6 +370,71 @@ export class UploadController {
             });
         }
     }
+
+    /**
+     * Upload agent document (office address verification utility bill, CAC certificate, or license)
+     * POST /api/upload/agent-document
+     * Body: { docType: "address" | "cac" | "license" }
+     * File: "document"
+     */
+    async uploadAgentDocument(req: Request, res: Response) {
+        try {
+            const file = req.file;
+            const docType = (req.body?.docType as string) || "address";
+
+            if (!file) {
+                return res.status(400).json({
+                    success: false,
+                    message: "No document file uploaded",
+                });
+            }
+
+            const userId = req.user?.id;
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Unauthorized",
+                });
+            }
+
+            // Upload document to Cloudinary
+            const result = await uploadService.uploadIdDocument(file.buffer, `${userId}_${docType}`);
+
+            // Prepare update field
+            const updateData: any = {};
+            if (docType === "cac") {
+                updateData.cacDocUrl = result.secureUrl;
+            } else if (docType === "license") {
+                updateData.licenseDocUrl = result.secureUrl;
+            } else {
+                updateData.addressDocUrl = result.secureUrl;
+            }
+
+            // Upsert agent profile
+            const profile = await prisma.agentProfile.upsert({
+                where: { userId },
+                create: { userId, ...updateData },
+                update: updateData,
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: `${docType === "cac" ? "CAC certificate" : docType === "license" ? "License document" : "Address verification document"} uploaded successfully`,
+                data: {
+                    url: result.secureUrl,
+                    docType,
+                    profile,
+                },
+            });
+        } catch (error: any) {
+            console.error("Error uploading agent document:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to upload agent document",
+                error: error.message,
+            });
+        }
+    }
 }
 
 export const uploadController = new UploadController();

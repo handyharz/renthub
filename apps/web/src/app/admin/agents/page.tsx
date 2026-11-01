@@ -23,6 +23,9 @@ interface AgentProfile {
     businessName?: string;
     businessAddress?: string;
     licenseNumber?: string;
+    licenseDocUrl?: string;
+    cacDocUrl?: string;
+    addressDocUrl?: string;
     yearsOfExperience: number;
     operatingCities: string[];
     bio?: string;
@@ -39,6 +42,7 @@ interface AgentProfile {
         email?: string;
         phone?: string;
         verified: boolean;
+        idDocumentUrl?: string;
     };
 }
 
@@ -569,6 +573,26 @@ export default function AdminAgentsPage() {
                                                                     License: {agent.licenseNumber}
                                                                 </span>
                                                             )}
+                                                            {agent.addressDocUrl && (
+                                                                <a
+                                                                    href={agent.addressDocUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-2.5 py-0.5 rounded-full font-semibold border border-blue-200 dark:border-blue-800 hover:underline"
+                                                                >
+                                                                    <FileText className="h-3 w-3" /> Address Proof
+                                                                </a>
+                                                            )}
+                                                            {agent.cacDocUrl && (
+                                                                <a
+                                                                    href={agent.cacDocUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 px-2.5 py-0.5 rounded-full font-semibold border border-purple-200 dark:border-purple-800 hover:underline"
+                                                                >
+                                                                    <Building2 className="h-3 w-3" /> CAC Registered
+                                                                </a>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -704,6 +728,51 @@ export default function AdminAgentsPage() {
                                                                 </span>
                                                             )}
                                                         </div>
+
+                                                        {/* Document Verification Links */}
+                                                        <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                                                            {agent.user.idDocumentUrl ? (
+                                                                <a
+                                                                    href={agent.user.idDocumentUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold hover:underline"
+                                                                >
+                                                                    <ShieldCheck className="h-3.5 w-3.5" /> View Gov ID <ExternalLink className="h-2.5 w-2.5" />
+                                                                </a>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-500 text-[11px]">
+                                                                    No Gov ID
+                                                                </span>
+                                                            )}
+
+                                                            {agent.addressDocUrl ? (
+                                                                <a
+                                                                    href={agent.addressDocUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold hover:underline"
+                                                                >
+                                                                    <FileText className="h-3.5 w-3.5" /> View Address Proof <ExternalLink className="h-2.5 w-2.5" />
+                                                                </a>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-[11px]">
+                                                                    Address Proof Pending
+                                                                </span>
+                                                            )}
+
+                                                            {agent.cacDocUrl && (
+                                                                <a
+                                                                    href={agent.cacDocUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-bold hover:underline"
+                                                                >
+                                                                    <Building2 className="h-3.5 w-3.5" /> View CAC Doc <ExternalLink className="h-2.5 w-2.5" />
+                                                                </a>
+                                                            )}
+                                                        </div>
+
                                                         {agent.bio && (
                                                             <p className="text-xs text-[var(--text-muted)] mt-2 italic">"{agent.bio}"</p>
                                                         )}
