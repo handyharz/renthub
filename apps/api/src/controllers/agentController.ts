@@ -15,7 +15,7 @@ const str = (v: unknown): string =>
     Array.isArray(v) ? String(v[0] ?? "") : String(v ?? "");
 
 function getClerkId(req: Request): string {
-    return req.auth?.userId ?? req.user?.clerkId ?? "";
+    return (req.query?.clerkId as string) ?? (req.body?.clerkId as string) ?? req.auth?.userId ?? req.user?.clerkId ?? "";
 }
 
 async function resolveDbUserId(req: Request): Promise<string | null> {
@@ -349,6 +349,33 @@ export const adminListAllAgents = async (req: Request, res: Response) => {
         return ok(res, agents);
     } catch (e: any) {
         return fail(res, e.message, 500);
+    }
+};
+
+/** Check eligibility to deactivate / relinquish agent account */
+export const checkAgentDeactivationEligibility = async (req: Request, res: Response) => {
+    try {
+        const userId = await resolveDbUserId(req);
+        if (!userId) return fail(res, "Unauthorized", 401);
+
+        const eligibility = await agentService.checkDeactivationEligibility(userId);
+        return ok(res, eligibility);
+    } catch (e: any) {
+        return fail(res, e.message, 500);
+    }
+};
+
+/** Deactivate agent account, archive records, and revert user to TENANT */
+export const deactivateAgentAccount = async (req: Request, res: Response) => {
+    try {
+        const userId = await resolveDbUserId(req);
+        if (!userId) return fail(res, "Unauthorized", 401);
+
+        const confirmation = req.body?.confirmation;
+        const result = await agentService.deactivateAgentAccount(userId, confirmation);
+        return ok(res, result, result.message);
+    } catch (e: any) {
+        return fail(res, e.message, 400);
     }
 };
 

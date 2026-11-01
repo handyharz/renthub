@@ -22,6 +22,8 @@ import {
     getMyStrikes,
     adminGetAgentKPIs,
     adminListAllAgents,
+    checkAgentDeactivationEligibility,
+    deactivateAgentAccount,
 } from "../controllers/agentController";
 import { requireAuth, requireDbUser, requireRole } from "../middleware/auth";
 
@@ -40,6 +42,8 @@ router.get("/me/delegations", requireAuth, requireDbUser, getMyDelegations);
 router.get("/me/payouts", requireAuth, requireDbUser, getMyAgentPayouts);
 router.get("/me/strikes", requireAuth, requireDbUser, getMyStrikes);
 router.post("/me/delegations", requireAuth, requireDbUser, requestDelegation);
+router.get("/me/deactivation-check", requireAuth, requireDbUser, checkAgentDeactivationEligibility);
+router.post("/me/deactivate", requireAuth, requireDbUser, deactivateAgentAccount);
 
 router.get("/landlord/delegations", requireAuth, requireDbUser, getLandlordDelegations);
 router.patch("/delegations/:id/authorize", requireAuth, requireDbUser, authorizeDelegation);

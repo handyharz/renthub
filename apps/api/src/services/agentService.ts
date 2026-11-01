@@ -772,6 +772,148 @@ export class AgentService {
             history,
         };
     }
+
+    // ─── DEACTIVATION & ROLE RELINQUISHMENT ─────────────────────────────────────
+
+    /**
+     * Check if an agent is eligible to deactivate/relinquish their agent role.
+     * Guards:
+     * 1. 0 active property delegations (AUTHORIZED or PENDING_LANDLORD)
+     * 2. 0 in-flight/held escrow transactions on properties they manage
+     * 3. 0 pending strikes/disputes
+     */
+    async checkDeactivationEligibility(userId: string) {
+        // 1. Check delegations
+        const activeDelegations = await prisma.agentListing.findMany({
+            where: {
+                agentId: userId,
+                status: { in: [AgentListingStatus.AUTHORIZED, AgentListingStatus.PENDING_LANDLORD] }
+            },
+            include: {
+                property: { select: { id: true, title: true } }
+            }
+        });
+
+        // 2. Check withheld / pending escrow transactions on managed properties
+        const allAgentListings = await prisma.agentListing.findMany({
+            where: { agentId: userId },
+            select: { propertyId: true }
+        });
+        const propertyIds = allAgentListings.map(l => l.propertyId);
+
+        let withheldTransactions: any[] = [];
+        if (propertyIds.length > 0) {
+            withheldTransactions = await prisma.transaction.findMany({
+                where: {
+                    propertyId: { in: propertyIds },
+                    OR: [
+                        { escrowHeld: true, escrowReleased: false },
+                        { status: "PENDING" },
+                        { disputed: true }
+                    ]
+                },
+                select: {
+                    id: true,
+                    totalAmount: true,
+                    rentAmount: true,
+                    status: true,
+                    disputed: true,
+                    property: { select: { title: true } }
+                }
+            });
+        }
+
+        // 3. Check pending strikes / disputes
+        const pendingStrikes = await prisma.agentStrike.findMany({
+            where: {
+                agentId: userId,
+                status: "PENDING"
+            },
+            select: { id: true, reason: true }
+        });
+
+        const blockers: string[] = [];
+
+        if (activeDelegations.length > 0) {
+            const propNames = activeDelegations.map(d => d.property?.title || "Property").slice(0, 2).join(", ");
+            blockers.push(`You currently have ${activeDelegations.length} active property delegation(s) (${propNames}${activeDelegations.length > 2 ? "..." : ""}). You must relinquish or complete them before deactivating.`);
+        }
+
+        if (withheldTransactions.length > 0) {
+            blockers.push(`You have ${withheldTransactions.length} transaction(s) with funds currently held in escrow or in dispute. Escrow releases or refunds must be finalized first.`);
+        }
+
+        if (pendingStrikes.length > 0) {
+            blockers.push(`You have ${pendingStrikes.length} unresolved dispute/strike review(s) currently open.`);
+        }
+
+        const canDeactivate = blockers.length === 0;
+
+        return {
+            canDeactivate,
+            blockers,
+            details: {
+                activeDelegationsCount: activeDelegations.length,
+                withheldTransactionsCount: withheldTransactions.length,
+                pendingStrikesCount: pendingStrikes.length,
+            },
+            retentionPolicy: {
+                retentionYears: 2,
+                notice: "In compliance with real estate regulatory standards and financial escrow anti-fraud laws, your past transaction audit trail, KYC documents, and delegation records will be retained in secure storage for 2 years before permanent deletion."
+            }
+        };
+    }
+
+    /**
+     * Deactivates the agent profile, archives it for the 2-year retention period,
+     * and switches the user role back to TENANT.
+     */
+    async deactivateAgentAccount(userId: string, confirmation: string) {
+        if (!confirmation || confirmation.trim().toUpperCase() !== "DELETE") {
+            throw new Error('You must type "DELETE" to confirm deactivation.');
+        }
+
+        // Re-verify eligibility
+        const eligibility = await this.checkDeactivationEligibility(userId);
+        if (!eligibility.canDeactivate) {
+            throw new Error(`Cannot deactivate agent account: ${eligibility.blockers.join(" ")}`);
+        }
+
+        // 1. Update AgentProfile to SUSPENDED status (archived for retention)
+        await prisma.agentProfile.upsert({
+            where: { userId },
+            update: {
+                status: AgentStatus.SUSPENDED,
+                rejectionReason: "Account deactivated by user; archived for 2-year statutory retention."
+            },
+            create: {
+                userId,
+                status: AgentStatus.SUSPENDED,
+                rejectionReason: "Account deactivated by user; archived for 2-year statutory retention."
+            }
+        });
+
+        // 2. Switch User.role back to TENANT
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                role: "TENANT"
+            },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                firstName: true,
+                lastName: true
+            }
+        });
+
+        return {
+            success: true,
+            user: updatedUser,
+            message: "Agent role relinquished successfully. Your account has been switched back to a Tenant account. Your records are archived under the 2-year retention policy."
+        };
+    }
 }
 
 export const agentService = new AgentService();

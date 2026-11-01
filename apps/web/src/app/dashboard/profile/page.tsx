@@ -23,6 +23,7 @@ import {
     ExternalLink,
     Building2,
     AlertCircle,
+    AlertTriangle,
     Save,
     Briefcase,
     RefreshCw,
@@ -30,6 +31,7 @@ import {
 import Link from "next/link";
 import { toast } from "sonner";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
+import { AgentDeactivationModal } from "@/components/agent/AgentDeactivationModal";
 
 export default function ProfilePage() {
     const { user, isLoaded } = useUser();
@@ -38,6 +40,7 @@ export default function ProfilePage() {
     const [saving, setSaving] = useState(false);
     const [showVerifyModal, setShowVerifyModal] = useState(false);
     const [showSwitchModal, setShowSwitchModal] = useState(false);
+    const [showDeactivateModal, setShowDeactivateModal] = useState(false);
     const [switchingRole, setSwitchingRole] = useState(false);
     const [activeSection, setActiveSection] = useState<"all" | "personal" | "kyc" | "settlement">("all");
 
@@ -534,8 +537,20 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
                                 {isAgent ? (
-                                    <div className="text-xs text-purple-700 dark:text-purple-300 font-medium bg-purple-100 dark:bg-purple-900/30 rounded-xl px-3 py-2">
-                                        ✓ Role: Agent — go to <a href="/dashboard?tab=agent" className="font-bold underline">your Agent dashboard</a>
+                                    <div className="space-y-2.5">
+                                        <div className="text-xs text-purple-700 dark:text-purple-300 font-medium bg-purple-100 dark:bg-purple-900/30 rounded-xl px-3 py-2 flex items-center justify-between">
+                                            <span>✓ Role: Agent</span>
+                                            <a href="/dashboard?tab=agent" className="font-bold underline text-purple-800 dark:text-purple-200 hover:text-purple-950">
+                                                Agent Dashboard →
+                                            </a>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowDeactivateModal(true)}
+                                            className="w-full text-left text-[11px] text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold flex items-center gap-1.5 px-1 hover:underline transition-colors"
+                                        >
+                                            Relinquish Agent Role & Switch to Tenant
+                                        </button>
                                     </div>
                                 ) : (
                                     <Button
@@ -623,11 +638,11 @@ export default function ProfilePage() {
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                     onClick={(e) => { if (e.target === e.currentTarget) setShowSwitchModal(false); }}
                 >
-                    <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl shadow-2xl w-full max-w-lg p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
                         {/* Header */}
-                        <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-2xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center shrink-0">
-                                <Briefcase className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                        <div className="flex items-center gap-3.5">
+                            <div className="h-12 w-12 rounded-2xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                                <Briefcase className="h-6 w-6" />
                             </div>
                             <div>
                                 <h2 className="text-lg font-extrabold text-[var(--text-primary)]">
@@ -639,27 +654,65 @@ export default function ProfilePage() {
                             </div>
                         </div>
 
-                        {/* Body */}
-                        <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-4 space-y-2.5 text-xs text-[var(--text-secondary)]">
-                            <p className="font-bold text-[var(--text-primary)] text-sm">What happens next:</p>
-                            <ul className="space-y-2">
-                                <li className="flex items-start gap-2">
-                                    <span className="text-purple-500 font-bold mt-0.5">→</span>
-                                    Your account role will be updated to <strong className="text-[var(--text-primary)]">Agent</strong>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-purple-500 font-bold mt-0.5">→</span>
-                                    You'll be redirected to your <strong className="text-[var(--text-primary)]">Agent dashboard</strong> to complete your profile & KYC
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-purple-500 font-bold mt-0.5">→</span>
-                                    Earn up to <strong className="text-[var(--text-primary)]">5% commission</strong> per deal, paid landlord-side via escrow
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="text-amber-500 font-bold mt-0.5">⚠</span>
-                                    Your agent profile requires admin approval before you can manage listings
-                                </li>
-                            </ul>
+                        {/* Step-by-Step Onboarding Roadmap */}
+                        <div className="space-y-2.5">
+                            <p className="font-bold text-[var(--text-primary)] text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                                How Agent Onboarding Works
+                            </p>
+
+                            <div className="space-y-2">
+                                {/* Step 1: Instant Switch */}
+                                <div className="flex items-start gap-3 p-3 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-800/60">
+                                    <div className="h-7 w-7 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                        1
+                                    </div>
+                                    <div className="text-xs space-y-0.5 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-[var(--text-primary)]">Instant Role Update</span>
+                                            <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                                Instant
+                                            </span>
+                                        </div>
+                                        <p className="text-[var(--text-secondary)] leading-relaxed">
+                                            Your account role immediately changes to <strong className="text-[var(--text-primary)]">Agent</strong> and unlocks your Agent Dashboard.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Step 2: KYC & Profile */}
+                                <div className="flex items-start gap-3 p-3 rounded-2xl bg-[var(--bg-muted)]/60 border border-[var(--border-color)]">
+                                    <div className="h-7 w-7 rounded-full bg-[var(--border-color)] text-[var(--text-secondary)] flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                        2
+                                    </div>
+                                    <div className="text-xs space-y-0.5 min-w-0">
+                                        <span className="font-bold text-[var(--text-primary)]">Profile Setup & KYC</span>
+                                        <p className="text-[var(--text-secondary)] leading-relaxed">
+                                            Add your agency details, operating cities, and submit your government ID document for verification.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Step 3: Commission */}
+                                <div className="flex items-start gap-3 p-3 rounded-2xl bg-[var(--bg-muted)]/60 border border-[var(--border-color)]">
+                                    <div className="h-7 w-7 rounded-full bg-[var(--border-color)] text-[var(--text-secondary)] flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                                        3
+                                    </div>
+                                    <div className="text-xs space-y-0.5 min-w-0">
+                                        <span className="font-bold text-[var(--text-primary)]">Earn Commission</span>
+                                        <p className="text-[var(--text-secondary)] leading-relaxed">
+                                            Earn up to <strong className="text-[var(--text-primary)]">5% commission</strong> per deal, paid landlord-side via RentHub escrow.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Admin Approval Notice Banner */}
+                        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/25 border border-amber-200 dark:border-amber-800/60 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <p className="leading-relaxed">
+                                <strong className="font-semibold text-amber-950 dark:text-amber-100">Admin Approval Required:</strong> You can configure your profile immediately, but admin approval is required before you can manage listings.
+                            </p>
                         </div>
 
                         {/* Actions */}
@@ -683,9 +736,13 @@ export default function ProfilePage() {
                                             role: "AGENT",
                                             onboardingCompleted: true,
                                         });
+                                        // Auto-create/seed agent profile shell
+                                        try {
+                                            await api.get(`/agents/me?clerkId=${user?.id}`);
+                                        } catch {}
                                         setShowSwitchModal(false);
                                         toast.success("Role updated! Taking you to your agent dashboard...");
-                                        setTimeout(() => window.location.href = "/dashboard?tab=agent", 1200);
+                                        setTimeout(() => window.location.href = "/dashboard?tab=agent", 1000);
                                     } catch {
                                         toast.error("Failed to switch role. Please try again.");
                                         setSwitchingRole(false);
@@ -702,6 +759,14 @@ export default function ProfilePage() {
                     </div>
                 </div>
             )}
+
+            {/* Agent Deactivation Modal */}
+            <AgentDeactivationModal
+                isOpen={showDeactivateModal}
+                onClose={() => setShowDeactivateModal(false)}
+                onSuccess={() => fetchUserProfile()}
+                clerkId={user?.id || ""}
+            />
         </div>
     );
 }

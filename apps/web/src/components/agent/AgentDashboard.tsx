@@ -15,6 +15,7 @@ import { formatPrice, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { toast } from "sonner";
+import { AgentDeactivationModal } from "./AgentDeactivationModal";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -399,6 +400,7 @@ export default function AgentDashboard() {
     const [loading, setLoading] = useState(true);
     const [showDelegationModal, setShowDelegationModal] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);
+    const [showDeactivateModal, setShowDeactivateModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
@@ -475,13 +477,22 @@ export default function AgentDashboard() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                         {profile && <StatusBadge status={profile.status} />}
-                        <button
-                            onClick={() => setShowProfileModal(true)}
-                            className="text-xs underline opacity-80 hover:opacity-100 flex items-center gap-1"
-                        >
-                            <Edit3 className="h-3 w-3" />
-                            Edit Profile
-                        </button>
+                        <div className="flex items-center gap-2.5">
+                            <button
+                                onClick={() => setShowProfileModal(true)}
+                                className="text-xs underline opacity-80 hover:opacity-100 flex items-center gap-1"
+                            >
+                                <Edit3 className="h-3 w-3" />
+                                Edit Profile
+                            </button>
+                            <span className="opacity-40 text-xs">·</span>
+                            <button
+                                onClick={() => setShowDeactivateModal(true)}
+                                className="text-xs text-red-200 hover:text-white underline transition-colors"
+                            >
+                                Close Agent Account
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -669,6 +680,14 @@ export default function AgentDashboard() {
                     profile={profile}
                     onClose={() => setShowProfileModal(false)}
                     onSuccess={fetchData}
+                />
+            )}
+            {showDeactivateModal && (
+                <AgentDeactivationModal
+                    isOpen={showDeactivateModal}
+                    onClose={() => setShowDeactivateModal(false)}
+                    onSuccess={fetchData}
+                    clerkId={user?.id || ""}
                 />
             )}
         </div>
