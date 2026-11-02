@@ -887,9 +887,9 @@ export function ApplicationsTab() {
 
                                         {/* Application Details Strip */}
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 rounded-2xl bg-[var(--bg-muted)]/60 border border-[var(--border-color)] text-xs">
-                                            <div>
-                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Proposed Move-In</span>
-                                                <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block">
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block truncate">Proposed Move-In</span>
+                                                <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block truncate">
                                                     {new Date(app.proposedMoveInDate).toLocaleDateString("en-NG", {
                                                         day: "numeric",
                                                         month: "short",
@@ -897,21 +897,21 @@ export function ApplicationsTab() {
                                                     })}
                                                 </span>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Duration</span>
-                                                <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block">
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block truncate">Duration</span>
+                                                <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block truncate">
                                                     {app.leaseDuration} Months
                                                 </span>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Est. Total Deposit</span>
-                                                <span className="font-extrabold text-[var(--color-brand-green)] mt-0.5 block">
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block truncate">Est. Total Deposit</span>
+                                                <span className="font-extrabold text-[var(--color-brand-green)] mt-0.5 block truncate">
                                                     {formatPrice(totalEstimated)}
                                                 </span>
                                             </div>
-                                            <div>
-                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Application Date</span>
-                                                <span className="font-semibold text-[var(--text-secondary)] mt-0.5 block">
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block truncate">Application Date</span>
+                                                <span className="font-semibold text-[var(--text-secondary)] mt-0.5 block truncate">
                                                     {new Date(app.createdAt).toLocaleDateString()}
                                                 </span>
                                             </div>
@@ -919,19 +919,52 @@ export function ApplicationsTab() {
 
                                         {/* Application Note */}
                                         {app.note && (
-                                            <div className="text-xs text-[var(--text-secondary)] font-medium bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
+                                            <div className="text-xs text-[var(--text-secondary)] font-medium bg-blue-500/10 p-3 rounded-xl border border-blue-500/20 break-words">
                                                 <span className="font-bold text-[var(--text-primary)] mr-1">Your Note to Landlord:</span>
                                                 <span className="italic">"{app.note}"</span>
                                             </div>
                                         )}
 
-                                        {/* DYNAMIC ACTION BANNERS */}
-                                        {/* 1. Approved & Ready to Pay */}
+                                        {/* DYNAMIC ACTION BANNERS ACROSS ALL STATUSES */}
+                                        {/* Status: PENDING (Awaiting Landlord Approval) */}
+                                        {app.status === "PENDING" && (
+                                            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 font-medium flex items-start gap-2.5">
+                                                <Clock className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5 animate-pulse" />
+                                                <div className="space-y-0.5 min-w-0">
+                                                    <span className="font-bold text-[var(--text-primary)] block">Awaiting Landlord Review</span>
+                                                    <span className="leading-relaxed text-[var(--text-secondary)] block">
+                                                        Your application has been submitted. As soon as the landlord accepts, this listing will lock for you to deposit rent into protected escrow.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Status: REJECTED (Application Declined) */}
+                                        {app.status === "REJECTED" && (
+                                            <div className="p-3.5 sm:p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-xs text-red-700 dark:text-red-300 font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                <div className="flex items-start gap-2.5 min-w-0">
+                                                    <XCircle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                                                    <div className="space-y-0.5 min-w-0">
+                                                        <span className="font-bold text-[var(--text-primary)] block">Application Declined</span>
+                                                        <span className="leading-relaxed text-[var(--text-secondary)] block">
+                                                            This application was declined. Explore other verified homes on RentHub with 0% broker fee and full escrow protection.
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <Link href="/search" className="shrink-0 w-full sm:w-auto">
+                                                    <Button size="sm" variant="outline" className="w-full sm:w-auto h-9 px-4 rounded-xl border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold gap-1.5 hover:bg-red-500/10 shadow-2xs">
+                                                        <Search className="h-3.5 w-3.5" /> Browse Homes
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        )}
+
+                                        {/* Status: APPROVED & Ready to Pay Escrow */}
                                         {app.status === "APPROVED" && !hasActiveTransaction && !isHandoverCompleted && (
                                             <div className="bg-gradient-to-r from-emerald-500/15 via-emerald-500/10 to-transparent rounded-2xl p-4 sm:p-5 border border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
-                                                <div className="space-y-1">
+                                                <div className="space-y-1 min-w-0">
                                                     <div className="font-black text-emerald-600 dark:text-emerald-400 text-sm sm:text-base flex items-center gap-2">
-                                                        <ShieldCheck className="h-5 w-5 text-emerald-500" /> Landlord Accepted Your Application!
+                                                        <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" /> Landlord Accepted Your Application!
                                                     </div>
                                                     <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed max-w-xl">
                                                         Property is locked for you. Deposit{" "}
@@ -945,41 +978,41 @@ export function ApplicationsTab() {
                                                 <Button
                                                     disabled={paymentLoading === app.id}
                                                     onClick={() => setPaymentModalApp(app)}
-                                                    className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs rounded-xl shrink-0 h-11 px-6 gap-2 shadow-xs"
+                                                    className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs rounded-xl shrink-0 h-11 px-6 gap-2 shadow-xs w-full md:w-auto"
                                                 >
-                                                    <CreditCard className="h-4 w-4" />
+                                                    <CreditCard className="h-4 w-4 shrink-0" />
                                                     {paymentLoading === app.id ? "Processing..." : "Pay Into Escrow"}
                                                 </Button>
                                             </div>
                                         )}
 
-                                        {/* 2. Payment Pending / Processing */}
+                                        {/* Status: APPROVED with Payment Pending / Processing */}
                                         {app.status === "APPROVED" &&
                                             txForApp &&
                                             txForApp.status === "PENDING" &&
                                             !isHandoverCompleted && (
                                                 <div className="bg-amber-500/10 rounded-2xl p-4 sm:p-5 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                    <div className="space-y-1 text-xs">
+                                                    <div className="space-y-1 text-xs min-w-0">
                                                         <div className="font-bold text-amber-600 dark:text-amber-400 text-sm flex items-center gap-1.5">
-                                                            <AlertTriangle className="h-4 w-4 text-amber-500" /> Payment Initiated — Awaiting Confirmation
+                                                            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" /> Payment Initiated — Awaiting Confirmation
                                                         </div>
-                                                        <p className="text-[var(--text-secondary)] font-medium">
+                                                        <p className="text-[var(--text-secondary)] font-medium leading-relaxed">
                                                             Your transaction was initiated via {txForApp.paymentGateway === "ANCHOR" ? "Anchor BaaS" : txForApp.paymentGateway === "AFRIEXCHANGE" ? "AfriExchange" : "Paystack"}. If you closed or cancelled the checkout session, you can switch payment methods or retry.
                                                         </p>
                                                     </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
+                                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
                                                         <Button
                                                             variant="outline"
                                                             disabled={paymentLoading === txForApp.id}
                                                             onClick={() => handleCancelPendingPayment(txForApp.id)}
-                                                            className="text-xs h-9 px-3 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                                                            className="text-xs h-9 px-3 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 w-full sm:w-auto text-center"
                                                         >
                                                             {paymentLoading === txForApp.id ? "Cancelling..." : "Cancel / Change Method"}
                                                         </Button>
                                                         <Button
                                                             disabled={paymentLoading === app.id}
                                                             onClick={() => setPaymentModalApp(app)}
-                                                            className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs h-9 px-4"
+                                                            className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs h-9 px-4 w-full sm:w-auto text-center"
                                                         >
                                                             Retry Payment
                                                         </Button>
@@ -987,14 +1020,14 @@ export function ApplicationsTab() {
                                                 </div>
                                             )}
 
-                                        {/* 3. Funds Secured in Escrow */}
+                                        {/* Status: APPROVED with Funds Secured in Escrow */}
                                         {app.status === "APPROVED" && isPaidInEscrow && !isHandoverCompleted && (
                                             <div className="bg-blue-500/10 rounded-2xl p-4 sm:p-5 border border-blue-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                <div className="space-y-1">
+                                                <div className="space-y-1 min-w-0">
                                                     <div className="font-black text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2">
-                                                        <Lock className="h-4 w-4 text-blue-500" /> Funds Secured in Escrow Vault
+                                                        <Lock className="h-4 w-4 text-blue-500 shrink-0" /> Funds Secured in Escrow Vault
                                                     </div>
-                                                    <p className="text-xs text-[var(--text-secondary)] font-medium">
+                                                    <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
                                                         Your payment is safely locked in escrow. Switch to the{" "}
                                                         <button
                                                             onClick={() => setActiveTab("escrow")}
@@ -1008,22 +1041,22 @@ export function ApplicationsTab() {
 
                                                 <Button
                                                     onClick={() => setActiveTab("escrow")}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shrink-0 h-10 px-4 gap-1.5 shadow-xs"
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shrink-0 h-10 px-4 gap-1.5 shadow-xs w-full md:w-auto"
                                                 >
-                                                    <KeyRound className="h-3.5 w-3.5" />
+                                                    <KeyRound className="h-3.5 w-3.5 shrink-0" />
                                                     View Handover OTP
                                                 </Button>
                                             </div>
                                         )}
 
-                                        {/* 4. Handover Completed */}
+                                        {/* Status: Handover Completed & Finalized */}
                                         {isHandoverCompleted && (
                                             <div className="bg-emerald-500/10 rounded-2xl p-4 sm:p-5 border border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                <div className="space-y-1">
+                                                <div className="space-y-1 min-w-0">
                                                     <div className="font-black text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-2">
-                                                        <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Key Handover Complete & Escrow Released!
+                                                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Key Handover Complete & Escrow Released!
                                                     </div>
-                                                    <p className="text-xs text-[var(--text-secondary)] font-medium">
+                                                    <p className="text-xs text-[var(--text-secondary)] font-medium leading-relaxed">
                                                         You have physically received the keys and the landlord has been paid. Enjoy your new home!
                                                     </p>
                                                 </div>
@@ -1031,15 +1064,15 @@ export function ApplicationsTab() {
                                                 {txForApp && (
                                                     reviewedTxIds.includes(txForApp.id) ||
                                                     (txForApp.property?.reviews && txForApp.property.reviews.length > 0) ? (
-                                                        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold text-xs py-2 px-3.5 flex items-center gap-1.5 shrink-0 shadow-2xs">
-                                                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> Review Submitted ✅
+                                                        <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold text-xs py-2 px-3.5 flex items-center gap-1.5 shrink-0 shadow-2xs self-start sm:self-center">
+                                                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 shrink-0" /> Review Submitted ✅
                                                         </Badge>
                                                     ) : (
                                                         <Button
                                                             onClick={() => handleOpenReviewModal(txForApp)}
-                                                            className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shrink-0 flex items-center gap-1.5 h-10 px-4 shadow-xs"
+                                                            className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-xl shrink-0 flex items-center gap-1.5 h-10 px-4 shadow-xs w-full md:w-auto"
                                                         >
-                                                            <Star className="h-3.5 w-3.5 fill-current" /> Write Verified Review
+                                                            <Star className="h-3.5 w-3.5 fill-current shrink-0" /> Write Verified Review
                                                         </Button>
                                                     )
                                                 )}

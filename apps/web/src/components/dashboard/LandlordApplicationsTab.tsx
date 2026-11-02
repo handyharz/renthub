@@ -582,7 +582,7 @@ export function LandlordApplicationsTab() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                            <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center mt-1 sm:mt-0">
                                                 <a
                                                     href={`tel:${app.tenant.phone}`}
                                                     className="h-8 px-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--color-brand-green)] hover:border-[var(--color-brand-green)]/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
@@ -633,9 +633,9 @@ export function LandlordApplicationsTab() {
 
                                     {/* Application Note */}
                                     {app.note && (
-                                        <div className="text-xs text-[var(--text-secondary)] font-medium bg-blue-500/10 p-3.5 rounded-2xl border border-blue-500/20 flex items-start gap-2.5">
+                                        <div className="text-xs text-[var(--text-secondary)] font-medium bg-blue-500/10 p-3.5 rounded-2xl border border-blue-500/20 flex items-start gap-2.5 break-words">
                                             <MessageSquare className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                                            <div>
+                                            <div className="min-w-0">
                                                 <strong className="text-[var(--text-primary)] font-bold block mb-0.5">
                                                     Applicant's Personal Note:
                                                 </strong>
@@ -648,7 +648,7 @@ export function LandlordApplicationsTab() {
                                     {app.status === "PENDING" && (
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--border-color)]">
                                             <div className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
-                                                <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)]" />
+                                                <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
                                                 <span>Approving will lock the listing to <strong>Under Offer</strong> and prompt the tenant to deposit funds into Escrow.</span>
                                             </div>
 
@@ -657,15 +657,15 @@ export function LandlordApplicationsTab() {
                                                     variant="outline"
                                                     disabled={actionLoading === app.id}
                                                     onClick={() => handleUpdateStatus(app.id, "REJECTED")}
-                                                    className="h-10 px-4 rounded-xl text-red-500 border-red-500/30 hover:bg-red-500/10 text-xs font-bold gap-1.5 shadow-xs"
+                                                    className="h-10 px-4 rounded-xl text-red-500 border-red-500/30 hover:bg-red-500/10 text-xs font-bold gap-1.5 shadow-xs flex-1 sm:flex-initial"
                                                 >
-                                                    <X className="h-3.5 w-3.5" />
+                                                    <X className="h-3.5 w-3.5 shrink-0" />
                                                     Decline
                                                 </Button>
                                                 <Button
                                                     disabled={actionLoading === app.id}
                                                     onClick={() => handleUpdateStatus(app.id, "APPROVED")}
-                                                    className="h-10 px-5 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-bold gap-1.5 shadow-xs"
+                                                    className="h-10 px-5 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white text-xs font-bold gap-1.5 shadow-xs flex-1 sm:flex-initial"
                                                 >
                                                     {actionLoading === app.id ? (
                                                         <>
@@ -674,7 +674,7 @@ export function LandlordApplicationsTab() {
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <Check className="h-3.5 w-3.5" />
+                                                            <Check className="h-3.5 w-3.5 shrink-0" />
                                                             Approve & Lock Property
                                                         </>
                                                     )}
