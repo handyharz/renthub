@@ -339,35 +339,38 @@ export default function AddPropertyPage() {
         <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] pb-24">
             {/* Sticky Header with Navigation & Progress Bar */}
             <div className="sticky top-16 z-30 bg-[var(--bg-card)]/90 backdrop-blur-md border-b border-[var(--border-color)] shadow-[var(--shadow-sm)]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => router.push("/dashboard")}
-                            className="h-9 w-9 rounded-xl hover:bg-[var(--bg-muted)] border border-[var(--border-color)] shrink-0"
+                            className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl hover:bg-[var(--bg-muted)] border border-[var(--border-color)] shrink-0"
                             aria-label="Back to dashboard"
                         >
                             <ArrowLeft className="h-4 w-4" />
                         </Button>
 
                         <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium">
+                            {/* Breadcrumb: hidden on mobile to avoid duplicating the title */}
+                            <div className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium">
                                 <Link href="/dashboard" className="hover:text-[var(--text-primary)] transition-colors">
                                     Dashboard
                                 </Link>
                                 <ChevronRight className="h-3 w-3 shrink-0" />
-                                <span className="text-[var(--text-primary)] font-semibold">List Your Property</span>
+                                <span className="text-[var(--text-primary)] font-semibold">New Listing</span>
                             </div>
-                            <h1 className="text-base sm:text-lg font-extrabold text-[var(--text-primary)] truncate mt-0.5">
-                                List Your Property on RentHub
+                            <h1 className="text-sm sm:text-lg font-extrabold text-[var(--text-primary)] truncate sm:mt-0.5">
+                                <span className="sm:hidden">List Your Property</span>
+                                <span className="hidden sm:inline">List Your Property on RentHub</span>
                             </h1>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold px-3 py-1">
-                            Step {step} of 4 • {step * 25}% Complete
+                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold px-2.5 sm:px-3 py-1 text-xs">
+                            <span className="sm:hidden">Step {step}/4</span>
+                            <span className="hidden sm:inline">Step {step} of 4 • {step * 25}% Complete</span>
                         </Badge>
                     </div>
                 </div>
