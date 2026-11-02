@@ -471,7 +471,7 @@ function DashboardContent() {
                     </div>
 
                     {/* Tab Content */}
-                    <div className="p-4 sm:p-6">
+                    <div className="p-4 sm:p-6 min-w-0 max-w-full overflow-x-clip">
                         {activeTab === "overview" && (
                             role === "LANDLORD"
                                 ? <OverviewTab stats={stats} activities={activities} loading={loading} onTabChange={setActiveTab} dbUser={dbUser} properties={properties} />

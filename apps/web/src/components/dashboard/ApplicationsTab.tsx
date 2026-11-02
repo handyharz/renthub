@@ -494,19 +494,19 @@ export function ApplicationsTab() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Header with Title & Refresh */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
+                <div className="min-w-0">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-[var(--color-brand-green)]/10 border border-emerald-500/30 flex items-center justify-center text-[var(--color-brand-green)] shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-[var(--color-brand-green)]/10 border border-emerald-500/30 flex items-center justify-center text-[var(--color-brand-green)] shadow-xs shrink-0">
                             <FileText className="h-4 w-4" />
                         </div>
-                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight truncate">
                             My Rental Applications & Escrow
                         </h2>
                     </div>
-                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1">
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1 break-words">
                         Track application approvals, pay securely via RentHub Escrow, and verify key handover with 6-digit OTP
                     </p>
                 </div>
@@ -526,99 +526,99 @@ export function ApplicationsTab() {
             </div>
 
             {/* Metric Overview Strip */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full min-w-0 max-w-full">
                 <div
                     onClick={() => { setActiveTab("applications"); setAppStatusFilter("ALL"); setAppPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         activeTab === "applications" && appStatusFilter === "ALL"
                             ? "border-[var(--color-brand-green)] ring-2 ring-[var(--color-brand-green)]/15"
                             : "border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] truncate">
                             Submitted
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-                            <FileText className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+                            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-[var(--text-primary)]">{stats.total}</span>
-                        <span className="text-[11px] font-semibold text-[var(--text-muted)]">applications</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-[var(--text-primary)] shrink-0">{stats.total}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-[var(--text-muted)] truncate">applications</span>
                     </div>
                 </div>
 
                 <div
                     onClick={() => { setActiveTab("applications"); setAppStatusFilter("PENDING"); setAppPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         activeTab === "applications" && appStatusFilter === "PENDING"
                             ? "border-amber-500 ring-2 ring-amber-500/15"
                             : "border-[var(--border-color)] hover:border-amber-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 truncate">
                             Awaiting Landlord
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                            <Clock className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{stats.pending}</span>
-                        <span className="text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80">in review</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 shrink-0">{stats.pending}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80 truncate">in review</span>
                     </div>
                 </div>
 
                 <div
                     onClick={() => { setActiveTab("escrow"); setEscrowFilter("active"); setEscrowPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         activeTab === "escrow" && escrowFilter === "active"
                             ? "border-blue-500 ring-2 ring-blue-500/15"
                             : "border-[var(--border-color)] hover:border-blue-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 truncate">
                             Escrow Protected
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                            <ShieldCheck className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{stats.activeEscrows}</span>
-                        <span className="text-[11px] font-semibold text-blue-600/80 dark:text-blue-400/80">awaiting OTP</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400 shrink-0">{stats.activeEscrows}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-blue-600/80 dark:text-blue-400/80 truncate">awaiting OTP</span>
                     </div>
                 </div>
 
                 <div
                     onClick={() => { setActiveTab("escrow"); setEscrowFilter("completed"); setEscrowPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         activeTab === "escrow" && escrowFilter === "completed"
                             ? "border-emerald-500 ring-2 ring-emerald-500/15"
                             : "border-[var(--border-color)] hover:border-emerald-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 truncate">
                             Handovers Done
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                            <KeyRound className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <KeyRound className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{stats.completedHandovers}</span>
-                        <span className="text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80">keys received</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 shrink-0">{stats.completedHandovers}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80 truncate">keys received</span>
                     </div>
                 </div>
             </div>
 
             {/* TAB NAVIGATION PILLS */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-3">
-                <div className="flex items-center gap-1.5 p-1 bg-[var(--bg-muted)] rounded-2xl border border-[var(--border-color)] w-full sm:w-auto shadow-inner overflow-x-auto no-scrollbar scroll-smooth">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-3 w-full min-w-0 max-w-full">
+                <div className="flex items-center gap-1.5 p-1 bg-[var(--bg-muted)] rounded-2xl border border-[var(--border-color)] w-full sm:w-auto min-w-0 max-w-full shadow-inner overflow-x-auto no-scrollbar scroll-smooth">
                     <button
                         onClick={() => {
                             setActiveTab("applications");
@@ -687,9 +687,9 @@ export function ApplicationsTab() {
             {activeTab === "applications" && (
                 <div className="space-y-4">
                     {/* Search & Filter Ribbon */}
-                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-2 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xs">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 p-2 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xs w-full min-w-0 max-w-full">
                         {/* Search input */}
-                        <div className="relative flex-1">
+                        <div className="relative flex-1 w-full min-w-0">
                             <Search className="h-4 w-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                             <input
                                 type="text"
@@ -712,7 +712,7 @@ export function ApplicationsTab() {
                         </div>
 
                         {/* Status Filter Chips */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pb-1 md:pb-0 w-full md:w-auto min-w-0 max-w-full">
                             {(
                                 [
                                     { id: "ALL", label: "All", count: stats.total },
@@ -729,7 +729,7 @@ export function ApplicationsTab() {
                                             setAppStatusFilter(filter.id);
                                             setAppPage(1);
                                         }}
-                                        className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 ${
+                                        className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 shrink-0 ${
                                             isActive
                                                 ? "bg-[var(--color-brand-green)] text-white shadow-xs"
                                                 : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-[var(--border-color)]"
@@ -752,7 +752,7 @@ export function ApplicationsTab() {
                     </div>
 
                     {applications.length === 0 ? (
-                        <div className="text-center py-16 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
+                        <div className="text-center py-12 sm:py-16 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-4 sm:p-8 shadow-xs w-full min-w-0 max-w-full">
                             <div className="w-16 h-16 rounded-2xl bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] flex items-center justify-center mx-auto mb-4 border border-[var(--color-brand-green)]/20 shadow-xs">
                                 <Home className="h-8 w-8" />
                             </div>
@@ -768,7 +768,7 @@ export function ApplicationsTab() {
                             </Link>
                         </div>
                     ) : filteredApps.length === 0 ? (
-                        <div className="text-center py-14 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
+                        <div className="text-center py-10 sm:py-14 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-4 sm:p-8 shadow-xs w-full min-w-0 max-w-full">
                             <Search className="h-10 w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-60" />
                             <h3 className="text-base font-bold text-[var(--text-primary)]">No matching applications</h3>
                             <p className="text-xs text-[var(--text-secondary)] font-medium max-w-sm mx-auto mt-1">
@@ -787,7 +787,7 @@ export function ApplicationsTab() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="grid gap-4">
+                        <div className="grid gap-4 w-full min-w-0 max-w-full">
                             {paginatedApps.map((app) => {
                                 const primaryImage =
                                     app.property.images?.find((img) => img.isPrimary)?.url ||
@@ -813,10 +813,10 @@ export function ApplicationsTab() {
                                 return (
                                     <div
                                         key={app.id}
-                                        className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-xs hover:border-[var(--color-brand-green)]/40 transition-all duration-200 space-y-4"
+                                        className="bg-[var(--bg-card)] rounded-2xl p-3.5 sm:p-5 border border-[var(--border-color)] shadow-xs hover:border-[var(--color-brand-green)]/40 transition-all duration-200 space-y-4 w-full min-w-0 max-w-full"
                                     >
                                         {/* Top Property Info & Status */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4 w-full min-w-0">
                                             <div className="flex items-center gap-3 sm:gap-3.5 w-full sm:w-auto flex-1 min-w-0">
                                                 <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
                                                     {primaryImage ? (
@@ -850,36 +850,36 @@ export function ApplicationsTab() {
                                                         <MapPin className="h-3 w-3 shrink-0 text-[var(--text-muted)]" />
                                                         <span className="truncate">{app.property.address}, {app.property.city}</span>
                                                     </p>
-                                                    <div className="text-xs font-black text-[var(--color-brand-green)] mt-1">
+                                                    <div className="text-xs font-black text-[var(--color-brand-green)] mt-1 truncate">
                                                         Annual Rent: {formatPrice(app.property.pricePerYear)}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="shrink-0 self-start sm:self-center">
+                                            <div className="w-full sm:w-auto flex flex-wrap items-center shrink-0 self-start sm:self-center">
                                                 {app.status === "PENDING" && (
-                                                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                        <Clock className="h-3.5 w-3.5 animate-pulse" /> Awaiting Landlord Approval
+                                                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                        <Clock className="h-3.5 w-3.5 animate-pulse shrink-0" /> Awaiting Landlord Approval
                                                     </Badge>
                                                 )}
                                                 {app.status === "APPROVED" && !isPaidInEscrow && !isHandoverCompleted && (
-                                                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                        <CheckCircle2 className="h-3.5 w-3.5" /> Approved — Action Required
+                                                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Approved — Action Required
                                                     </Badge>
                                                 )}
                                                 {app.status === "APPROVED" && isPaidInEscrow && !isHandoverCompleted && (
-                                                    <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                        <ShieldCheck className="h-3.5 w-3.5" /> Rent Secured in Escrow
+                                                    <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" /> Rent Secured in Escrow
                                                     </Badge>
                                                 )}
                                                 {isHandoverCompleted && (
-                                                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                        <CheckCircle2 className="h-3.5 w-3.5" /> Handover Complete
+                                                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Handover Complete
                                                     </Badge>
                                                 )}
                                                 {app.status === "REJECTED" && (
-                                                    <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                        <XCircle className="h-3.5 w-3.5" /> Application Declined
+                                                    <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                        <XCircle className="h-3.5 w-3.5 shrink-0" /> Application Declined
                                                     </Badge>
                                                 )}
                                             </div>
@@ -1086,7 +1086,7 @@ export function ApplicationsTab() {
 
                     {/* Pagination for Applications */}
                     {filteredApps.length > ITEMS_PER_PAGE && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)]">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)] w-full min-w-0">
                             <p className="text-xs text-[var(--text-secondary)] font-medium">
                                 Showing{" "}
                                 <span className="font-bold text-[var(--text-primary)]">
@@ -1103,7 +1103,7 @@ export function ApplicationsTab() {
                                 applications
                             </p>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap justify-center">
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -1145,15 +1145,15 @@ export function ApplicationsTab() {
 
             {/* TAB CONTENT 2: ACTIVE ESCROW & KEY HANDOVER */}
             {activeTab === "escrow" && (
-                <div className="space-y-4">
+                <div className="space-y-4 w-full min-w-0 max-w-full">
                     {/* Sub-filter Pills */}
-                    <div className="flex items-center gap-2 pb-1 overflow-x-auto scrollbar-none">
+                    <div className="flex items-center gap-2 pb-1 overflow-x-auto no-scrollbar scroll-smooth w-full min-w-0 max-w-full">
                         <button
                             onClick={() => {
                                 setEscrowFilter("all");
                                 setEscrowPage(1);
                             }}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                                 escrowFilter === "all"
                                     ? "bg-[var(--color-brand-green)] text-white shadow-xs"
                                     : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -1172,7 +1172,7 @@ export function ApplicationsTab() {
                                 setEscrowFilter("active");
                                 setEscrowPage(1);
                             }}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                                 escrowFilter === "active"
                                     ? "bg-blue-600 text-white shadow-xs"
                                     : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -1192,7 +1192,7 @@ export function ApplicationsTab() {
                                 setEscrowFilter("completed");
                                 setEscrowPage(1);
                             }}
-                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                                 escrowFilter === "completed"
                                     ? "bg-emerald-600 text-white shadow-xs"
                                     : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
