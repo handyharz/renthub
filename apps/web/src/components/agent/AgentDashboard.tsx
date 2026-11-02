@@ -976,9 +976,9 @@ export default function AgentDashboard() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Profile Status Card */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white w-full min-w-0">
                 <div className="flex items-start justify-between flex-wrap gap-4">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
@@ -1192,13 +1192,13 @@ export default function AgentDashboard() {
                     </div>
 
                     {/* Filter tabs */}
-                    <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+                    <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar scroll-smooth pb-1 w-full min-w-0">
                         {["ALL", "PENDING_LANDLORD", "AUTHORIZED", "COMPLETED", "REVOKED"].map(f => (
                             <button
                                 key={f}
                                 onClick={() => setActiveFilter(f)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border",
+                                    "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors border",
                                     activeFilter === f
                                         ? "bg-blue-600 text-white border-blue-600"
                                         : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] border-[var(--border-color)]"

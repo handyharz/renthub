@@ -1544,9 +1544,9 @@ function DashboardForRentTab() {
     const citiesInState = selectedState && NIGERIAN_LOCATIONS[selectedState] ? NIGERIAN_LOCATIONS[selectedState] : [];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Header Banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-muted)]/40 rounded-3xl border border-[var(--border-color)] shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-muted)]/40 rounded-3xl border border-[var(--border-color)] shadow-xs w-full min-w-0">
                 <div>
                     <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
                         <div className="p-2 rounded-xl bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)]">
@@ -1575,11 +1575,11 @@ function DashboardForRentTab() {
             </div>
 
             {/* Search and Filters Toolbar */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs space-y-3.5">
+            <div className="p-4 sm:p-5 rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xs space-y-3.5 w-full min-w-0 max-w-full">
                 {/* Search Bar + State Select + Sort */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 w-full min-w-0">
                     {/* Live Search */}
-                    <div className="relative sm:col-span-2">
+                    <div className="relative sm:col-span-2 w-full min-w-0">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)]" />
                         <input
                             type="text"
@@ -1652,7 +1652,7 @@ function DashboardForRentTab() {
                 </div>
 
                 {/* Popular Nigerian States Ribbon */}
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pt-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pt-1 w-full min-w-0 max-w-full">
                     <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
                         <MapPin className="h-3 w-3 text-[var(--color-brand-green)]" /> Hubs:
                     </span>
@@ -1678,7 +1678,7 @@ function DashboardForRentTab() {
                 </div>
 
                 {/* Second Ribbon: Budget & Utilities */}
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1 border-t border-[var(--border-color)]/60">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pt-1 border-t border-[var(--border-color)]/60 w-full min-w-0 max-w-full">
                     {/* Budget Pills */}
                     {PRICE_OPTIONS.map((opt) => (
                         <button
@@ -1908,19 +1908,19 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
     });
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-300">
+        <div className="space-y-8 animate-in fade-in duration-300 w-full min-w-0 max-w-full">
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[var(--bg-muted)] border border-[var(--border-color)] p-6 sm:p-8 shadow-xs">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[var(--bg-muted)] border border-[var(--border-color)] p-6 sm:p-8 shadow-xs w-full min-w-0">
                 <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-3">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full min-w-0">
+                    <div className="space-y-3 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0">
                                 <ShieldCheck className="h-3.5 w-3.5" /> Verified Legal Intelligence
                             </Badge>
-                            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5">
+                            <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-bold px-3 py-1 rounded-full text-xs flex items-center gap-1.5 shrink-0">
                                 <BookOpen className="h-3.5 w-3.5" /> {role === "LANDLORD" ? "Landlord Toolkit" : role === "AGENT" ? "Agent Toolkit" : "Tenant Toolkit"}
                             </Badge>
                         </div>
@@ -1943,7 +1943,7 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
             </div>
 
             {/* Quick Downloadable Legal Toolkit */}
-            <div className="space-y-4">
+            <div className="space-y-4 w-full min-w-0">
                 <div className="flex items-center justify-between">
                     <div>
                         <h3 className="text-base sm:text-lg font-black text-[var(--text-primary)]">
@@ -1955,10 +1955,10 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
                     <Link
                         href="/resources/landlords/legal-templates"
-                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between w-full min-w-0"
                     >
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -1984,7 +1984,7 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
 
                     <Link
                         href="/resources/landlords/legal-templates"
-                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between w-full min-w-0"
                     >
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -2010,7 +2010,7 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
 
                     <Link
                         href="/resources/tenants/inspection-checklist"
-                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between w-full min-w-0"
                     >
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -2036,7 +2036,7 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
 
                     <Link
                         href="/resources/landlords/legal-templates"
-                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between"
+                        className="p-5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40 hover:shadow-md transition-all group flex flex-col justify-between w-full min-w-0"
                     >
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -2063,9 +2063,9 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
             </div>
 
             {/* Interactive Search & Category Filter Bar */}
-            <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="relative flex-1 max-w-md">
+            <div className="space-y-4 w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
+                    <div className="relative flex-1 max-w-md w-full min-w-0">
                         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                         <input
                             type="text"
@@ -2076,7 +2076,7 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1 w-full sm:w-auto min-w-0">
                         {[
                             { id: "ALL", label: "All Items" },
                             { id: "LEGAL", label: "Legal Contracts" },
@@ -2087,7 +2087,7 @@ function DashboardResourcesTab({ role }: { role: "LANDLORD" | "TENANT" | "AGENT"
                             <button
                                 key={tab.id}
                                 onClick={() => setCategoryFilter(tab.id as any)}
-                                className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer ${
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 transition-all cursor-pointer ${
                                     categoryFilter === tab.id
                                         ? "bg-[var(--color-brand-green)] text-white shadow-xs"
                                         : "bg-[var(--bg-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-color)]"
@@ -2345,9 +2345,9 @@ function FavoritesTab({
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Header Strip */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-muted)]/30 rounded-3xl border border-[var(--border-color)] shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 bg-gradient-to-br from-[var(--bg-card)] to-[var(--bg-muted)]/30 rounded-3xl border border-[var(--border-color)] shadow-xs w-full min-w-0">
                 <div>
                     <div className="flex items-center gap-2.5 mb-1.5">
                         <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
@@ -2509,7 +2509,7 @@ function FavoritesTab({
                 </div>
 
                 {/* Filter Pills */}
-                <div className="flex items-center gap-2 pt-1 overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-2 pt-1 overflow-x-auto no-scrollbar scroll-smooth w-full min-w-0 max-w-full">
                     <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider shrink-0 flex items-center gap-1">
                         <Filter className="h-3 w-3" /> Status:
                     </span>
@@ -3057,19 +3057,19 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Header with Title & Refresh */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
+                <div className="min-w-0">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs shrink-0">
                             <Calendar className="h-4 w-4" />
                         </div>
-                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight truncate">
                             {role === "LANDLORD" ? "Physical Tour Requests" : "My Scheduled Physical Tours"}
                         </h2>
                     </div>
-                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1">
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1 break-words">
                         {role === "LANDLORD"
                             ? "Review, schedule, and confirm on-site property walkthroughs with prospective renters"
                             : "Manage in-person property viewings, coordinate with landlords, and prepare for inspection"}
@@ -3091,100 +3091,100 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
             </div>
 
             {/* Metric Overview Strip */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full min-w-0 max-w-full">
                 <div
                     onClick={() => { setStatusFilter("ALL"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "ALL"
                             ? "border-[var(--color-brand-blue)] ring-2 ring-[var(--color-brand-blue)]/15"
                             : "border-[var(--border-color)] hover:border-[var(--color-brand-blue)]/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] truncate">
                             Total Tours
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-                            <Calendar className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+                            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-[var(--text-primary)]">{stats.total}</span>
-                        <span className="text-[11px] font-semibold text-[var(--text-muted)]">bookings</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-[var(--text-primary)] shrink-0">{stats.total}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-[var(--text-muted)] truncate">bookings</span>
                     </div>
                 </div>
 
                 <div
                     onClick={() => { setStatusFilter("CONFIRMED"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "CONFIRMED"
                             ? "border-emerald-500 ring-2 ring-emerald-500/15"
                             : "border-[var(--border-color)] hover:border-emerald-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 truncate">
                             Confirmed & Upcoming
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                            <CheckCircle2 className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{stats.confirmed}</span>
-                        <span className="text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80">ready</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 shrink-0">{stats.confirmed}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80 truncate">ready</span>
                     </div>
                 </div>
 
                 <div
                     onClick={() => { setStatusFilter("PENDING"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "PENDING"
                             ? "border-amber-500 ring-2 ring-amber-500/15"
                             : "border-[var(--border-color)] hover:border-amber-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 truncate">
                             Pending Approval
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                            <Clock className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{stats.pending}</span>
-                        <span className="text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80">awaiting</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 shrink-0">{stats.pending}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80 truncate">awaiting</span>
                     </div>
                 </div>
 
                 <div
                     onClick={() => { setStatusFilter("CANCELLED"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "CANCELLED"
                             ? "border-red-500 ring-2 ring-red-500/15"
                             : "border-[var(--border-color)] hover:border-red-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 truncate">
                             Cancelled / Past
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 flex items-center justify-center">
-                            <XCircle className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                            <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-red-600 dark:text-red-400">{stats.cancelled}</span>
-                        <span className="text-[11px] font-semibold text-red-600/80 dark:text-red-400/80">closed</span>
+                    <div className="mt-2 flex items-baseline gap-1.5 sm:gap-2 min-w-0">
+                        <span className="text-xl sm:text-2xl font-black text-red-600 dark:text-red-400 shrink-0">{stats.cancelled}</span>
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-red-600/80 dark:text-red-400/80 truncate">closed</span>
                     </div>
                 </div>
             </div>
 
             {/* Filter & Search Bar */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-2 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xs">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 p-2 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xs w-full min-w-0 max-w-full">
                 {/* Search input */}
-                <div className="relative flex-1">
+                <div className="relative flex-1 w-full min-w-0">
                     <Search className="h-4 w-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                         type="text"
@@ -3211,7 +3211,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                 </div>
 
                 {/* Status Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pb-1 md:pb-0 w-full md:w-auto min-w-0 max-w-full">
                     {(
                         [
                             { id: "ALL", label: "All Tours", count: stats.total },
@@ -3228,7 +3228,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                     setStatusFilter(filter.id);
                                     setCurrentPage(1);
                                 }}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 ${
+                                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 shrink-0 ${
                                     isActive
                                         ? "bg-[var(--color-brand-blue)] text-white shadow-xs"
                                         : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-[var(--border-color)]"
@@ -3252,11 +3252,11 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
 
             {/* Tours List */}
             {tours.length === 0 ? (
-                <div className="text-center py-16 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
-                    <div className="w-16 h-16 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-4 border border-blue-500/20 shadow-xs">
-                        <Calendar className="h-8 w-8" />
+                <div className="text-center py-12 sm:py-16 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-4 sm:p-8 shadow-xs w-full min-w-0 max-w-full">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto mb-4 border border-blue-500/20 shadow-xs">
+                        <Calendar className="h-7 w-7 sm:h-8 sm:w-8" />
                     </div>
-                    <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">
+                    <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] mb-1">
                         {role === "LANDLORD" ? "No Physical Tour Requests Yet" : "No Tours Scheduled Yet"}
                     </h3>
                     <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-md mx-auto leading-relaxed">
@@ -3274,9 +3274,9 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                     )}
                 </div>
             ) : filteredTours.length === 0 ? (
-                <div className="text-center py-14 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
-                    <Search className="h-10 w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-60" />
-                    <h3 className="text-base font-bold text-[var(--text-primary)]">No Matching Tours</h3>
+                <div className="text-center py-10 sm:py-14 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-4 sm:p-8 shadow-xs w-full min-w-0 max-w-full">
+                    <Search className="h-9 w-9 sm:h-10 sm:w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-60" />
+                    <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">No Matching Tours</h3>
                     <p className="text-xs text-[var(--text-secondary)] font-medium max-w-sm mx-auto mt-1">
                         We couldn't find any tour bookings matching your search query or active filter.
                     </p>
@@ -3293,8 +3293,8 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                     </Button>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    <div className="grid gap-4">
+                <div className="space-y-4 w-full min-w-0 max-w-full">
+                    <div className="grid gap-4 w-full min-w-0 max-w-full">
                         {paginatedTours.map((tour: any) => {
                             const displayUser = role === "LANDLORD" ? tour.tenant : tour.landlord;
                             const userLabel = role === "LANDLORD" ? "Prospective Renter" : "Property Owner";
@@ -3311,10 +3311,10 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                             return (
                                 <div
                                     key={tour.id}
-                                    className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-xs hover:border-[var(--color-brand-blue)]/40 transition-all duration-200 space-y-4"
+                                    className="bg-[var(--bg-card)] rounded-2xl p-3.5 sm:p-5 border border-[var(--border-color)] shadow-xs hover:border-[var(--color-brand-blue)]/40 transition-all duration-200 space-y-4 w-full min-w-0 max-w-full"
                                 >
                                     {/* Top Bar: Property Thumbnail, Title, Address & Status */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4 w-full min-w-0">
                                         <div className="flex items-center gap-3 sm:gap-3.5 w-full sm:w-auto flex-1 min-w-0">
                                             <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
                                                 <Image
@@ -3348,7 +3348,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                     </span>
                                                 </p>
                                                 {tour.property?.pricePerYear && (
-                                                    <div className="text-xs font-black text-[var(--color-brand-green)] mt-1">
+                                                    <div className="text-xs font-black text-[var(--color-brand-green)] mt-1 truncate">
                                                         {formatPrice(tour.property.pricePerYear)}{" "}
                                                         <span className="text-[11px] font-semibold text-[var(--text-muted)]">/ year</span>
                                                     </div>
@@ -3356,29 +3356,29 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                             </div>
                                         </div>
 
-                                        <div className="shrink-0 self-start sm:self-center">
+                                        <div className="shrink-0 self-start sm:self-center w-full sm:w-auto flex flex-wrap items-center">
                                             {tour.status === "CONFIRMED" && (
-                                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                    <CheckCircle2 className="h-3.5 w-3.5" /> Confirmed Walkthrough
+                                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> Confirmed Walkthrough
                                                 </Badge>
                                             )}
                                             {tour.status === "PENDING" && (
-                                                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                    <Clock className="h-3.5 w-3.5 animate-pulse" /> Pending Approval
+                                                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                    <Clock className="h-3.5 w-3.5 animate-pulse shrink-0" /> Pending Approval
                                                 </Badge>
                                             )}
                                             {tour.status === "CANCELLED" && (
-                                                <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs">
-                                                    <XCircle className="h-3.5 w-3.5" /> Cancelled
+                                                <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 px-3 py-1 text-xs font-extrabold flex items-center gap-1.5 shadow-2xs max-w-full break-words">
+                                                    <XCircle className="h-3.5 w-3.5 shrink-0" /> Cancelled
                                                 </Badge>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Middle: Schedule Box & Participant Card */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 w-full min-w-0">
                                         {/* Schedule Date & Time Card */}
-                                        <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] flex items-center gap-3.5">
+                                        <div className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] flex items-center gap-3 sm:gap-3.5 min-w-0 w-full">
                                             <div className="w-13 h-14 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col items-center justify-center shrink-0 shadow-2xs">
                                                 <span className="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider">
                                                     {monthShort}
@@ -3391,23 +3391,23 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                 </span>
                                             </div>
 
-                                            <div className="min-w-0 space-y-1">
-                                                <p className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider">
+                                            <div className="min-w-0 space-y-1 flex-1">
+                                                <p className="text-[10px] uppercase font-bold text-[var(--text-muted)] tracking-wider truncate">
                                                     Scheduled Inspection Slot
                                                 </p>
                                                 <div className="flex items-center gap-1.5 text-xs font-extrabold text-[var(--text-primary)]">
                                                     <Clock className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                                                    <span>{tour.preferredTime}</span>
+                                                    <span className="truncate">{tour.preferredTime}</span>
                                                 </div>
-                                                <p className="text-[11px] text-[var(--text-secondary)] font-medium">
+                                                <p className="text-[11px] text-[var(--text-secondary)] font-medium truncate">
                                                     Physical In-Person Walkthrough
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Participant Profile Card */}
-                                        <div className="lg:col-span-2 p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                                            <div className="flex items-center gap-3 min-w-0">
+                                        <div className="lg:col-span-2 p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs min-w-0 w-full">
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 {displayUser?.avatar ? (
                                                     <img
                                                         src={displayUser.avatar}
@@ -3420,12 +3420,12 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                         {displayUser?.lastName?.[0]}
                                                     </div>
                                                 )}
-                                                <div className="min-w-0">
+                                                <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-extrabold text-[var(--text-primary)] text-sm truncate">
                                                             {displayUser?.firstName} {displayUser?.lastName}
                                                         </span>
-                                                        <Badge className="bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 text-[10px] px-1.5 py-0.2 font-bold">
+                                                        <Badge className="bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 text-[10px] px-1.5 py-0.2 font-bold shrink-0">
                                                             {userLabel}
                                                         </Badge>
                                                     </div>
@@ -3433,30 +3433,30 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                         {displayUser?.phone && (
                                                             <a
                                                                 href={`tel:${displayUser.phone}`}
-                                                                className="flex items-center gap-1 hover:text-[var(--color-brand-green)] transition-colors"
+                                                                className="flex items-center gap-1 hover:text-[var(--color-brand-green)] transition-colors shrink-0"
                                                                 title="Call"
                                                             >
-                                                                <Phone className="h-3 w-3 text-[var(--color-brand-green)]" />
-                                                                {displayUser.phone}
+                                                                <Phone className="h-3 w-3 text-[var(--color-brand-green)] shrink-0" />
+                                                                <span>{displayUser.phone}</span>
                                                             </a>
                                                         )}
                                                         {displayUser?.email && (
-                                                            <span className="flex items-center gap-1 text-[var(--text-muted)] truncate max-w-[180px]">
-                                                                <Mail className="h-3 w-3" />
-                                                                {displayUser.email}
+                                                            <span className="flex items-center gap-1 text-[var(--text-muted)] truncate min-w-0">
+                                                                <Mail className="h-3 w-3 shrink-0" />
+                                                                <span className="truncate">{displayUser.email}</span>
                                                             </span>
                                                         )}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center mt-1 sm:mt-0">
+                                            <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center mt-1 sm:mt-0 flex-wrap">
                                                 {displayUser?.phone && (
                                                     <a
                                                         href={`tel:${displayUser.phone}`}
                                                         className="h-8 px-2.5 rounded-xl bg-[var(--bg-muted)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--color-brand-green)] hover:border-[var(--color-brand-green)]/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
                                                     >
-                                                        <Phone className="h-3 w-3" /> Call
+                                                        <Phone className="h-3 w-3 shrink-0" /> Call
                                                     </a>
                                                 )}
                                                 <Button
@@ -3465,7 +3465,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                     onClick={() => handleMessageClick(displayUser?.id, tour.propertyId)}
                                                     className="h-8 px-2.5 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 text-[var(--color-brand-orange)] hover:bg-[var(--bg-muted)] shadow-2xs"
                                                 >
-                                                    <MessageSquare className="h-3 w-3" /> Chat
+                                                    <MessageSquare className="h-3 w-3 shrink-0" /> Chat
                                                 </Button>
                                             </div>
                                         </div>
@@ -3473,22 +3473,22 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
 
                                     {/* Tenant Message */}
                                     {tour.message && (
-                                        <div className="p-3.5 bg-blue-500/10 rounded-2xl text-xs text-[var(--text-secondary)] border border-blue-500/20 font-medium flex items-start gap-2.5">
+                                        <div className="p-3 sm:p-3.5 bg-blue-500/10 rounded-2xl text-xs text-[var(--text-secondary)] border border-blue-500/20 font-medium flex items-start gap-2.5 w-full min-w-0 break-words">
                                             <MessageSquare className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                                            <div>
+                                            <div className="min-w-0 flex-1">
                                                 <span className="font-bold text-[var(--text-primary)] block mb-0.5">
                                                     Special Request / Note:
                                                 </span>
-                                                <span className="italic leading-relaxed">"{tour.message}"</span>
+                                                <span className="italic leading-relaxed break-words">"{tour.message}"</span>
                                             </div>
                                         </div>
                                     )}
 
                                     {/* Bottom Decision / Action Bar */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--border-color)]">
-                                        <div className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1.5">
-                                            <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)]" />
-                                            <span>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--border-color)] w-full min-w-0">
+                                        <div className="text-xs text-[var(--text-secondary)] font-medium flex items-center gap-1.5 min-w-0 flex-1">
+                                            <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
+                                            <span className="leading-relaxed">
                                                 {tour.status === "CONFIRMED"
                                                     ? "Confirmed walkthrough: Please arrive on time and verify keys on-site."
                                                     : tour.status === "PENDING"
@@ -3497,7 +3497,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                             </span>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-end">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-start sm:justify-end min-w-0">
                                             {/* Landlord Pending Actions */}
                                             {role === "LANDLORD" && tour.status === "PENDING" && (
                                                 <>
@@ -3508,7 +3508,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                         onClick={() => handleStatusUpdate(tour.id, "CANCELLED")}
                                                         className="h-9 px-4 rounded-xl text-red-500 border-red-500/30 hover:bg-red-500/10 text-xs font-bold gap-1.5 shadow-xs"
                                                     >
-                                                        <XCircle className="h-3.5 w-3.5" />
+                                                        <XCircle className="h-3.5 w-3.5 shrink-0" />
                                                         Decline
                                                     </Button>
                                                     <Button
@@ -3517,7 +3517,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                         onClick={() => handleStatusUpdate(tour.id, "CONFIRMED")}
                                                         className="h-9 px-5 rounded-xl bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-extrabold text-xs shadow-xs gap-1.5"
                                                     >
-                                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                                                         Confirm Tour
                                                     </Button>
                                                 </>
@@ -3532,7 +3532,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                     onClick={() => handleStatusUpdate(tour.id, "CANCELLED")}
                                                     className="h-9 px-4 rounded-xl text-red-500 border-red-500/30 hover:bg-red-500/10 text-xs font-bold gap-1.5 shadow-xs"
                                                 >
-                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    <Trash2 className="h-3.5 w-3.5 shrink-0" />
                                                     Cancel Request
                                                 </Button>
                                             )}
@@ -3544,7 +3544,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                                     onClick={() => handleMessageClick(displayUser?.id, tour.propertyId)}
                                                     className="h-9 px-4 rounded-xl bg-[var(--color-brand-blue)] hover:bg-[var(--color-brand-blue)]/90 text-white text-xs font-bold gap-1.5 shadow-xs"
                                                 >
-                                                    <MessageSquare className="h-3.5 w-3.5" />
+                                                    <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                                                     Direct Message
                                                 </Button>
                                             )}
@@ -3557,8 +3557,8 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
 
                     {/* Pagination Strip */}
                     {filteredTours.length > ITEMS_PER_PAGE && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)]">
-                            <p className="text-xs text-[var(--text-secondary)] font-medium">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)] w-full min-w-0">
+                            <p className="text-xs text-[var(--text-secondary)] font-medium text-center sm:text-left">
                                 Showing{" "}
                                 <span className="font-bold text-[var(--text-primary)]">
                                     {(currentPage - 1) * ITEMS_PER_PAGE + 1}
@@ -3574,13 +3574,13 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                 tours
                             </p>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center flex-wrap justify-center gap-1.5">
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === 1}
                                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)]"
+                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)] shrink-0"
                                 >
                                     <ChevronLeft className="h-3.5 w-3.5" /> Prev
                                 </Button>
@@ -3589,7 +3589,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                     <button
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
-                                        className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${
+                                        className={`h-8 w-8 rounded-xl text-xs font-bold transition-all shrink-0 ${
                                             currentPage === page
                                                 ? "bg-[var(--color-brand-blue)] text-white shadow-xs"
                                                 : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -3604,7 +3604,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                                     size="sm"
                                     disabled={currentPage === totalPages}
                                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)]"
+                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)] shrink-0"
                                 >
                                     Next <ChevronRight className="h-3.5 w-3.5" />
                                 </Button>
@@ -3689,27 +3689,27 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
         });
 
     return (
-        <div className="space-y-6 sm:space-y-8">
+        <div className="space-y-6 sm:space-y-8 w-full min-w-0 max-w-full">
             {/* Portfolio Header & Stats Bar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[var(--border-color)]">
-                <div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[var(--border-color)] w-full min-w-0">
+                <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2.5 flex-wrap">
                         <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
                             My Properties Portfolio
                         </h2>
-                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--bg-muted)] text-[var(--text-secondary)] border border-[var(--border-color)]">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--bg-muted)] text-[var(--text-secondary)] border border-[var(--border-color)] shrink-0">
                             {properties.length} Total Units
                         </span>
                     </div>
-                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1">
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1 leading-relaxed">
                         Manage listing status, edit rates, boost visibility, and monitor real-time renter interest.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 shrink-0">
                     <Link href="/properties/new">
                         <Button className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-5 rounded-xl shadow-xs gap-2">
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-4 w-4 shrink-0" />
                             List New Property
                         </Button>
                     </Link>
@@ -3717,56 +3717,56 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
             </div>
 
             {/* Metric Overview Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 w-full min-w-0 max-w-full">
+                <div className="p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-[var(--text-secondary)] font-bold">Total Portfolio</span>
-                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold truncate">Total Portfolio</span>
+                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 shrink-0">
                             <Building2 className="h-4 w-4" />
                         </div>
                     </div>
-                    <p className="text-2xl font-extrabold text-[var(--text-primary)]">{loading ? "..." : properties.length}</p>
-                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Properties listed</p>
+                    <p className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] truncate">{loading ? "..." : properties.length}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5 truncate">Properties listed</p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                <div className="p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-[var(--text-secondary)] font-bold">Available Now</span>
-                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold truncate">Available Now</span>
+                        <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 shrink-0">
                             <CheckCircle2 className="h-4 w-4" />
                         </div>
                     </div>
-                    <p className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{loading ? "..." : availableCount}</p>
-                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Live on marketplace</p>
+                    <p className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 truncate">{loading ? "..." : availableCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5 truncate">Live on marketplace</p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                <div className="p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-[var(--text-secondary)] font-bold">Total Views</span>
-                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold truncate">Total Views</span>
+                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500 shrink-0">
                             <Eye className="h-4 w-4" />
                         </div>
                     </div>
-                    <p className="text-2xl font-extrabold text-[var(--text-primary)]">{loading ? "..." : totalViews.toLocaleString()}</p>
-                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Tenant impressions</p>
+                    <p className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] truncate">{loading ? "..." : totalViews.toLocaleString()}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5 truncate">Tenant impressions</p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+                <div className="p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-[var(--text-secondary)] font-bold">Featured Listings</span>
-                        <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
+                        <span className="text-xs text-[var(--text-secondary)] font-bold truncate">Featured Listings</span>
+                        <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500 shrink-0">
                             <Rocket className="h-4 w-4" />
                         </div>
                     </div>
-                    <p className="text-2xl font-extrabold text-[var(--color-brand-orange)]">{loading ? "..." : featuredCount}</p>
-                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5">Priority visibility</p>
+                    <p className="text-xl sm:text-2xl font-extrabold text-[var(--color-brand-orange)] truncate">{loading ? "..." : featuredCount}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] font-medium mt-0.5 truncate">Priority visibility</p>
                 </div>
             </div>
 
             {/* Filter, Search & View Controls Ribbon */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)]">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] w-full min-w-0 max-w-full">
                 {/* Search */}
-                <div className="relative flex-1 min-w-[220px]">
+                <div className="relative flex-1 w-full min-w-0">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-muted)] pointer-events-none" />
                     <input
                         type="text"
@@ -3787,7 +3787,7 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                 </div>
 
                 {/* Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 w-full md:w-auto min-w-0 max-w-full">
                     {(
                         [
                             { id: "ALL", label: `All (${properties.length})` },
@@ -3801,7 +3801,7 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                             type="button"
                             onClick={() => setStatusFilter(filter.id)}
                             className={cn(
-                                "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border",
+                                "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border shrink-0",
                                 statusFilter === filter.id
                                     ? "bg-[var(--color-brand-green)] text-white border-[var(--color-brand-green)] shadow-xs"
                                     : "bg-[var(--bg-muted)] text-[var(--text-secondary)] border-[var(--border-color)] hover:bg-[var(--border-color)]/50"
@@ -3813,11 +3813,11 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                 </div>
 
                 {/* Sort & View Mode Switcher */}
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center justify-between sm:justify-start gap-2 w-full md:w-auto shrink-0 min-w-0">
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as any)}
-                        className="h-10 px-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-brand-green)] cursor-pointer"
+                        className="flex-1 sm:flex-initial h-10 px-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--color-brand-green)] cursor-pointer min-w-0"
                     >
                         <option value="NEWEST">Newest First</option>
                         <option value="VIEWS">Most Viewed</option>
@@ -3825,7 +3825,7 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                         <option value="PRICE_DESC">Price: High to Low</option>
                     </select>
 
-                    <div className="flex items-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] p-0.5">
+                    <div className="flex items-center rounded-xl border border-[var(--border-color)] bg-[var(--bg-muted)] p-0.5 shrink-0">
                         <button
                             type="button"
                             onClick={() => setViewMode("GRID")}
@@ -4078,8 +4078,8 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                 </div>
             ) : (
                 /* Table / Dense List View */
-                <div className="bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] overflow-hidden shadow-xs">
-                    <div className="overflow-x-auto">
+                <div className="bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] overflow-hidden shadow-xs w-full min-w-0 max-w-full">
+                    <div className="overflow-x-auto no-scrollbar scroll-smooth w-full min-w-0 max-w-full">
                         <table className="w-full text-left text-xs sm:text-sm">
                             <thead className="bg-[var(--bg-muted)]/60 text-[var(--text-secondary)] font-bold border-b border-[var(--border-color)]">
                                 <tr>

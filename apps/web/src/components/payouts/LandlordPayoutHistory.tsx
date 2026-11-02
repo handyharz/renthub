@@ -233,74 +233,74 @@ export function LandlordPayoutHistory() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Overview Earnings KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full min-w-0">
                 {/* Total Disbursed */}
-                <div className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow w-full min-w-0">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] truncate">
                                 Total Settled to Wallet
                             </p>
-                            <div className="flex items-baseline gap-2 mt-1">
-                                <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                            <div className="flex items-baseline gap-2 mt-1 min-w-0">
+                                <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 truncate">
                                     {formatPrice(stats.totalDisbursed)}
                                 </h3>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shrink-0">
                                     NT
                                 </span>
                             </div>
-                            <p className="text-xs text-[var(--text-muted)] mt-1">
+                            <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
                                 {stats.completedCount} completed escrow releases • Settled in Naira Tokens (NT)
                             </p>
                         </div>
-                        <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20">
+                        <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20 shrink-0 ml-3">
                             <Banknote className="h-5 w-5" />
                         </div>
                     </div>
                 </div>
 
                 {/* Pending In Escrow */}
-                <div className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow">
+                <div className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow w-full min-w-0">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] truncate">
                                 In Escrow / Pending
                             </p>
-                            <div className="flex items-baseline gap-2 mt-1">
-                                <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400">
+                            <div className="flex items-baseline gap-2 mt-1 min-w-0">
+                                <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 truncate">
                                     {formatPrice(stats.pendingInEscrow)}
                                 </h3>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0">
                                     NT
                                 </span>
                             </div>
-                            <p className="text-xs text-[var(--text-muted)] mt-1">
+                            <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
                                 Released upon key handover verification • Secured in Naira Tokens (NT)
                             </p>
                         </div>
-                        <div className="h-11 w-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20">
+                        <div className="h-11 w-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20 shrink-0 ml-3">
                             <Clock className="h-5 w-5" />
                         </div>
                     </div>
                 </div>
 
                 {/* Platform Fee & Net Ratio */}
-                <div className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
+                <div className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-sm hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1 w-full min-w-0">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] truncate">
                                 Net Escrow Ratio
                             </p>
-                            <h3 className="text-2xl font-black text-[var(--text-primary)] mt-1">
+                            <h3 className="text-2xl font-black text-[var(--text-primary)] mt-1 truncate">
                                 98% Net to You
                             </h3>
-                            <p className="text-xs text-[var(--text-muted)] mt-1">
+                            <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
                                 2% RentHub escrow guarantee commission
                             </p>
                         </div>
-                        <div className="h-11 w-11 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center border border-blue-500/20">
+                        <div className="h-11 w-11 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center border border-blue-500/20 shrink-0 ml-3">
                             <ShieldCheck className="h-5 w-5" />
                         </div>
                     </div>
@@ -308,13 +308,13 @@ export function LandlordPayoutHistory() {
             </div>
 
             {/* Payout Records Section */}
-            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-[var(--border-color)] space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div>
-                            <h3 className="text-lg font-bold text-[var(--text-primary)] flex items-center gap-2">
-                                <Receipt className="h-5 w-5 text-[var(--color-brand-green)]" />
-                                Escrow Settlement Records
+            <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-sm overflow-hidden w-full min-w-0 max-w-full">
+                <div className="p-4 sm:p-5 border-b border-[var(--border-color)] space-y-4 w-full min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full min-w-0">
+                        <div className="min-w-0">
+                            <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] flex items-center gap-2 truncate">
+                                <Receipt className="h-5 w-5 text-[var(--color-brand-green)] shrink-0" />
+                                <span>Escrow Settlement Records</span>
                             </h3>
                             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                                 Transparent audit of your tenant rent escrows, platform commission, and wallet releases.
@@ -326,7 +326,7 @@ export function LandlordPayoutHistory() {
                             size="sm"
                             onClick={fetchPayouts}
                             disabled={loading}
-                            className="gap-2 text-xs border-[var(--border-color)] self-start sm:self-auto"
+                            className="gap-2 text-xs border-[var(--border-color)] self-start sm:self-auto shrink-0"
                         >
                             <RotateCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
                             Refresh
@@ -334,9 +334,9 @@ export function LandlordPayoutHistory() {
                     </div>
 
                     {/* Filter Pills and Search */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 w-full min-w-0">
                         {/* Status Pills */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pb-1 sm:pb-0 w-full sm:w-auto min-w-0">
                             {[
                                 { key: "ALL", label: "All Payouts" },
                                 { key: "COMPLETED", label: "Settled" },
@@ -347,7 +347,7 @@ export function LandlordPayoutHistory() {
                                 <button
                                     key={pill.key}
                                     onClick={() => setStatusFilter(pill.key)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                         statusFilter === pill.key
                                             ? "bg-[var(--color-brand-green)] text-white shadow-sm"
                                             : "bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-color)]"
@@ -359,7 +359,7 @@ export function LandlordPayoutHistory() {
                         </div>
 
                         {/* Search Input */}
-                        <div className="relative min-w-[220px]">
+                        <div className="relative w-full sm:w-auto sm:min-w-[220px] min-w-0">
                             <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                             <input
                                 type="text"
@@ -391,8 +391,8 @@ export function LandlordPayoutHistory() {
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
+                    <div className="overflow-x-auto no-scrollbar w-full min-w-0">
+                        <table className="w-full text-left text-xs min-w-[640px]">
                             <thead className="bg-[var(--bg-primary)] border-b border-[var(--border-color)] text-[var(--text-muted)] font-semibold uppercase tracking-wider">
                                 <tr>
                                     <th className="py-3 px-4">Date</th>

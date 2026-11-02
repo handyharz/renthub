@@ -133,22 +133,22 @@ export function LandlordAgentDelegationsTab() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Info banner */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-sm text-blue-800 dark:text-blue-300">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-sm text-blue-800 dark:text-blue-300 w-full min-w-0">
                 <strong>🤝 Agent Delegation</strong> — Agents on RentHub are verified professionals. When you authorize an
                 agent for a listing, they can help market and manage it. Their commission (up to 5%) is deducted from your
                 rental income through escrow — tenants pay zero agent fee.
             </div>
 
             {/* Filter tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1 w-full min-w-0">
                 {["ALL", "PENDING_LANDLORD", "AUTHORIZED", "COMPLETED", "REVOKED"].map(f => (
                     <button
                         key={f}
                         onClick={() => setActiveFilter(f)}
                         className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors border",
+                            "px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors border",
                             activeFilter === f
                                 ? "bg-blue-600 text-white border-blue-600"
                                 : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:bg-[var(--bg-card-hover)] border-[var(--border-color)]"
@@ -160,7 +160,7 @@ export function LandlordAgentDelegationsTab() {
             </div>
 
             {filtered.length === 0 ? (
-                <div className="text-center py-16 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-2xl">
+                <div className="text-center py-16 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-2xl w-full min-w-0">
                     <Users className="h-12 w-12 text-[var(--text-muted)] mx-auto mb-3" />
                     <p className="text-[var(--text-secondary)] font-medium">No agent requests</p>
                     <p className="text-[var(--text-muted)] text-sm mt-1">
@@ -168,7 +168,7 @@ export function LandlordAgentDelegationsTab() {
                     </p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 w-full min-w-0">
                     {filtered.map(d => {
                         const img = d.property.images?.[0]?.url;
                         const agentProfile = d.agent.agentProfile;
@@ -176,11 +176,11 @@ export function LandlordAgentDelegationsTab() {
                         const isRevLoading = actionLoading === d.id + "_rev";
 
                         return (
-                            <div key={d.id} className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm">
-                                <div className="p-5">
-                                    <div className="flex flex-col sm:flex-row gap-4">
+                            <div key={d.id} className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm w-full min-w-0 max-w-full">
+                                <div className="p-4 sm:p-5">
+                                    <div className="flex flex-col sm:flex-row gap-4 w-full min-w-0">
                                         {/* Property thumbnail */}
-                                        <div className="relative h-24 w-32 shrink-0 rounded-xl overflow-hidden bg-[var(--bg-muted)]">
+                                        <div className="relative h-32 sm:h-24 w-full sm:w-32 shrink-0 rounded-xl overflow-hidden bg-[var(--bg-muted)]">
                                             {img ? (
                                                 <Image src={img} alt={d.property.title} fill className="object-cover" />
                                             ) : (
@@ -191,7 +191,7 @@ export function LandlordAgentDelegationsTab() {
                                         </div>
 
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-2 flex-wrap">
+                                            <div className="flex items-start justify-between gap-2 flex-wrap min-w-0">
                                                 <div>
                                                     <Link href={`/properties/${d.property.id}`} className="font-bold text-[var(--text-primary)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors line-clamp-1">
                                                         {d.property.title}

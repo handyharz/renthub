@@ -266,27 +266,27 @@ export function TransactionsTab() {
     const getStatusBadge = (status: string, escrowHeld: boolean, escrowReleased: boolean, disputed?: boolean) => {
         if (disputed) {
             return (
-                <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 flex items-center gap-1.5 font-bold px-3 py-1 text-xs shadow-2xs">
-                    <XCircle className="h-3.5 w-3.5" /> Escrow Disputed / Locked
+                <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 flex items-center gap-1.5 font-bold px-3 py-1 text-xs shadow-2xs max-w-full break-words whitespace-normal">
+                    <XCircle className="h-3.5 w-3.5 shrink-0" /> <span>Escrow Disputed / Locked</span>
                 </Badge>
             );
         }
         if ((status === "ESCROWED" || status === "SUCCESSFUL") && !escrowReleased) {
             return (
-                <Badge className="flex items-center gap-1.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold px-3 py-1 text-xs shadow-2xs">
-                    <Clock className="h-3.5 w-3.5 animate-pulse" /> Escrow Secured (Awaiting Handover OTP)
+                <Badge className="flex items-center gap-1.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-bold px-3 py-1 text-xs shadow-2xs max-w-full break-words whitespace-normal">
+                    <Clock className="h-3.5 w-3.5 animate-pulse shrink-0" /> <span>Escrow Secured (Awaiting Handover OTP)</span>
                 </Badge>
             );
         }
         if (escrowReleased || status === "RELEASED") {
             return (
-                <Badge className="flex items-center gap-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold px-3 py-1 text-xs shadow-2xs">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Escrow Released & Disbursed
+                <Badge className="flex items-center gap-1.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-bold px-3 py-1 text-xs shadow-2xs max-w-full break-words whitespace-normal">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> <span>Escrow Released & Disbursed</span>
                 </Badge>
             );
         }
         return (
-            <Badge variant="outline" className="text-[var(--text-secondary)] border-[var(--border-color)] font-bold px-3 py-1 text-xs">
+            <Badge variant="outline" className="text-[var(--text-secondary)] border-[var(--border-color)] font-bold px-3 py-1 text-xs max-w-full break-words whitespace-normal">
                 {status}
             </Badge>
         );
@@ -308,19 +308,19 @@ export function TransactionsTab() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0 max-w-full">
             {/* Header with Title & Refresh */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-[var(--color-brand-green)]/10 border border-emerald-500/30 flex items-center justify-center text-[var(--color-brand-green)] shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full min-w-0">
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-[var(--color-brand-green)]/10 border border-emerald-500/30 flex items-center justify-center text-[var(--color-brand-green)] shadow-xs shrink-0">
                             <Receipt className="h-4 w-4" />
                         </div>
                         <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] tracking-tight">
                             Escrow & Rental Transactions
                         </h2>
                     </div>
-                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1">
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium mt-1 leading-relaxed">
                         Track verified tenant escrow payments, enter handover OTPs to claim payouts, and manage settlement accounts
                     </p>
                 </div>
@@ -340,17 +340,17 @@ export function TransactionsTab() {
             </div>
 
             {/* AfriExchange Escrow Settlement Status Banner */}
-            <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent rounded-2xl p-4 sm:p-5 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-                <div className="flex items-center gap-3.5">
+            <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent rounded-2xl p-4 sm:p-5 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs w-full min-w-0 max-w-full">
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
                     <div className="w-10 h-10 rounded-xl bg-[var(--color-brand-green)] text-white flex items-center justify-center shrink-0 shadow-xs">
                         <Wallet className="h-5 w-5" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-extrabold text-[var(--text-primary)] text-sm">
                                 AfriExchange Instant Escrow Settlement
                             </h4>
-                            <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
                                 Instant Payout Route
                             </span>
                         </div>
@@ -367,34 +367,34 @@ export function TransactionsTab() {
                         className="h-9 px-4 rounded-xl bg-[var(--bg-card)] hover:bg-[var(--bg-muted)] text-[var(--color-brand-green)] border-emerald-500/30 text-xs font-bold shadow-xs gap-1.5"
                     >
                         <span>Manage Payout Account</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0" />
                     </Button>
                 </Link>
             </div>
 
             {/* Metric Overview Strip */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full min-w-0 max-w-full">
                 <div
                     onClick={() => { setStatusFilter("ALL"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "ALL"
                             ? "border-[var(--color-brand-green)] ring-2 ring-[var(--color-brand-green)]/15"
                             : "border-[var(--border-color)] hover:border-[var(--color-brand-green)]/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] truncate block">
                             Total Net Rent Payout (98%)
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-[var(--color-brand-green)] flex items-center justify-center">
-                            <Receipt className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 text-[var(--color-brand-green)] flex items-center justify-center shrink-0">
+                            <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2">
-                        <span className="text-xl sm:text-2xl font-black text-[var(--text-primary)]">
+                    <div className="mt-2 min-w-0">
+                        <span className="text-lg sm:text-2xl font-black text-[var(--text-primary)] truncate block">
                             {formatPrice(stats.totalNetPayout)}
                         </span>
-                        <p className="text-[11px] font-semibold text-[var(--text-muted)] mt-0.5">
+                        <p className="text-[10px] sm:text-[11px] font-semibold text-[var(--text-muted)] mt-0.5 truncate">
                             From {formatPrice(stats.totalRentGross)} gross rent • 2% fee deducted
                         </p>
                     </div>
@@ -402,25 +402,25 @@ export function TransactionsTab() {
 
                 <div
                     onClick={() => { setStatusFilter("ESCROWED"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "ESCROWED"
                             ? "border-amber-500 ring-2 ring-amber-500/15"
                             : "border-[var(--border-color)] hover:border-amber-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 truncate block">
                             Awaiting OTP Handover
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                            <Clock className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2">
-                        <span className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400">
+                    <div className="mt-2 min-w-0">
+                        <span className="text-lg sm:text-2xl font-black text-amber-600 dark:text-amber-400 truncate block">
                             {formatPrice(stats.inEscrowAmount)}
                         </span>
-                        <p className="text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+                        <p className="text-[10px] sm:text-[11px] font-semibold text-amber-600/80 dark:text-amber-400/80 mt-0.5 truncate">
                             {stats.inEscrowCount} locked in escrow
                         </p>
                     </div>
@@ -428,25 +428,25 @@ export function TransactionsTab() {
 
                 <div
                     onClick={() => { setStatusFilter("RELEASED"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "RELEASED"
                             ? "border-emerald-500 ring-2 ring-emerald-500/15"
                             : "border-[var(--border-color)] hover:border-emerald-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 truncate block">
                             Disbursed Payouts
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                            <CheckCircle2 className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2">
-                        <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    <div className="mt-2 min-w-0">
+                        <span className="text-lg sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 truncate block">
                             {formatPrice(stats.releasedAmount)}
                         </span>
-                        <p className="text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                        <p className="text-[10px] sm:text-[11px] font-semibold text-emerald-600/80 dark:text-emerald-400/80 mt-0.5 truncate">
                             {stats.releasedCount} completed releases
                         </p>
                     </div>
@@ -454,25 +454,25 @@ export function TransactionsTab() {
 
                 <div
                     onClick={() => { setStatusFilter("DISPUTED"); setCurrentPage(1); }}
-                    className={`p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs ${
+                    className={`p-3 sm:p-4 rounded-2xl bg-[var(--bg-card)] border transition-all cursor-pointer shadow-xs min-w-0 ${
                         statusFilter === "DISPUTED"
                             ? "border-red-500 ring-2 ring-red-500/15"
                             : "border-[var(--border-color)] hover:border-red-500/40"
                     }`}
                 >
-                    <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                    <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 truncate block">
                             Frozen / Disputed
                         </span>
-                        <div className="w-8 h-8 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 flex items-center justify-center">
-                            <ShieldAlert className="h-4 w-4" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                            <ShieldAlert className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </div>
                     </div>
-                    <div className="mt-2">
-                        <span className="text-xl sm:text-2xl font-black text-red-600 dark:text-red-400">
+                    <div className="mt-2 min-w-0">
+                        <span className="text-lg sm:text-2xl font-black text-red-600 dark:text-red-400 truncate block">
                             {stats.disputedCount}
                         </span>
-                        <p className="text-[11px] font-semibold text-red-600/80 dark:text-red-400/80 mt-0.5">
+                        <p className="text-[10px] sm:text-[11px] font-semibold text-red-600/80 dark:text-red-400/80 mt-0.5 truncate">
                             under investigation
                         </p>
                     </div>
@@ -480,9 +480,9 @@ export function TransactionsTab() {
             </div>
 
             {/* Filter & Search Bar */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-2 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xs">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3 p-2 bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] shadow-xs w-full min-w-0 max-w-full">
                 {/* Search input */}
-                <div className="relative flex-1">
+                <div className="relative flex-1 w-full min-w-0">
                     <Search className="h-4 w-4 text-[var(--text-muted)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                         type="text"
@@ -505,7 +505,7 @@ export function TransactionsTab() {
                 </div>
 
                 {/* Status Filter Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pb-1 md:pb-0 w-full md:w-auto min-w-0 max-w-full">
                     {(
                         [
                             { id: "ALL", label: "All Transactions", count: stats.total },
@@ -522,7 +522,7 @@ export function TransactionsTab() {
                                     setStatusFilter(filter.id);
                                     setCurrentPage(1);
                                 }}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 ${
+                                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 shrink-0 ${
                                     isActive
                                         ? "bg-[var(--color-brand-green)] text-white shadow-xs"
                                         : "bg-[var(--bg-muted)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] border border-[var(--border-color)]"
@@ -546,12 +546,12 @@ export function TransactionsTab() {
 
             {/* Transactions List */}
             {transactions.length === 0 ? (
-                <div className="text-center py-16 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
-                    <div className="w-16 h-16 rounded-2xl bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] flex items-center justify-center mx-auto mb-4 border border-[var(--color-brand-green)]/20 shadow-xs">
-                        <Receipt className="h-8 w-8" />
+                <div className="text-center py-12 sm:py-16 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-4 sm:p-8 shadow-xs w-full min-w-0 max-w-full">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] flex items-center justify-center mx-auto mb-4 border border-[var(--color-brand-green)]/20 shadow-xs">
+                        <Receipt className="h-7 w-7 sm:h-8 sm:w-8" />
                     </div>
-                    <h3 className="text-lg font-bold text-[var(--text-primary)]">No Rental Payments Received Yet</h3>
-                    <p className="text-sm text-[var(--text-secondary)] font-medium max-w-md mx-auto mt-1 leading-relaxed">
+                    <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">No Rental Payments Received Yet</h3>
+                    <p className="text-xs sm:text-sm text-[var(--text-secondary)] font-medium max-w-md mx-auto mt-1 leading-relaxed">
                         When prospective tenants complete escrow payments for your approved properties, their payment details and handover claims will appear here.
                     </p>
                     <div className="mt-6 flex items-center justify-center gap-3">
@@ -563,9 +563,9 @@ export function TransactionsTab() {
                     </div>
                 </div>
             ) : filteredTransactions.length === 0 ? (
-                <div className="text-center py-14 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-8 shadow-xs">
-                    <Search className="h-10 w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-60" />
-                    <h3 className="text-base font-bold text-[var(--text-primary)]">No Matching Transactions</h3>
+                <div className="text-center py-10 sm:py-14 bg-[var(--bg-card)] rounded-3xl border border-[var(--border-color)] p-4 sm:p-8 shadow-xs w-full min-w-0 max-w-full">
+                    <Search className="h-9 w-9 sm:h-10 sm:w-10 text-[var(--text-muted)] mx-auto mb-3 opacity-60" />
+                    <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)]">No Matching Transactions</h3>
                     <p className="text-xs text-[var(--text-secondary)] font-medium max-w-sm mx-auto mt-1">
                         We couldn't find any escrow records matching your search or active filter.
                     </p>
@@ -582,8 +582,8 @@ export function TransactionsTab() {
                     </Button>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    <div className="grid gap-4">
+                <div className="space-y-4 w-full min-w-0 max-w-full">
+                    <div className="grid gap-4 w-full min-w-0 max-w-full">
                         {paginatedTransactions.map((tx) => {
                             const primaryImage =
                                 tx.property?.images?.find((img) => img.isPrimary)?.url ||
@@ -596,10 +596,10 @@ export function TransactionsTab() {
                             return (
                                 <div
                                     key={tx.id}
-                                    className="bg-[var(--bg-card)] rounded-2xl p-5 border border-[var(--border-color)] shadow-xs hover:border-[var(--color-brand-green)]/40 transition-all duration-200 space-y-4"
+                                    className="bg-[var(--bg-card)] rounded-2xl p-3.5 sm:p-5 border border-[var(--border-color)] shadow-xs hover:border-[var(--color-brand-green)]/40 transition-all duration-200 space-y-4 w-full min-w-0 max-w-full"
                                 >
                                     {/* Top Bar: Property Thumbnail, Title, Address & Status */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4 w-full min-w-0">
                                         <div className="flex items-center gap-3 sm:gap-3.5 w-full sm:w-auto flex-1 min-w-0">
                                             <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative shrink-0 border border-[var(--border-color)] shadow-xs">
                                                 {primaryImage ? (
@@ -640,33 +640,33 @@ export function TransactionsTab() {
                                             </div>
                                         </div>
 
-                                        <div className="shrink-0 self-start sm:self-center">
+                                        <div className="shrink-0 self-start sm:self-center w-full sm:w-auto flex flex-wrap items-center">
                                             {getStatusBadge(tx.status, tx.escrowHeld, tx.escrowReleased, tx.disputed)}
                                         </div>
                                     </div>
 
                                     {/* Middle: Tenant Contact & Financial Breakdown */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 w-full min-w-0">
                                         {/* Tenant Card */}
-                                        <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-[var(--color-brand-green)]/20 to-[var(--color-brand-green)]/5 text-[var(--color-brand-green)] flex items-center justify-center font-black text-sm shrink-0 border border-[var(--color-brand-green)]/30 shadow-2xs">
                                                     {tx.tenant?.firstName?.[0]}
                                                     {tx.tenant?.lastName?.[0]}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <div className="flex items-center gap-1.5">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
                                                         <span className="font-extrabold text-[var(--text-primary)] text-sm truncate">
                                                             {tx.tenant?.firstName} {tx.tenant?.lastName}
                                                         </span>
-                                                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0.2 font-black">
+                                                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0.2 font-black shrink-0">
                                                             Tenant
                                                         </Badge>
                                                     </div>
-                                                    <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)] font-medium mt-1 flex-wrap">
+                                                    <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)] font-medium mt-1 flex-wrap min-w-0">
                                                         <a
                                                             href={`tel:${tx.tenant?.phone}`}
-                                                            className="flex items-center gap-1 hover:text-[var(--color-brand-green)] transition-colors"
+                                                            className="flex items-center gap-1 hover:text-[var(--color-brand-green)] transition-colors shrink-0"
                                                             title="Call tenant"
                                                         >
                                                             <Phone className="h-3 w-3 text-[var(--color-brand-green)]" />
@@ -675,7 +675,7 @@ export function TransactionsTab() {
                                                         {tx.tenant?.email && (
                                                             <a
                                                                 href={`mailto:${tx.tenant?.email}`}
-                                                                className="flex items-center gap-1 hover:text-[var(--color-brand-green)] transition-colors truncate max-w-[160px]"
+                                                                className="flex items-center gap-1 hover:text-[var(--color-brand-green)] transition-colors truncate max-w-[140px] sm:max-w-[180px]"
                                                                 title="Email tenant"
                                                             >
                                                                 <Mail className="h-3 w-3 text-[var(--color-brand-green)]" />
@@ -686,7 +686,7 @@ export function TransactionsTab() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                            <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center flex-wrap">
                                                 <a
                                                     href={`tel:${tx.tenant?.phone}`}
                                                     className="h-8 px-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--color-brand-green)] hover:border-[var(--color-brand-green)]/40 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs"
@@ -705,40 +705,40 @@ export function TransactionsTab() {
                                         </div>
 
                                         {/* Financial Breakdown Table Card */}
-                                        <div className="lg:col-span-2 p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col justify-center space-y-2 text-xs shadow-2xs">
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2 border-b border-[var(--border-color)]">
-                                                <div>
-                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">Annual Rent (Gross)</span>
-                                                    <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block">
+                                        <div className="lg:col-span-2 p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col justify-center space-y-2 text-xs shadow-2xs w-full min-w-0">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2 border-b border-[var(--border-color)] w-full min-w-0">
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block truncate">Annual Rent (Gross)</span>
+                                                    <span className="font-extrabold text-[var(--text-primary)] mt-0.5 block truncate">
                                                         {formatPrice(rent)}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-[10px] uppercase font-bold text-red-500 block">RentHub Fee (2%)</span>
-                                                    <span className="font-extrabold text-red-500 mt-0.5 block">
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] uppercase font-bold text-red-500 block truncate">RentHub Fee (2%)</span>
+                                                    <span className="font-extrabold text-red-500 mt-0.5 block truncate">
                                                         - {formatPrice(landlordFee)}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">Your Net Payout (98%)</span>
-                                                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block truncate">Your Net Payout (98%)</span>
+                                                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
                                                         {formatPrice(netRentPayout)}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block" title="Includes rent, caution deposit, legal fee & 2% tenant escrow fee">
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block truncate" title="Includes rent, caution deposit, legal fee & 2% tenant escrow fee">
                                                         Tenant Total in Escrow
                                                     </span>
-                                                    <span className="font-extrabold text-[var(--text-secondary)] mt-0.5 block">
+                                                    <span className="font-extrabold text-[var(--text-secondary)] mt-0.5 block truncate">
                                                         {formatPrice(tenantEscrowTotal)}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pt-0.5">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pt-0.5 w-full min-w-0">
                                                 <div className="flex items-center gap-1.5 text-[var(--text-secondary)] min-w-0">
                                                     <ShieldCheck className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
-                                                    <span className="font-medium text-xs">Net Payout to Your Bank upon OTP Handover:</span>
+                                                    <span className="font-medium text-xs break-words">Net Payout to Your Bank upon OTP Handover:</span>
                                                 </div>
                                                 <span className="text-base sm:text-lg font-black text-[var(--color-brand-green)] shrink-0">
                                                     {formatPrice(netRentPayout)}
@@ -748,8 +748,8 @@ export function TransactionsTab() {
                                     </div>
 
                                     {/* Action Bar */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--border-color)]">
-                                        <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[var(--border-color)] w-full min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -757,9 +757,9 @@ export function TransactionsTab() {
                                                     setSelectedTransaction(tx);
                                                     setIsEscrowModalOpen(true);
                                                 }}
-                                                className="h-9 px-3 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 shadow-2xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                                className="h-9 px-3 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 shadow-2xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0"
                                             >
-                                                <Eye className="h-3.5 w-3.5" />
+                                                <Eye className="h-3.5 w-3.5 shrink-0" />
                                                 <span>Escrow Vault Details</span>
                                             </Button>
 
@@ -771,9 +771,9 @@ export function TransactionsTab() {
                                                     setDocModalTxId(tx.id);
                                                     setDocModalTab("tax-pack");
                                                 }}
-                                                className="h-9 px-3 rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 text-xs font-bold gap-1.5 shadow-2xs"
+                                                className="h-9 px-3 rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 hover:bg-emerald-500/10 text-xs font-bold gap-1.5 shadow-2xs shrink-0"
                                             >
-                                                <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                                                <Sparkles className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                                                 <span>Tax Act 2025 Pack</span>
                                             </Button>
 
@@ -785,14 +785,14 @@ export function TransactionsTab() {
                                                     setDocModalTxId(tx.id);
                                                     setDocModalTab("receipt");
                                                 }}
-                                                className="h-9 px-3 rounded-xl border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-bold gap-1.5 shadow-2xs"
+                                                className="h-9 px-3 rounded-xl border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs font-bold gap-1.5 shadow-2xs shrink-0"
                                             >
-                                                <Receipt className="h-3.5 w-3.5" />
+                                                <Receipt className="h-3.5 w-3.5 shrink-0" />
                                                 <span>Official Receipt</span>
                                             </Button>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-end">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-start sm:justify-end min-w-0">
                                             {/* Key Handover Release OTP Button */}
                                             {(tx.status === "ESCROWED" || tx.status === "SUCCESSFUL") && !tx.escrowReleased && !tx.disputed && (
                                                 <>
@@ -806,7 +806,7 @@ export function TransactionsTab() {
                                                     <Button
                                                         variant="outline"
                                                         onClick={() => setHandoverModalTx(tx)}
-                                                        className="h-10 px-3 rounded-xl border-amber-500/30 text-amber-600 hover:bg-amber-500/10 text-xs font-bold"
+                                                        className="h-10 px-3 rounded-xl border-amber-500/30 text-amber-600 hover:bg-amber-500/10 text-xs font-bold shrink-0"
                                                         title="Submit proof of key exchange if tenant occupied without sharing OTP (Guide §5.3)"
                                                     >
                                                         Proof of Handover
@@ -819,7 +819,7 @@ export function TransactionsTab() {
                                                 <Button
                                                     variant="outline"
                                                     onClick={() => setMoveOutModalTx(tx)}
-                                                    className="h-10 px-3 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                                    className="h-10 px-3 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] shrink-0"
                                                 >
                                                     <Building2 className="h-3.5 w-3.5" />
                                                     <span>Move-Out & Caution</span>
@@ -851,8 +851,8 @@ export function TransactionsTab() {
 
                     {/* Pagination Strip */}
                     {filteredTransactions.length > ITEMS_PER_PAGE && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)]">
-                            <p className="text-xs text-[var(--text-secondary)] font-medium">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--border-color)] w-full min-w-0">
+                            <p className="text-xs text-[var(--text-secondary)] font-medium text-center sm:text-left">
                                 Showing{" "}
                                 <span className="font-bold text-[var(--text-primary)]">
                                     {(currentPage - 1) * ITEMS_PER_PAGE + 1}
@@ -868,37 +868,39 @@ export function TransactionsTab() {
                                 transactions
                             </p>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center flex-wrap justify-center gap-1.5 w-full sm:w-auto min-w-0">
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === 1}
                                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)]"
+                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)] shrink-0"
                                 >
                                     <ChevronLeft className="h-3.5 w-3.5" /> Prev
                                 </Button>
 
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                    <button
-                                        key={page}
-                                        onClick={() => setCurrentPage(page)}
-                                        className={`h-8 w-8 rounded-xl text-xs font-bold transition-all ${
-                                            currentPage === page
-                                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
-                                                : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                                        }`}
-                                    >
-                                        {page}
-                                    </button>
-                                ))}
+                                <div className="flex items-center flex-wrap justify-center gap-1 shrink-0">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                        <button
+                                            key={page}
+                                            onClick={() => setCurrentPage(page)}
+                                            className={`h-8 w-8 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                                                currentPage === page
+                                                    ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                                    : "bg-[var(--bg-card)] border border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                            }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    ))}
+                                </div>
 
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     disabled={currentPage === totalPages}
                                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)]"
+                                    className="h-8 px-3 rounded-xl text-xs font-bold gap-1 border-[var(--border-color)] shrink-0"
                                 >
                                     Next <ChevronRight className="h-3.5 w-3.5" />
                                 </Button>
