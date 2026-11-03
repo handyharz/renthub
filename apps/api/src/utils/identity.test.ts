@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { sanitizeSelfServiceRole, stripReleaseOtp } from "./identity";
+import { canSelfAssignRole, sanitizeSelfServiceRole, stripReleaseOtp } from "./identity";
 import { hashOtp, otpMatches, timingSafeEqualString } from "./cryptoCompare";
 
 describe("sanitizeSelfServiceRole", () => {
@@ -14,6 +14,11 @@ describe("sanitizeSelfServiceRole", () => {
         assert.equal(sanitizeSelfServiceRole("ADMIN"), undefined);
         assert.equal(sanitizeSelfServiceRole("SUPERUSER"), undefined);
         assert.equal(sanitizeSelfServiceRole(null), undefined);
+    });
+
+    it("blocks role changes after onboarding", () => {
+        assert.equal(canSelfAssignRole(false), true);
+        assert.equal(canSelfAssignRole(true), false);
     });
 });
 

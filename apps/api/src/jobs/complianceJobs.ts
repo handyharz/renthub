@@ -1,7 +1,11 @@
 import { prisma } from "../config/database";
 import { logger } from "../utils/logger";
+import { withJobLock } from "./jobLock";
+import { retryFailedLandlordPayouts } from "./retryPayouts";
 
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+const COMPLIANCE_LOCK_ID = 814201;
+const PAYOUT_LOCK_ID = 814202;
 
 export async function runComplianceJobs(): Promise<void> {
     const now = new Date();
@@ -20,14 +24,17 @@ export async function runComplianceJobs(): Promise<void> {
     const expiredOffers = await prisma.property.updateMany({
         where: {
             status: "UNDER_OFFER",
-            updatedAt: { lt: offerLockCutoff },
+            OR: [
+                { offerLockedAt: { lt: offerLockCutoff } },
+                { offerLockedAt: null, updatedAt: { lt: offerLockCutoff } },
+            ],
         },
         data: {
             status: "AVAILABLE",
+            offerLockedAt: null,
         },
     });
 
-    // Guide §5.5: Flag transactions where OTP expired without key handover or dispute
     const expiredOtps = await prisma.transaction.updateMany({
         where: {
             status: "ESCROWED",
@@ -51,12 +58,12 @@ export async function runComplianceJobs(): Promise<void> {
 
 export function startComplianceJobs(): void {
     const intervalMs = Number(process.env.COMPLIANCE_JOB_INTERVAL_MS || 15 * 60 * 1000);
-    runComplianceJobs().catch((err) =>
-        console.error("[compliance] initial run failed:", err)
-    );
+    const tick = async () => {
+        await withJobLock(COMPLIANCE_LOCK_ID, () => runComplianceJobs());
+        await withJobLock(PAYOUT_LOCK_ID, () => retryFailedLandlordPayouts());
+    };
+    tick().catch((err) => console.error("[compliance] initial run failed:", err));
     setInterval(() => {
-        runComplianceJobs().catch((err) =>
-            console.error("[compliance] scheduled run failed:", err)
-        );
+        tick().catch((err) => console.error("[compliance] scheduled run failed:", err));
     }, intervalMs);
 }

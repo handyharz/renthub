@@ -4,6 +4,9 @@ import { transactionService } from "../services/transactionService";
 import { afriExchangePaymentService } from "../services/afriExchangePaymentService";
 import { anchorService } from "../services/anchorService";
 import { prisma } from "../config/database";
+import { paidKoboMeetsExpected, afriExchangePaidMeetsExpected } from "../utils/moneyRail";
+import { isWebhookTimestampFresh } from "../utils/webhookSecurity";
+import { propertyService } from "../services/propertyService";
 
 export class PaymentController {
     /**
@@ -95,7 +98,6 @@ export class PaymentController {
             return res.status(500).json({
                 success: false,
                 message: "Failed to initialize payment",
-                error: error.message,
             });
         }
     }
@@ -164,19 +166,21 @@ export class PaymentController {
                 });
             }
 
-            const expectedKobo = paymentService.nairaToKobo(transaction.totalAmount);
-            if (typeof paymentData.amount === "number" && paymentData.amount < expectedKobo) {
+            if (!paidKoboMeetsExpected(paymentData.amount, transaction.totalAmount)) {
                 return res.status(400).json({
                     success: false,
                     message: "Paid amount does not match the escrow total",
                 });
             }
 
-            const updatedTransaction = await transactionService.updateTransactionStatus(
-                transaction.id,
-                "SUCCESSFUL" as any,
-                { paystackRef: payRef as string }
-            );
+            await transactionService.markEscrowedIfPayable(transaction.id, {
+                paystackRef: payRef as string,
+                paymentGateway: "PAYSTACK",
+            });
+            await propertyService.lockUnderOffer(transaction.propertyId);
+            const updatedTransaction = await prisma.transaction.findUniqueOrThrow({
+                where: { id: transaction.id },
+            });
 
             return res.status(200).json({
                 success: true,
@@ -191,7 +195,6 @@ export class PaymentController {
             return res.status(500).json({
                 success: false,
                 message: "Failed to verify payment",
-                error: error.message,
             });
         }
     }
@@ -241,7 +244,6 @@ export class PaymentController {
             return res.status(500).json({
                 success: false,
                 message: "Webhook processing failed",
-                error: error.message,
             });
         }
     }
@@ -258,11 +260,17 @@ export class PaymentController {
         });
 
         if (transaction) {
-            await transactionService.updateTransactionStatus(
-                transaction.id,
-                "SUCCESSFUL" as any
-            );
-            // TODO: Send notification to landlord
+            if (!paidKoboMeetsExpected(data.amount, transaction.totalAmount)) {
+                console.warn(
+                    `[Paystack Webhook] Underpayment for tx=${transaction.id}: paid=${data.amount} expectedNaira=${transaction.totalAmount}`
+                );
+                return;
+            }
+            await transactionService.markEscrowedIfPayable(transaction.id, {
+                paystackRef: reference,
+                paymentGateway: "PAYSTACK",
+            });
+            await propertyService.lockUnderOffer(transaction.propertyId);
             return;
         }
 
@@ -445,6 +453,9 @@ export class PaymentController {
             if (!webhookSecret || !signature || !timestamp) {
                 return res.status(401).json({ success: false, message: "Invalid signature" });
             }
+            if (!isWebhookTimestampFresh(timestamp)) {
+                return res.status(401).json({ success: false, message: "Stale webhook timestamp" });
+            }
 
             const crypto = await import("crypto");
             const rawBody = req.rawBody ? req.rawBody.toString("utf8") : JSON.stringify(req.body);
@@ -483,18 +494,20 @@ export class PaymentController {
                 });
 
                 if (tx && tx.status !== "ESCROWED") {
-                    await prisma.transaction.update({
-                        where: { id: tx.id },
-                        data: {
-                            status: "ESCROWED",
-                            escrowHeld: true,
+                    if (!afriExchangePaidMeetsExpected(data, tx.totalAmount)) {
+                        console.warn(
+                            `[AfriExchange Webhook] Underpayment or missing amount for tx=${tx.id}`
+                        );
+                    } else {
+                        await transactionService.markEscrowedIfPayable(tx.id, {
+                            afriExchangeRef: reference || tx.afriExchangeRef || undefined,
                             paymentGateway: "AFRIEXCHANGE",
-                            afriExchangeRef: reference || tx.afriExchangeRef,
-                        },
-                    });
-                    console.info(
-                        `[AfriExchange Webhook] Secured escrow for transaction ${tx.id} from reference ${reference}`
-                    );
+                        });
+                        await propertyService.lockUnderOffer(tx.propertyId);
+                        console.info(
+                            `[AfriExchange Webhook] Secured escrow for transaction ${tx.id} from reference ${reference}`
+                        );
+                    }
                 }
 
                 // Also check if this is a ServiceTransaction (Property Verification or Featured Listing)
@@ -671,7 +684,6 @@ export class PaymentController {
             return res.status(500).json({
                 success: false,
                 message: "Failed to initialize Anchor virtual escrow account",
-                error: error.message,
             });
         }
     }
@@ -732,7 +744,6 @@ export class PaymentController {
             return res.status(500).json({
                 success: false,
                 message: "Failed to retrieve Anchor virtual account details",
-                error: error.message,
             });
         }
     }
@@ -746,6 +757,14 @@ export class PaymentController {
             const signature = (req.headers["x-anchor-signature"] || req.headers["x-webhook-signature"]) as string;
             const timestamp = req.headers["x-anchor-timestamp"] as string;
             const rawPayload = req.rawBody ? req.rawBody.toString("utf8") : JSON.stringify(req.body);
+
+            if (!isWebhookTimestampFresh(timestamp)) {
+                console.warn("[Anchor Webhook] Rejected stale or missing timestamp from IP:", req.ip);
+                return res.status(401).json({
+                    success: false,
+                    message: "Invalid or stale webhook timestamp",
+                });
+            }
 
             const isValid = anchorService.verifyWebhookSignature(rawPayload, signature, timestamp);
 
@@ -788,36 +807,23 @@ export class PaymentController {
                 });
 
                 if (transaction) {
-                    // Integer Kobo match assertion
-                    const expectedKobo = anchorService.nairaToKobo(transaction.totalAmount);
-                    if (amountKobo && amountKobo < expectedKobo) {
+                    if (!paidKoboMeetsExpected(amountKobo, transaction.totalAmount)) {
                         console.warn(
-                            `[Anchor Webhook] Underpayment detected for tx=${transaction.id}: expected ${expectedKobo} kobo, received ${amountKobo} kobo`
+                            `[Anchor Webhook] Underpayment or missing amount for tx=${transaction.id}: received ${amountKobo}`
                         );
                         return res.status(200).json({
                             success: false,
-                            message: "Underpayment detected. Escrow not released.",
+                            message: "Underpayment detected. Escrow not funded.",
                         });
                     }
 
-                    // Atomic transition PENDING -> ESCROWED
-                    const claimed = await prisma.transaction.updateMany({
-                        where: { id: transaction.id, status: "PENDING" },
-                        data: {
-                            status: "ESCROWED",
-                            escrowHeld: true,
-                            paymentGateway: "ANCHOR",
-                        },
+                    const claimed = await transactionService.markEscrowedIfPayable(transaction.id, {
+                        paymentGateway: "ANCHOR",
                     });
 
                     if (claimed.count > 0) {
                         console.info(`[Anchor Webhook] Transitioned tx=${transaction.id} to ESCROWED`);
-
-                        // Property to UNDER_OFFER
-                        await prisma.property.update({
-                            where: { id: transaction.propertyId },
-                            data: { status: "UNDER_OFFER" },
-                        });
+                        await propertyService.lockUnderOffer(transaction.propertyId);
 
                         // Deduct 2% platform protection fee to RentHub revenue ledger
                         const feeKobo = anchorService.nairaToKobo(transaction.platformFee);
@@ -842,7 +848,6 @@ export class PaymentController {
             return res.status(500).json({
                 success: false,
                 message: "Webhook processing failed",
-                error: error.message,
             });
         }
     }

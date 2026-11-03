@@ -15,8 +15,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     }
 
     const claims = sessionClaims as any;
+    // Fail closed: Clerk publicMetadata.role must be ADMIN (API still uses the DB role).
     const role = claims?.publicMetadata?.role || claims?.metadata?.role || claims?.role;
-    if (role && role !== "ADMIN" && role !== "admin") {
+    if (role !== "ADMIN" && role !== "admin") {
         redirect("/dashboard");
     }
 

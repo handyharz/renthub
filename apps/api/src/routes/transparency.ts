@@ -129,7 +129,7 @@ router.get("/stats", async (req: Request, res: Response) => {
             success: true,
             data: {
                 systemStatus: getEscrowHealthStatus(),
-                isReconciled: latestSnapshot?.isReconciled ?? true,
+                isReconciled: latestSnapshot?.isReconciled ?? false,
                 varianceDisplay: varianceKobo === BigInt(0) ? "0 kobo" : `${varianceKobo.toString()} kobo`,
                 activeEscrowsCount,
                 totalCompletedEscrows: totalReleasedCount,

@@ -37,6 +37,34 @@ export const uploadIdMiddleware = uploadId;
 
 export class UploadController {
     /**
+     * Draft listing photos before a property row exists.
+     * POST /api/upload/listing-drafts
+     */
+    async uploadListingDrafts(req: Request, res: Response) {
+        try {
+            const files = req.files as Express.Multer.File[];
+            if (!files || files.length === 0) {
+                return res.status(400).json({ success: false, message: "No files uploaded" });
+            }
+            if (!req.user) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const uploaded = await Promise.all(
+                files.map((file) => uploadService.uploadImage(file.buffer, "listing-drafts"))
+            );
+
+            return res.status(200).json({
+                success: true,
+                data: { urls: uploaded.map((item) => item.secureUrl) },
+            });
+        } catch (error: unknown) {
+            console.error("Error uploading listing drafts:", error);
+            return res.status(500).json({ success: false, message: "Failed to upload images" });
+        }
+    }
+
+    /**
      * Upload property images
      * POST /api/upload/property/:propertyId
      */

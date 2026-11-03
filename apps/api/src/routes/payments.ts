@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { paymentController } from "../controllers/paymentController";
 import { requireAuth, requireDbUser } from "../middleware/auth";
+import { requireEscrowOperational } from "../middleware/escrowHealth";
 
 const router: Router = Router();
 
-router.post("/initialize", requireAuth, requireDbUser, paymentController.initializePayment.bind(paymentController));
-router.post("/anchor/initialize", requireAuth, requireDbUser, paymentController.initializeAnchorPayment.bind(paymentController));
+router.post("/initialize", requireAuth, requireDbUser, requireEscrowOperational, paymentController.initializePayment.bind(paymentController));
+router.post("/anchor/initialize", requireAuth, requireDbUser, requireEscrowOperational, paymentController.initializeAnchorPayment.bind(paymentController));
 router.get("/anchor/status/:transactionId", requireAuth, requireDbUser, paymentController.getAnchorAccountDetails.bind(paymentController));
-router.post("/afriexchange/pay", requireAuth, requireDbUser, paymentController.payWithAfriExchange.bind(paymentController));
+router.post("/afriexchange/pay", requireAuth, requireDbUser, requireEscrowOperational, paymentController.payWithAfriExchange.bind(paymentController));
 router.get(
     "/afriexchange/verify/:reference",
     requireAuth,

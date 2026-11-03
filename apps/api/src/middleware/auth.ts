@@ -51,9 +51,13 @@ export async function requireAuth(
 
         // Verify token with Clerk
         try {
-            // verifyToken is the standard way to verify the Bearer JWT in @clerk/backend
+            const authorizedParties = (process.env.CLERK_AUTHORIZED_PARTIES || "")
+                .split(",")
+                .map((origin) => origin.trim())
+                .filter(Boolean);
             const payload = await verifyToken(token, {
                 secretKey: process.env.CLERK_SECRET_KEY,
+                ...(authorizedParties.length ? { authorizedParties } : {}),
             });
 
             if (!payload) {
@@ -165,8 +169,13 @@ export async function optionalAuth(
 
     try {
         const token = authHeader.substring(7);
+        const authorizedParties = (process.env.CLERK_AUTHORIZED_PARTIES || "")
+            .split(",")
+            .map((origin) => origin.trim())
+            .filter(Boolean);
         const payload = await verifyToken(token, {
             secretKey: process.env.CLERK_SECRET_KEY,
+            ...(authorizedParties.length ? { authorizedParties } : {}),
         });
 
         if (payload?.sub) {

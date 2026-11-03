@@ -16,6 +16,7 @@ import {
     Clock, AlertCircle,
 } from "lucide-react";
 import api from "@/lib/api";
+import { uploadListingImages } from "@/lib/uploadListingImages";
 import MapPicker from "@/components/map/MapPicker";
 import { PROPERTY_TYPES } from "@/lib/constants";
 import { NIGERIAN_LOCATIONS, ALL_STATES } from "@/lib/locations";
@@ -1012,18 +1013,7 @@ function Step4Photos({ formData, updateField }: { formData: FormData; updateFiel
         if (!files || files.length === 0) return;
         setUploading(true);
         try {
-            const urls: string[] = [];
-            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-            const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-            for (const file of Array.from(files)) {
-                const fd = new window.FormData();
-                fd.append("file", file);
-                fd.append("upload_preset", uploadPreset!);
-                fd.append("folder", "renthub-properties");
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fd });
-                const data = await res.json();
-                if (data.secure_url) urls.push(data.secure_url);
-            }
+            const urls = await uploadListingImages(Array.from(files));
             updateField("images", [...formData.images, ...urls]);
         } catch {
             toast.error("Failed to upload photos. Please check your connection.");

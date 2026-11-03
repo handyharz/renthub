@@ -1,6 +1,8 @@
 import axios from "axios";
 import { prisma } from "../config/database";
 import { PaymentGateway, TransactionStatus } from "@prisma/client";
+import { afriExchangePaidMeetsExpected } from "../utils/moneyRail";
+import { propertyService } from "./propertyService";
 
 import { getCleanAfriExchangeUrl, getAfriExchangeApiKey } from "../config/afriExchange";
 
@@ -455,15 +457,25 @@ export class AfriExchangePaymentService {
 
             const result = response.data?.data || {};
             if (result.verified) {
-                const updated = await prisma.transaction.update({
-                    where: { id: transaction.id },
+                if (!afriExchangePaidMeetsExpected(result, transaction.totalAmount)) {
+                    throw new Error("Paid amount does not match the escrow total");
+                }
+                await prisma.transaction.updateMany({
+                    where: {
+                        id: transaction.id,
+                        escrowReleased: false,
+                        disputed: false,
+                        status: { in: [TransactionStatus.PENDING, TransactionStatus.PROCESSING, TransactionStatus.SUCCESSFUL] },
+                    },
                     data: {
                         status: TransactionStatus.ESCROWED,
                         escrowHeld: true,
                         paymentGateway: PaymentGateway.AFRIEXCHANGE,
+                        afriExchangeRef: transaction.afriExchangeRef || reference,
                     },
                 });
-
+                await propertyService.lockUnderOffer(transaction.propertyId);
+                const updated = await prisma.transaction.findUniqueOrThrow({ where: { id: transaction.id } });
                 return { success: true, verified: true, transaction: updated };
             }
 
@@ -484,6 +496,29 @@ export class AfriExchangePaymentService {
         });
 
         return { success: true, verified: true, transaction: updated };
+    }
+
+    /** Live merchant vault balance in kobo. Returns null when the rail cannot be read. */
+    async getMerchantVaultBalanceKobo(): Promise<number | null> {
+        if (!this.enabled) return null;
+        try {
+            const response = await axios.get(`${this.baseUrl}/integrations/renthub/escrow/balance`, {
+                headers: { "x-renthub-api-key": this.apiKey },
+                timeout: 15000,
+            });
+            const payload = response.data?.data || response.data || {};
+            const raw =
+                payload.availableBalanceKobo ??
+                payload.balanceKobo ??
+                payload.availableBalance ??
+                payload.balance;
+            const n = Number(raw);
+            if (!Number.isFinite(n) || n < 0) return null;
+            return n;
+        } catch (err: any) {
+            console.warn("[AfriExchangePaymentService] Vault balance unread:", err.message);
+            return null;
+        }
     }
 }
 

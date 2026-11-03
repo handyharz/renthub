@@ -16,6 +16,11 @@ export function sanitizeSelfServiceRole(role: unknown): UserRole | undefined {
     return undefined;
 }
 
+/** Role may be chosen during onboarding only. */
+export function canSelfAssignRole(onboardingCompleted: boolean | null | undefined): boolean {
+    return !onboardingCompleted;
+}
+
 export function stripReleaseOtp<T extends { releaseOtp?: string | null }>(
     record: T | null | undefined
 ): Omit<T, "releaseOtp"> | T | null {

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { userService } from "../services/userService";
 import { UserRole, UserStatus } from "@prisma/client";
-import { sanitizeSelfServiceRole } from "../utils/identity";
+import { canSelfAssignRole, sanitizeSelfServiceRole } from "../utils/identity";
 import { trustScoreService } from "../services/trustScoreService";
 
 export class UserController {
@@ -182,9 +182,12 @@ export class UserController {
             // Check if user already exists
             const existingUser = await userService.getUserByClerkId(clerkId);
             if (existingUser) {
-                // If a different role or onboardingCompleted is provided, update it
                 if (req.body.role || req.body.onboardingCompleted !== undefined) {
-                    const newRole = sanitizeSelfServiceRole(req.body.role) || existingUser.role;
+                    const requestedRole = sanitizeSelfServiceRole(req.body.role);
+                    const newRole =
+                        requestedRole && canSelfAssignRole(existingUser.onboardingCompleted)
+                            ? requestedRole
+                            : existingUser.role;
                     const markOnboarded = req.body.onboardingCompleted ??
                         (newRole === UserRole.LANDLORD || newRole === UserRole.AGENT || existingUser.onboardingCompleted);
 

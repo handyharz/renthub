@@ -181,6 +181,48 @@ export class TransactionService {
     }
 
     /**
+     * Atomic PENDING/PROCESSING → ESCROWED. Never funds an already released or disputed lease.
+     */
+    async markEscrowedIfPayable(
+        id: string,
+        extra: {
+            paystackRef?: string;
+            afriExchangeRef?: string;
+            paymentGateway?: "PAYSTACK" | "AFRIEXCHANGE" | "ANCHOR";
+        } = {}
+    ) {
+        return prisma.transaction.updateMany({
+            where: {
+                id,
+                escrowReleased: false,
+                disputed: false,
+                status: {
+                    in: [
+                        TransactionStatus.PENDING,
+                        TransactionStatus.PROCESSING,
+                        TransactionStatus.SUCCESSFUL,
+                    ],
+                },
+            },
+            data: {
+                status: TransactionStatus.ESCROWED,
+                escrowHeld: true,
+                ...extra,
+            },
+        });
+    }
+
+    enqueueLandlordPayout(transactionId: string, gateway: string | null | undefined) {
+        const run =
+            gateway === "ANCHOR"
+                ? () => anchorService.disburseLandlordPayout(transactionId)
+                : () => afriExchangePayoutService.disburseLandlordPayout(transactionId);
+        void run().catch((err) =>
+            console.error(`[TransactionService] Payout dispatch failed for tx=${transactionId}:`, err)
+        );
+    }
+
+    /**
      * Release escrow to landlord
      */
     async releaseEscrow(
@@ -321,7 +363,16 @@ export class TransactionService {
         return stripReleaseOtp(transaction);
     }
 
-    async generateHandoverOTP(transactionId: string, tenantId: string): Promise<{ otp: string; message: string; expiresAt: Date }> {
+    async generateHandoverOTP(
+        transactionId: string,
+        tenantId: string
+    ): Promise<{
+        otp: string;
+        message: string;
+        expiresAt: Date;
+        deliveredToPhone: boolean;
+        deliveredToEmail: boolean;
+    }> {
         const transaction = await prisma.transaction.findUnique({
             where: { id: transactionId },
             include: {
@@ -375,8 +426,10 @@ export class TransactionService {
 
         return {
             otp,
-            message: "Handover OTP generated successfully! Sent to your registered email and shown below.",
-            expiresAt
+            message: "Handover OTP sent to your registered email and phone. It is not shown in the app.",
+            expiresAt,
+            deliveredToPhone: Boolean(transaction.tenant.phone),
+            deliveredToEmail: Boolean(transaction.tenant.email),
         };
     }
 
@@ -464,16 +517,7 @@ export class TransactionService {
 
         await this.completeAgentListingForTransaction(transaction.propertyId, transaction.rentAmount);
 
-        // 🔥 Trigger automated landlord payout based on paymentGateway (fire-and-forget)
-        if (transaction.paymentGateway === "ANCHOR") {
-            anchorService.disburseLandlordPayout(transactionId).catch((err) =>
-                console.error(`[TransactionService] Anchor NIP payout failed for tx=${transactionId}:`, err)
-            );
-        } else {
-            afriExchangePayoutService.disburseLandlordPayout(transactionId).catch((err) =>
-                console.error(`[TransactionService] AfriExchange payout failed for tx=${transactionId}:`, err)
-            );
-        }
+        this.enqueueLandlordPayout(transactionId, transaction.paymentGateway);
 
         return released;
     }

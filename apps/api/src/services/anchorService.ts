@@ -347,14 +347,16 @@ export class AnchorService {
             return false;
         }
 
-        // Timestamp replay protection
-        if (timestampHeader) {
-            const eventTime = parseInt(timestampHeader, 10);
-            const now = Math.floor(Date.now() / 1000);
-            if (isNaN(eventTime) || Math.abs(now - eventTime) > 300) {
-                console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
-                return false;
-            }
+        if (!timestampHeader) {
+            console.warn("[AnchorService] Webhook rejected: missing timestamp");
+            return false;
+        }
+        const eventTime = parseInt(timestampHeader, 10);
+        const now = Math.floor(Date.now() / 1000);
+        const ts = eventTime > 1e12 ? Math.floor(eventTime / 1000) : eventTime;
+        if (isNaN(ts) || Math.abs(now - ts) > 300) {
+            console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
+            return false;
         }
 
         const expectedSignature = crypto

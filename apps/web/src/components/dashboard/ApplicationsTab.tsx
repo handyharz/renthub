@@ -24,8 +24,6 @@ import {
     RefreshCw,
     ExternalLink,
     MapPin,
-    Copy,
-    Check,
     Phone,
     Mail,
     Info,
@@ -118,8 +116,7 @@ export function ApplicationsTab() {
     const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
     const [otpLoading, setOtpLoading] = useState<string | null>(null);
     const [paymentModalApp, setPaymentModalApp] = useState<RentalApplication | null>(null);
-    const [copiedOtpId, setCopiedOtpId] = useState<string | null>(null);
-    const [activeOtps, setActiveOtps] = useState<Record<string, string>>({});
+    const [otpRequestedIds, setOtpRequestedIds] = useState<Record<string, boolean>>({});
 
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [isEscrowModalOpen, setIsEscrowModalOpen] = useState(false);
@@ -332,12 +329,9 @@ export function ApplicationsTab() {
         try {
             setOtpLoading(transactionId);
             const res = await api.post(`/transactions/${transactionId}/handover-otp`);
-            const generatedOtp = res.data?.data?.otp;
-            if (generatedOtp) {
-                setActiveOtps((prev) => ({ ...prev, [transactionId]: generatedOtp }));
-            }
-            toast.success("Handover OTP Generated!", {
-                description: res.data.message || "Your 6-digit code is displayed below and sent to your email."
+            setOtpRequestedIds((prev) => ({ ...prev, [transactionId]: true }));
+            toast.success("Handover OTP sent", {
+                description: res.data.message || "Check your registered email and phone. The code is not shown in the app."
             });
             fetchData();
         } catch (error: any) {
@@ -367,14 +361,6 @@ export function ApplicationsTab() {
     const handleOpenReviewModal = (transaction: Transaction) => {
         setSelectedTransaction(transaction);
         setIsReviewModalOpen(true);
-    };
-
-    const handleCopyOtp = (otp: string, txId: string) => {
-        if (!navigator.clipboard) return;
-        navigator.clipboard.writeText(otp);
-        setCopiedOtpId(txId);
-        toast.success("Key Handover OTP copied to clipboard!");
-        setTimeout(() => setCopiedOtpId(null), 2500);
     };
 
     // Deduplicate and prioritize transactions per application/property
@@ -1320,10 +1306,10 @@ export function ApplicationsTab() {
                                                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                                                     Generating...
                                                                 </>
-                                                            ) : (activeOtps[tx.id] || tx.releaseOtp) ? (
+                                                            ) : otpRequestedIds[tx.id] ? (
                                                                 <>
                                                                     <RefreshCw className="h-3.5 w-3.5" />
-                                                                    Regenerate OTP
+                                                                    Resend OTP
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -1344,38 +1330,14 @@ export function ApplicationsTab() {
                                                     </div>
                                                 </div>
 
-                                                {(activeOtps[tx.id] || tx.releaseOtp) && (
+                                                {otpRequestedIds[tx.id] && (
                                                     <div className="bg-[var(--bg-card)] rounded-2xl p-4 sm:p-5 border border-[var(--border-color)] text-center space-y-2 shadow-xs">
                                                         <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
                                                             <Lock className="h-3.5 w-3.5 text-[var(--color-brand-green)]" />
-                                                            Your 6-Digit Key Release OTP
-                                                        </div>
-                                                        <div className="flex items-center justify-center gap-3">
-                                                            <div className="text-2xl sm:text-4xl font-black tracking-[0.2em] sm:tracking-[0.4em] text-[var(--color-brand-green)] py-1 font-mono">
-                                                                {activeOtps[tx.id] || tx.releaseOtp}
-                                                            </div>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => handleCopyOtp((activeOtps[tx.id] || tx.releaseOtp)!, tx.id)}
-                                                                className="h-9 px-3 rounded-xl border-[var(--border-color)] text-xs font-bold gap-1.5 shadow-2xs"
-                                                                title="Copy OTP"
-                                                            >
-                                                                {copiedOtpId === tx.id ? (
-                                                                    <>
-                                                                        <Check className="h-3.5 w-3.5 text-emerald-500" />
-                                                                        Copied!
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Copy className="h-3.5 w-3.5" />
-                                                                        Copy
-                                                                    </>
-                                                                )}
-                                                            </Button>
+                                                            OTP sent to your email and phone
                                                         </div>
                                                         <p className="text-[11px] text-[var(--text-muted)] font-medium max-w-md mx-auto">
-                                                            Give this code to your landlord to release rent funds from escrow only after you hold the physical keys.
+                                                            Give that code to your landlord only after you hold the physical keys. It is never shown in the app.
                                                         </p>
                                                     </div>
                                                 )}

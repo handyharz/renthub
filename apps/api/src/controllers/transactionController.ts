@@ -293,8 +293,9 @@ export class TransactionController {
                 success: true,
                 message: result.message,
                 data: {
-                    otp: result.otp,
                     expiresAt: result.expiresAt,
+                    deliveredToPhone: result.deliveredToPhone,
+                    deliveredToEmail: result.deliveredToEmail,
                 },
             });
         } catch (error: any) {

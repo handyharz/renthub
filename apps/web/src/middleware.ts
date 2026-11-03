@@ -17,7 +17,7 @@ export default clerkMiddleware(async (auth, req) => {
         }
         const claims = sessionClaims as any
         const role = claims?.publicMetadata?.role || claims?.metadata?.role || claims?.role
-        if (role && role !== 'ADMIN' && role !== 'admin') {
+        if (role !== 'ADMIN' && role !== 'admin') {
             const redirectUrl = new URL('/dashboard', req.url)
             return Response.redirect(redirectUrl)
         }

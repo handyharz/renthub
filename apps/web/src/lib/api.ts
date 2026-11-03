@@ -16,7 +16,13 @@ api.interceptors.request.use(
             config.url = config.url.replace(/^\/api/, '');
         }
 
-        console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, config.data || "");
+        if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+            delete config.headers["Content-Type"];
+        }
+
+        if (process.env.NODE_ENV !== "production") {
+            console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+        }
 
         try {
             // Get token from Clerk global object (client-side only)
@@ -44,7 +50,9 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
     (response) => {
-        console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+        if (process.env.NODE_ENV !== "production") {
+            console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+        }
         return response;
     },
     (error) => {

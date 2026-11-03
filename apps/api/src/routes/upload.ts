@@ -7,6 +7,12 @@ const router: Router = Router();
 router.use(requireAuth, requireDbUser);
 
 router.post(
+    "/listing-drafts",
+    uploadMiddleware.array("images", 10),
+    uploadController.uploadListingDrafts.bind(uploadController)
+);
+
+router.post(
     "/property/:propertyId",
     uploadMiddleware.array("images", 10),
     uploadController.uploadPropertyImages.bind(uploadController)

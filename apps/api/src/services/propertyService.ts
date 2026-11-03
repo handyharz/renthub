@@ -15,8 +15,6 @@ export class PropertyService {
                         id: true,
                         firstName: true,
                         lastName: true,
-                        email: true,
-                        phone: true,
                         verified: true,
                     },
                 },
@@ -256,11 +254,8 @@ export class PropertyService {
                 landlord: {
                     select: {
                         id: true,
-                        clerkId: true,
                         firstName: true,
                         lastName: true,
-                        email: true,
-                        phone: true,
                         verified: true,
                         avatar: true,
                         createdAt: true,
@@ -379,19 +374,27 @@ export class PropertyService {
         });
     }
 
+    async lockUnderOffer(propertyId: string): Promise<void> {
+        const property = await prisma.property.findUnique({
+            where: { id: propertyId },
+            select: { status: true, offerLockedAt: true },
+        });
+        if (!property || property.status === PropertyStatus.RENTED) return;
+        await prisma.property.update({
+            where: { id: propertyId },
+            data: {
+                status: PropertyStatus.UNDER_OFFER,
+                offerLockedAt: property.offerLockedAt ?? new Date(),
+            },
+        });
+    }
+
     /**
      * Increment view count
      */
     async incrementViewCount(propertyId: string, userId?: string): Promise<void> {
         await Promise.all([
-            prisma.property.update({
-                where: { id: propertyId },
-                data: {
-                    viewCount: {
-                        increment: 1,
-                    },
-                },
-            }),
+            prisma.$executeRaw`UPDATE "properties" SET "viewCount" = "viewCount" + 1 WHERE "id" = ${propertyId}`,
             prisma.propertyView.create({
                 data: {
                     propertyId,

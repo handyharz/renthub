@@ -1,7 +1,11 @@
 import { prisma } from "../config/database";
 import { anchorService } from "../services/anchorService";
+import { afriExchangePaymentService } from "../services/afriExchangePaymentService";
 import { logger } from "../utils/logger";
 import { trustScoreService } from "../services/trustScoreService";
+import { withJobLock } from "./jobLock";
+
+const RECON_LOCK_ID = 814203;
 
 export interface ReconciliationReport {
     timestamp: Date;
@@ -21,7 +25,7 @@ export function getEscrowHealthStatus(): "HEALTHY" | "PAUSED_VARIANCE" | "DEGRAD
 }
 
 export function isEscrowOperational(): boolean {
-    return cachedSystemStatus === "HEALTHY";
+    return cachedSystemStatus !== "PAUSED_VARIANCE";
 }
 
 /**
@@ -72,44 +76,49 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
         const totalActiveEscrows = anchorTransactions.length + afriTransactions.length;
 
         let anchorLedgerTotalKobo = BigInt(0);
+        let anchorFetched = false;
         try {
             const poolBalanceKobo = await anchorService.getEscrowPoolBalance();
             anchorLedgerTotalKobo = BigInt(poolBalanceKobo);
+            anchorFetched = process.env.ANCHOR_MOCK !== "true" && Boolean(process.env.ANCHOR_API_KEY);
         } catch (err: any) {
             logger.warn(`[reconcile-escrow] Could not fetch Anchor pool balance: ${err.message}`);
         }
 
-        // AfriExchange pool balance — in staging/mock matches expected, in prod asserts merchant vault
-        const afriExchangeLedgerTotalKobo = afriDbExpectedKobo;
-
-        // In staging/mock without live Anchor API credentials, anchor ledger reflects expected pool balance
-        if (anchorLedgerTotalKobo === BigInt(0) && (!process.env.ANCHOR_API_KEY || process.env.ANCHOR_MOCK === "true" || process.env.NODE_ENV !== "production")) {
-            anchorLedgerTotalKobo = anchorDbExpectedKobo;
+        let afriExchangeLedgerTotalKobo = BigInt(0);
+        let afriFetched = false;
+        const afriLive = await afriExchangePaymentService.getMerchantVaultBalanceKobo();
+        if (afriLive !== null) {
+            afriExchangeLedgerTotalKobo = BigInt(afriLive);
+            afriFetched = true;
         }
 
-        const anchorDiff = anchorDbExpectedKobo > anchorLedgerTotalKobo
-            ? anchorDbExpectedKobo - anchorLedgerTotalKobo
-            : anchorLedgerTotalKobo - anchorDbExpectedKobo;
-        const afriDiff = afriDbExpectedKobo > afriExchangeLedgerTotalKobo
-            ? afriDbExpectedKobo - afriExchangeLedgerTotalKobo
-            : afriExchangeLedgerTotalKobo - afriDbExpectedKobo;
-
+        const absDiff = (a: bigint, b: bigint) => (a > b ? a - b : b - a);
+        const anchorDiff = anchorFetched ? absDiff(anchorDbExpectedKobo, anchorLedgerTotalKobo) : BigInt(0);
+        const afriDiff = afriFetched ? absDiff(afriDbExpectedKobo, afriExchangeLedgerTotalKobo) : BigInt(0);
         const varianceKobo = anchorDiff + afriDiff;
-        const isReconciled = varianceKobo === BigInt(0) || process.env.NODE_ENV !== "production";
+        const unproven =
+            (anchorDbExpectedKobo > BigInt(0) && !anchorFetched) ||
+            (afriDbExpectedKobo > BigInt(0) && !afriFetched);
 
         let systemStatus: "HEALTHY" | "PAUSED_VARIANCE" | "DEGRADED" = "HEALTHY";
-        if (varianceKobo > BigInt(0) && process.env.NODE_ENV === "production") {
+        if (varianceKobo > BigInt(0)) {
             systemStatus = "PAUSED_VARIANCE";
-            cachedSystemStatus = "PAUSED_VARIANCE";
             logger.error(
-                `[reconcile-escrow] VARIANCE DETECTED! DB expected ${totalDbExpectedKobo} kobo, pools have ${anchorLedgerTotalKobo + afriExchangeLedgerTotalKobo} kobo. Difference: ${varianceKobo} kobo across ${totalActiveEscrows} active escrows.`
+                `[reconcile-escrow] VARIANCE DETECTED! DB expected ${totalDbExpectedKobo} kobo, live pools differ by ${varianceKobo} kobo across ${totalActiveEscrows} active escrows.`
+            );
+        } else if (unproven) {
+            systemStatus = "DEGRADED";
+            logger.warn(
+                `[reconcile-escrow] Ledger unread on at least one funded rail (anchorFetched=${anchorFetched}, afriFetched=${afriFetched}). Not claiming 0 kobo.`
             );
         } else {
-            cachedSystemStatus = "HEALTHY";
             logger.info(
-                `[reconcile-escrow] 1:1 multi-rail ledger reconciliation verified. Active escrows=${totalActiveEscrows} (Anchor: ${anchorTransactions.length}, AfriExchange: ${afriTransactions.length}), Total=₦${(anchorTotalNaira + afriTotalNaira).toLocaleString()}`
+                `[reconcile-escrow] Live rails match. Active escrows=${totalActiveEscrows} (Anchor: ${anchorTransactions.length}, AfriExchange: ${afriTransactions.length}), Total=₦${(anchorTotalNaira + afriTotalNaira).toLocaleString()}`
             );
         }
+        cachedSystemStatus = systemStatus;
+        const isReconciled = systemStatus === "HEALTHY";
 
         // Persist audit snapshot
         await prisma.transparencySnapshot.create({
@@ -127,6 +136,8 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
                     afriExchangeEscrowsCount: afriTransactions.length,
                     anchorTotalNaira,
                     afriTotalNaira,
+                    anchorFetched,
+                    afriFetched,
                 },
             },
         });
@@ -148,6 +159,7 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
         };
     } catch (error: any) {
         logger.error(`[reconcile-escrow] Reconciliation run failed: ${error.message}`);
+        cachedSystemStatus = "DEGRADED";
         return {
             timestamp: new Date(),
             activeEscrowTransactionsCount: 0,
@@ -166,13 +178,11 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
  */
 export function startAnchorEscrowReconciliationJob(): void {
     const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
-    runAnchorEscrowReconciliation().catch((err) =>
-        console.error("[reconcile-escrow] Initial run failed:", err)
-    );
-    setInterval(() => {
-        runAnchorEscrowReconciliation().catch((err) =>
-            console.error("[reconcile-escrow] Scheduled run failed:", err)
+    const tick = () =>
+        withJobLock(RECON_LOCK_ID, () => runAnchorEscrowReconciliation()).catch((err) =>
+            console.error("[reconcile-escrow] run failed:", err)
         );
-    }, SIX_HOURS_MS);
+    tick();
+    setInterval(tick, SIX_HOURS_MS);
 }
 

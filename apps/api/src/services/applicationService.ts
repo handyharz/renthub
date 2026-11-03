@@ -218,7 +218,7 @@ export class ApplicationService {
         if (status === ApplicationStatus.APPROVED) {
             await prisma.property.update({
                 where: { id: application.propertyId },
-                data: { status: "UNDER_OFFER" }
+                data: { status: "UNDER_OFFER", offerLockedAt: new Date() },
             });
         }
 

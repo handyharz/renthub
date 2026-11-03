@@ -104,6 +104,7 @@ model Property {
   powerSupply   PowerSupply       @default(GRID_ONLY)
   waterSupply   WaterSupply       @default(BOREHOLE)
   status        PropertyStatus    @default(AVAILABLE)
+  offerLockedAt DateTime?
   featured      Boolean           @default(false)
   featuredExpiresAt DateTime?
   verified      Boolean           @default(false)
@@ -244,7 +245,7 @@ model Transaction {
   anchorBankName          String?
   anchorCollectionRef     String?   @unique
   status         TransactionStatus @default(PENDING)
-  escrowHeld     Boolean           @default(true)
+  escrowHeld     Boolean           @default(false)
   escrowReleased Boolean           @default(false)
   releaseDate    DateTime?
   releaseReason  String?

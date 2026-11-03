@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { transactionController } from "../controllers/transactionController";
 import { requireAuth, requireDbUser, requireRole } from "../middleware/auth";
+import { requireEscrowOperational } from "../middleware/escrowHealth";
 
 const router: Router = Router();
 
 router.use(requireAuth, requireDbUser);
 
-router.post("/", transactionController.createTransaction.bind(transactionController));
+router.post("/", requireEscrowOperational, transactionController.createTransaction.bind(transactionController));
 
 router.get("/tenant/all", transactionController.getTenantTransactions.bind(transactionController));
 router.get("/landlord/all", transactionController.getLandlordTransactions.bind(transactionController));
