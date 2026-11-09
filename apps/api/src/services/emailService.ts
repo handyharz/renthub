@@ -64,6 +64,8 @@ export class EmailService {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>RentHub</title>
     <!--[if mso]>
     <noscript>
@@ -73,12 +75,16 @@ export class EmailService {
     </noscript>
     <![endif]-->
     <style>
+        :root {
+            color-scheme: light dark;
+            supported-color-schemes: light dark;
+        }
         body {
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: #f1f5f9;
-            color: #1e293b;
+            color: #0f172a;
             -webkit-font-smoothing: antialiased;
         }
         .preheader {
@@ -104,33 +110,23 @@ export class EmailService {
             box-shadow: 0 10px 25px -5px rgba(10, 37, 64, 0.05), 0 8px 10px -6px rgba(10, 37, 64, 0.03);
             overflow: hidden;
         }
-        .header {
-            padding: 32px 32px 24px;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .otp-digit {
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
         }
-        .body {
-            padding: 32px;
-            font-size: 15px;
-            line-height: 1.6;
-            color: #334155;
+        .otp-digit strong {
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
         }
-        .footer {
-            padding: 24px 32px 32px;
-            background-color: #f8fafc;
-            border-top: 1px solid #f1f5f9;
-            text-align: center;
-            font-size: 12px;
-            color: #64748b;
-            line-height: 1.5;
+        [data-ogsc] .otp-digit,
+        [data-ogsc] .otp-digit strong {
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
         }
         @media only screen and (max-width: 600px) {
             .container { padding: 16px 8px; }
-            .body { padding: 24px 20px; }
-            .header { padding: 24px 20px; }
-            .footer { padding: 20px; }
+            .otp-box-cell { width: 40px !important; height: 50px !important; min-width: 40px !important; }
+            .otp-digit-text { font-size: 28px !important; line-height: 50px !important; }
         }
     </style>
 </head>
@@ -164,7 +160,7 @@ export class EmailService {
                     </tr>
                     <!-- Main Body Content -->
                     <tr>
-                        <td style="padding: 32px; font-size: 15px; line-height: 1.6; color: #334155;">
+                        <td style="padding: 32px; font-size: 15px; line-height: 1.6; color: #1e293b;">
                             ${content}
                         </td>
                     </tr>
@@ -200,6 +196,26 @@ export class EmailService {
         const preheader = `Your 6-digit handover code for ${propertyTitle} is ready. Give this to your landlord ONLY after inspecting the keys.`;
         const dashboardUrl = `${this.frontendUrl}/dashboard?tab=applications`;
 
+        // Render each digit as a high-contrast individual card box
+        const digits = (otp || "").split("");
+        const digitBoxesHtml = digits
+            .map(
+                (d) => `
+                <td style="padding: 0 4px;" align="center">
+                    <table role="presentation" border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td align="center" valign="middle" class="otp-box-cell" width="46" height="58" style="width: 46px; height: 58px; min-width: 46px; background-color: #ffffff; border: 2px solid #0f172a; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                                <span class="otp-digit-text" style="font-family: ui-monospace, 'SF Mono', Consolas, 'Roboto Mono', Monaco, monospace; font-size: 34px; font-weight: 900; color: #000000 !important; -webkit-text-fill-color: #000000 !important; line-height: 58px; display: block; text-shadow: none;">
+                                    <strong style="color: #000000 !important; -webkit-text-fill-color: #000000 !important; font-weight: 900;">${d}</strong>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            `
+            )
+            .join("");
+
         const content = `
             <!-- Badge / Subheading -->
             <div style="margin-bottom: 16px;">
@@ -213,7 +229,7 @@ export class EmailService {
                 Your Physical Key Handover Code
             </h1>
 
-            <p style="margin: 0 0 16px 0; font-size: 15px; color: #334155;">
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #1e293b;">
                 Hello <strong>${tenantName}</strong>,
             </p>
 
@@ -221,18 +237,33 @@ export class EmailService {
                 Your rent payment for <strong>${propertyTitle}</strong> is secured in RentHub Escrow. When you meet your landlord to collect the keys, provide the 6-digit authorization code below to finalize handover and release payout.
             </p>
 
-            <!-- OTP Hero Box -->
-            <div style="background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%); border: 2px dashed #86efac; border-radius: 16px; padding: 24px 16px; text-align: center; margin: 24px 0;">
-                <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: #15803d; margin-bottom: 8px;">
-                    Your 6-Digit Release Code
-                </div>
-                <div style="font-size: 44px; font-weight: 900; letter-spacing: 0.22em; color: #0A2540; font-family: 'SF Mono', Consolas, 'Roboto Mono', Monaco, monospace; padding: 6px 0 10px 10px; line-height: 1;">
-                    ${otp}
-                </div>
-                <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #166534; background-color: #dcfce7; padding: 4px 12px; border-radius: 9999px;">
-                    ⏱️ Valid for 24 Hours • One-Time Use
-                </div>
-            </div>
+            <!-- OTP Hero Box with High-Contrast Digit Tiles -->
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 24px 0;">
+                <tr>
+                    <td align="center" style="background-color: #f0fdf4; border: 2px solid #00a651; border-radius: 16px; padding: 24px 16px; text-align: center;">
+                        <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: #15803d; margin-bottom: 14px;">
+                            Your 6-Digit Release Code
+                        </div>
+
+                        <!-- Individual Digit Tiles Table -->
+                        <table role="presentation" border="0" cellspacing="0" cellpadding="0" align="center" style="margin: 0 auto;">
+                            <tr>
+                                ${digitBoxesHtml}
+                            </tr>
+                        </table>
+
+                        <!-- Fallback / Plain text line for crystal clarity -->
+                        <div style="margin-top: 14px; font-size: 13px; font-weight: 700; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; font-family: ui-monospace, 'SF Mono', monospace; letter-spacing: 2px;">
+                            CODE: <strong style="color: #000000 !important; -webkit-text-fill-color: #000000 !important; font-size: 16px; font-weight: 900; letter-spacing: 4px;">${otp}</strong>
+                        </div>
+
+                        <!-- Expiration Pill -->
+                        <div style="display: inline-block; margin-top: 12px; background-color: #dcfce7; border: 1px solid #86efac; color: #166534; font-size: 12px; font-weight: 700; padding: 5px 14px; border-radius: 9999px;">
+                            ⏱️ Valid for 24 Hours • Single-Use Security Token
+                        </div>
+                    </td>
+                </tr>
+            </table>
 
             <!-- Mandatory Security Checklist -->
             <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 12px; padding: 18px 20px; margin: 24px 0;">
@@ -256,7 +287,7 @@ export class EmailService {
                     View in RentHub Dashboard &rarr;
                 </a>
             </div>
-            <div style="text-align: center; font-size: 11px; color: #94a3b8;">
+            <div style="text-align: center; font-size: 11px; color: #64748b;">
                 Something wrong with the property? You can click <strong>Dispute</strong> in your dashboard to freeze escrow.
             </div>
         `;
@@ -284,7 +315,7 @@ export class EmailService {
                 Proof of Key Handover Submitted
             </h1>
 
-            <p style="margin: 0 0 16px 0; font-size: 15px; color: #334155;">
+            <p style="margin: 0 0 16px 0; font-size: 15px; color: #1e293b;">
                 Hello <strong>${tenantName}</strong>,
             </p>
 
