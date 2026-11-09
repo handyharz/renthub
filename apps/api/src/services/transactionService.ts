@@ -766,20 +766,8 @@ export class TransactionService {
             smsService.sendSms(tenant.phone, alertMsg).catch(console.error);
         }
         if (tenant?.email) {
-            emailService.sendEmail(
-                tenant.email,
-                "RentHub Action Required: Landlord Submitted Handover Proof",
-                `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
-                    <h2 style="color: #f59e0b; margin: 0 0 12px;">Proof of Key Handover Submitted</h2>
-                    <p style="font-size: 14px; color: #334155;">Hello <strong>${tenant.firstName || "Tenant"}</strong>,</p>
-                    <p style="font-size: 14px; color: #334155;">Your landlord has submitted proof indicating that physical handover of keys for your rental has occurred.</p>
-                    <div style="background-color: #fffbeb; border: 1px solid #fef3c7; padding: 16px; border-radius: 12px; margin: 20px 0;">
-                        <p style="margin: 0; font-size: 13px; color: #92400e; font-weight: 600;">24-Hour Review Window Active</p>
-                        <p style="margin: 6px 0 0; font-size: 12px; color: #78350f;">Please log in to your RentHub dashboard to confirm possession and release escrow, or contest this claim if you have not received keys.</p>
-                    </div>
-                    <p style="font-size: 12px; color: #64748b; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">RentHub Trust & Safety • 7-Stage Protocol</p>
-                </div>`
-            ).catch(console.error);
+            const propertyTitle = (tx as any).property?.title || "your rented property";
+            emailService.sendHandoverProofAlertEmail(tenant.email, tenant.firstName || "Tenant", propertyTitle).catch(console.error);
         }
 
         return updatedTx;
