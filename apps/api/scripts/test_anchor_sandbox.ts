@@ -95,9 +95,39 @@ async function testAnchorSandbox() {
             console.log(`💳 ACCOUNT NUMBER: ${nuban}`);
             console.log(`👤 ACCOUNT NAME:   ${accountName}`);
             console.log(`🔗 REFERENCE:      ${testRef}`);
+            console.log(`🆔 VIRTUAL ID:     ${vData?.id}`);
             console.log("--------------------------------------------------");
+
+            // 4. Simulate Inbound Transfer / Payment to this Virtual NUBAN
+            if (vData?.id) {
+                console.log(`\n📡 4. Simulating Inbound Transfer (₦50,000.00) to Virtual NUBAN (${vData.id})...`);
+                const simPayload = {
+                    data: {
+                        type: "Notification",
+                        attributes: {
+                            transactionAmount: 5000000, // 50,000 NGN (in kobo)
+                            sourceAccount: {
+                                accountName: "Simulated Tenant Sender",
+                                accountNumber: "0123456789",
+                            },
+                        },
+                        relationships: {
+                            destinationAccount: {
+                                data: {
+                                    id: vData.id,
+                                    type: "VirtualNuban",
+                                },
+                            },
+                        },
+                    },
+                };
+
+                const simRes = await axios.post(`${baseUrl}/transaction-notification`, simPayload, { headers });
+                console.log("🎉 Transfer Simulation Succeeded (200 OK)!");
+                console.log("Payment Details:", JSON.stringify(simRes.data, null, 2));
+            }
         } catch (error: any) {
-            console.error("⚠️ Failed to create Virtual NUBAN:", error.response?.status, JSON.stringify(error.response?.data || error.message, null, 2));
+            console.error("⚠️ Failed to create Virtual NUBAN or simulate transfer:", error.response?.status, JSON.stringify(error.response?.data || error.message, null, 2));
         }
     }
 

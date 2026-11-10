@@ -214,12 +214,96 @@ Full Virtual NUBAN Response:
 💳 ACCOUNT NUMBER: 3730738462
 👤 ACCOUNT NAME:   RentHub Escrow Test
 🔗 REFERENCE:      rh_test_1794314898917
+🆔 VIRTUAL ID:     17943148994364-anc_acc_num
 --------------------------------------------------
+
+📡 4. Simulating Inbound Transfer (₦50,000.00) to Virtual NUBAN...
+🎉 Transfer Simulation Succeeded (200 OK)!
+Payment Details:
+{
+  "data": {
+    "id": "17943170511178-anc_py",
+    "type": "Payment",
+    "attributes": {
+      "createdAt": "2026-11-10T13:24:11.118291475",
+      "amount": 5000000,
+      "amountString": "50000.00",
+      "paymentReference": "0722f6f3-fe93-4362-9054-b1ca6b4301fd",
+      "fee": 0,
+      "narration": "Test transaction",
+      "paidAt": "2026-11-10T13:24:11.115033388",
+      "counterParty": {
+        "accountNumber": "0123456789",
+        "accountName": "Simulated Tenant Sender",
+        "bank": {
+          "name": "STANBIC IBTC BANK"
+        }
+      },
+      "currency": "NGN",
+      "type": "BankTransfer",
+      "feeString": "0.00"
+    },
+    "relationships": {
+      "virtualNuban": {
+        "data": {
+          "id": "17943170505386-anc_acc_num",
+          "type": "VirtualNuban"
+        }
+      },
+      "settlementAccount": {
+        "data": {
+          "id": "17943034048583-anc_acc",
+          "type": "DepositAccount"
+        }
+      }
+    }
+  }
+}
 
 ==================================================
              TEST EXECUTION COMPLETED             
 ==================================================
 ```
+
+---
+
+## 5. Troubleshooting & Root Cause: "404 Invalid account Id" in Simulate Transfer
+
+When attempting to simulate an inflow via the Anchor Dashboard's **"Simulate Transfer"** modal (`POST /api/v1/transaction-notification`), users may encounter:
+
+```json
+{
+  "errors": [
+    {
+      "title": "Not Found",
+      "status": "404",
+      "detail": "Invalid account Id."
+    }
+  ]
+}
+```
+
+### Why This Happened:
+1. **Resource Type Mismatch**:
+   Anchor's `transaction-notification` endpoint expects the destination resource ID to be a **`VirtualNuban`** (`type: "VirtualNuban"`).
+   - Deposit Account IDs end with **`-anc_acc`** (e.g. `17943034048583-anc_acc`).
+   - Virtual NUBAN IDs end with **`-anc_acc_num`** (e.g. `17943148994364-anc_acc_num`).
+   In the modal, selecting the Deposit Account ID (`-anc_acc`) caused Anchor to query the `VirtualNuban` database table for an ID that does not exist there, triggering a `404 Not Found`.
+
+2. **Source vs. Destination Account**:
+   - **Source Account Number**: Must be the *sender's* external bank account (e.g. `0123456789`), not the newly generated destination virtual NUBAN (`3730738462`).
+   - **Source Account Name**: Any test sender (e.g. `Test Tenant` or `NexGen Tech`).
+   - **Amount**: In Naira (e.g. `50000` for ₦50,000.00). Entering `100000000` converts to 10 billion kobo.
+   - **Account Number ID \***: Enter or select the **Virtual Account Number ID** (`17943148994364-anc_acc_num` or `17943170505386-anc_acc_num`).
+
+---
+
+## 6. Webhook Configuration Note
+
+In the Anchor Dashboard (`Webhooks` tab):
+- **Current URL**: `https://renthub-seven.vercel.app/` (Next.js web frontend)
+- **Correct Backend Webhook URL**: **`https://renthub-4jhq.onrender.com/api/webhooks/anchor`**
+  *(The Render backend hosts the Express route with raw body HMAC-SHA1 signature verification, ledger crediting, and lease status updates).*
 
 ---
 
@@ -250,3 +334,4 @@ During live integration, five key protocol alignments were implemented:
 - [x] Live Providus Bank Virtual NUBAN generated (`3730738462`).
 - [x] Webhook route listening at `/api/webhooks/anchor` with HMAC verification.
 - [x] All updates built with zero TypeScript compilation errors and pushed to `main` branch (`ddcdb81`).
+
