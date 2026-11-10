@@ -758,8 +758,8 @@ export class PaymentController {
             const timestamp = req.headers["x-anchor-timestamp"] as string;
             const rawPayload = req.rawBody ? req.rawBody.toString("utf8") : JSON.stringify(req.body);
 
-            if (!isWebhookTimestampFresh(timestamp)) {
-                console.warn("[Anchor Webhook] Rejected stale or missing timestamp from IP:", req.ip);
+            if (timestamp && !isWebhookTimestampFresh(timestamp)) {
+                console.warn("[Anchor Webhook] Rejected stale timestamp from IP:", req.ip);
                 return res.status(401).json({
                     success: false,
                     message: "Invalid or stale webhook timestamp",

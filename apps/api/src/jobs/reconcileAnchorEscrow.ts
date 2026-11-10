@@ -93,10 +93,15 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
             afriFetched = true;
         }
 
-        const absDiff = (a: bigint, b: bigint) => (a > b ? a - b : b - a);
-        const anchorDiff = anchorFetched ? absDiff(anchorDbExpectedKobo, anchorLedgerTotalKobo) : BigInt(0);
-        const afriDiff = afriFetched ? absDiff(afriDbExpectedKobo, afriExchangeLedgerTotalKobo) : BigInt(0);
-        const varianceKobo = anchorDiff + afriDiff;
+        // Solvency reconciliation: A deficit exists only if live pool balance is LESS than expected escrow liabilities.
+        // Holding reserve liquidity or surplus capital in the merchant vault guarantees 100%+ collateralization.
+        const anchorDeficit = anchorFetched && anchorLedgerTotalKobo < anchorDbExpectedKobo
+            ? anchorDbExpectedKobo - anchorLedgerTotalKobo
+            : BigInt(0);
+        const afriDeficit = afriFetched && afriExchangeLedgerTotalKobo < afriDbExpectedKobo
+            ? afriDbExpectedKobo - afriExchangeLedgerTotalKobo
+            : BigInt(0);
+        const varianceKobo = anchorDeficit + afriDeficit;
         const unproven =
             (anchorDbExpectedKobo > BigInt(0) && !anchorFetched) ||
             (afriDbExpectedKobo > BigInt(0) && !afriFetched);

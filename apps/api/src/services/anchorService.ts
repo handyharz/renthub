@@ -55,6 +55,19 @@ export class AnchorService {
     }
 
     /**
+     * Standard Anchor BaaS HTTP headers.
+     * Anchor requires 'x-anchor-key', supports 'Authorization: Bearer' as fallback.
+     */
+    private getHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+        return {
+            "x-anchor-key": this.apiKey,
+            Authorization: `Bearer ${this.apiKey}`,
+            "Content-Type": "application/json",
+            ...extraHeaders,
+        };
+    }
+
+    /**
      * Exact integer Naira to Kobo conversion.
      * Prevents IEEE 754 floating point precision issues.
      */
@@ -115,10 +128,7 @@ export class AnchorService {
                     },
                 },
                 {
-                    headers: {
-                        Authorization: `Bearer ${this.apiKey}`,
-                        "Content-Type": "application/json",
-                    },
+                    headers: this.getHeaders(),
                 }
             );
 
@@ -137,10 +147,7 @@ export class AnchorService {
                     },
                 },
                 {
-                    headers: {
-                        Authorization: `Bearer ${this.apiKey}`,
-                        "Content-Type": "application/json",
-                    },
+                    headers: this.getHeaders(),
                 }
             );
 
@@ -190,11 +197,7 @@ export class AnchorService {
                     description: `RentHub 2% Escrow Protection Fee for tx=${transactionId}`,
                 },
                 {
-                    headers: {
-                        Authorization: `Bearer ${this.apiKey}`,
-                        "Idempotency-Key": idempotencyKey,
-                        "Content-Type": "application/json",
-                    },
+                    headers: this.getHeaders({ "Idempotency-Key": idempotencyKey }),
                 }
             );
 
@@ -251,11 +254,7 @@ export class AnchorService {
                     reference: idempotencyKey,
                 },
                 {
-                    headers: {
-                        Authorization: `Bearer ${this.apiKey}`,
-                        "Idempotency-Key": idempotencyKey,
-                        "Content-Type": "application/json",
-                    },
+                    headers: this.getHeaders({ "Idempotency-Key": idempotencyKey }),
                 }
             );
 
@@ -306,11 +305,7 @@ export class AnchorService {
                     reference: idempotencyKey,
                 },
                 {
-                    headers: {
-                        Authorization: `Bearer ${this.apiKey}`,
-                        "Idempotency-Key": idempotencyKey,
-                        "Content-Type": "application/json",
-                    },
+                    headers: this.getHeaders({ "Idempotency-Key": idempotencyKey }),
                 }
             );
 
@@ -326,8 +321,9 @@ export class AnchorService {
     }
 
     /**
-     * Verify raw buffer HMAC-SHA256 signature for incoming Anchor webhooks.
-     * Includes timestamp replay protection (rejects events older than 300s).
+     * Verify HMAC signature for incoming Anchor webhooks.
+     * Anchor specifies Base64-encoded HMAC-SHA1 signature in `x-anchor-signature`.
+     * Also supports HMAC-SHA256 hex as fallback.
      */
     verifyWebhookSignature(
         rawBody: string | Buffer,
@@ -347,31 +343,54 @@ export class AnchorService {
             return false;
         }
 
-        if (!timestampHeader) {
-            console.warn("[AnchorService] Webhook rejected: missing timestamp");
-            return false;
-        }
-        const eventTime = parseInt(timestampHeader, 10);
-        const now = Math.floor(Date.now() / 1000);
-        const ts = eventTime > 1e12 ? Math.floor(eventTime / 1000) : eventTime;
-        if (isNaN(ts) || Math.abs(now - ts) > 300) {
-            console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
-            return false;
+        // Optional timestamp check (only enforce if header is sent)
+        if (timestampHeader) {
+            const eventTime = parseInt(timestampHeader, 10);
+            const now = Math.floor(Date.now() / 1000);
+            const ts = eventTime > 1e12 ? Math.floor(eventTime / 1000) : eventTime;
+            if (!isNaN(ts) && Math.abs(now - ts) > 300) {
+                console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
+                return false;
+            }
         }
 
-        const expectedSignature = crypto
-            .createHmac("sha256", this.webhookSecret)
-            .update(rawBody)
-            .digest("hex");
+        const raw = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, "utf8");
 
+        // 1. Official Anchor BaaS signature: Base64(HMAC_SHA1(rawBody, secretToken).digest('hex'))
         try {
-            return crypto.timingSafeEqual(
-                Buffer.from(signatureHeader, "hex"),
-                Buffer.from(expectedSignature, "hex")
-            );
-        } catch {
-            return false;
-        }
+            const hexDigest = crypto.createHmac("sha1", this.webhookSecret).update(raw).digest("hex");
+            const expectedBase64 = Buffer.from(hexDigest).toString("base64");
+            if (
+                signatureHeader.length === expectedBase64.length &&
+                crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedBase64))
+            ) {
+                return true;
+            }
+        } catch {}
+
+        // 2. Direct Base64 digest of HMAC-SHA1
+        try {
+            const expectedDirectBase64 = crypto.createHmac("sha1", this.webhookSecret).update(raw).digest("base64");
+            if (
+                signatureHeader.length === expectedDirectBase64.length &&
+                crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedDirectBase64))
+            ) {
+                return true;
+            }
+        } catch {}
+
+        // 3. Fallback HMAC-SHA256 hex digest
+        try {
+            const expectedSha256Hex = crypto.createHmac("sha256", this.webhookSecret).update(raw).digest("hex");
+            if (
+                signatureHeader.length === expectedSha256Hex.length &&
+                crypto.timingSafeEqual(Buffer.from(signatureHeader, "hex"), Buffer.from(expectedSha256Hex, "hex"))
+            ) {
+                return true;
+            }
+        } catch {}
+
+        return false;
     }
 
     /**
@@ -385,9 +404,7 @@ export class AnchorService {
 
         try {
             const response = await axios.get(`${this.baseUrl}/accounts/${ledgerId}/balance`, {
-                headers: {
-                    Authorization: `Bearer ${this.apiKey}`,
-                },
+                headers: this.getHeaders(),
             });
             return response.data.data.availableBalance || 0;
         } catch (error: any) {
