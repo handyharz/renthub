@@ -648,7 +648,8 @@ export class PaymentController {
                 transaction.id,
                 transaction.totalAmount,
                 tenantFullName,
-                landlordFullName
+                landlordFullName,
+                transaction.tenant.email || undefined
             );
 
             await prisma.transaction.update({

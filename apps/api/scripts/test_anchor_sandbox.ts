@@ -53,14 +53,51 @@ async function testAnchorSandbox() {
         }
     }
 
-    // 3. Test Revenue account balance
-    if (revenueId) {
+    // 3. Test creating a dynamic Virtual NUBAN linked to the FBO Escrow Pool
+    if (fboId) {
         try {
-            console.log(`\n📡 3. Querying Revenue (${revenueId}) balance...`);
-            const revRes = await axios.get(`${baseUrl}/accounts/balance/${revenueId}`, { headers });
-            console.log(`✅ Revenue Account Balance:`, JSON.stringify(revRes.data, null, 2));
+            console.log(`\n📡 3. Creating Virtual NUBAN linked to FBO Escrow Pool (${fboId})...`);
+            const testRef = `rh_test_${Date.now()}`;
+            const virtualNubanPayload = {
+                data: {
+                    type: "VirtualNuban",
+                    attributes: {
+                        virtualAccountDetail: {
+                            name: "RentHub Escrow Test",
+                            bvn: "22222222226",
+                            reference: testRef,
+                            email: "harun@nexgentech.dev",
+                            description: "RentHub Escrow Sandbox Test Account",
+                            permanent: false,
+                        },
+                    },
+                    relationships: {
+                        settlementAccount: {
+                            data: {
+                                type: "DepositAccount",
+                                id: fboId,
+                            },
+                        },
+                    },
+                },
+            };
+
+            const vRes = await axios.post(`${baseUrl}/virtual-nubans`, virtualNubanPayload, { headers });
+            console.log("🎉 Virtual NUBAN Created Successfully!");
+            console.log("Full Virtual NUBAN Response:\n", JSON.stringify(vRes.data, null, 2));
+
+            const vData = vRes.data?.data;
+            const nuban = vData?.attributes?.accountNumber || vData?.attributes?.virtualAccountDetail?.accountNumber || vData?.id;
+            const bank = vData?.attributes?.bankName || "Providus Bank / Anchor";
+            const accountName = vData?.attributes?.accountName || vData?.attributes?.virtualAccountDetail?.name;
+            console.log("\n--------------------------------------------------");
+            console.log(`🏦 BANK NAME:      ${bank}`);
+            console.log(`💳 ACCOUNT NUMBER: ${nuban}`);
+            console.log(`👤 ACCOUNT NAME:   ${accountName}`);
+            console.log(`🔗 REFERENCE:      ${testRef}`);
+            console.log("--------------------------------------------------");
         } catch (error: any) {
-            console.error(`⚠️ Failed to fetch Revenue balance:`, error.response?.status, error.response?.data || error.message);
+            console.error("⚠️ Failed to create Virtual NUBAN:", error.response?.status, JSON.stringify(error.response?.data || error.message, null, 2));
         }
     }
 

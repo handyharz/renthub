@@ -83,18 +83,20 @@ export class AnchorService {
     }
 
     /**
-     * Generate dedicated Virtual NUBAN sub-ledger and Caution sub-ledger for a transaction.
-     * Inflow fee: 0.5% capped at ₦200 + ₦50 EMTL = ₦250 total.
+     * Generate dedicated Virtual NUBAN linked to the FBO Escrow Pool.
+     * Uses Anchor BaaS official Virtual NUBAN endpoint (POST /api/v1/virtual-nubans).
      */
     async createEscrowSubAccount(
         transactionId: string,
         totalAmountNaira: number,
         tenantName: string,
-        landlordName: string
+        landlordName: string,
+        tenantEmail?: string,
+        tenantBvn?: string
     ): Promise<AnchorVirtualAccountResult> {
         const reference = `rh_escrow_${transactionId}`;
 
-        // Development / Test mock fallback when API key is not configured or in dev mode
+        // Development / Test mock fallback when API key is not configured or in test mode
         if (!this.apiKey || process.env.NODE_ENV === "test" || process.env.ANCHOR_MOCK === "true") {
             // Deterministic pseudo-NUBAN based on transactionId hash
             const hash = crypto.createHash("md5").update(transactionId).digest("hex");
@@ -113,55 +115,58 @@ export class AnchorService {
         }
 
         try {
-            // 1. Create main transaction escrow account
+            // Anchor BaaS Official Virtual NUBAN (JSON:API format) linked to FBO Escrow Pool
+            const virtualNubanPayload = {
+                data: {
+                    type: "VirtualNuban",
+                    attributes: {
+                        virtualAccountDetail: {
+                            name: `RentHub: ${tenantName.slice(0, 20)}`,
+                            bvn: tenantBvn || "22222222226", // Sandbox test BVN fallback
+                            reference,
+                            email: tenantEmail || "escrow@renthub.ng",
+                            description: `RentHub Escrow for tx=${transactionId} (Landlord: ${landlordName})`,
+                            permanent: false,
+                        },
+                    },
+                    relationships: {
+                        settlementAccount: {
+                            data: {
+                                type: "DepositAccount",
+                                id: this.escrowPoolId,
+                            },
+                        },
+                    },
+                },
+            };
+
             const response = await axios.post(
-                `${this.baseUrl}/accounts`,
-                {
-                    reference,
-                    accountType: "SUB_ACCOUNT",
-                    metadata: {
-                        transactionId,
-                        tenantName,
-                        landlordName,
-                        purpose: "RENT_AND_CAUTION_ESCROW",
-                        totalAmountKobo: this.nairaToKobo(totalAmountNaira),
-                    },
-                },
+                `${this.baseUrl}/virtual-nubans`,
+                virtualNubanPayload,
                 {
                     headers: this.getHeaders(),
                 }
             );
 
-            const accountData = response.data.data;
+            const vData = response.data?.data;
+            const attributes = vData?.attributes || {};
+            const bankInfo = attributes?.bank || {};
 
-            // 2. Create segregated caution ledger (for damage deposit compliance)
-            const cautionResponse = await axios.post(
-                `${this.baseUrl}/accounts`,
-                {
-                    reference: `rh_caution_${transactionId}`,
-                    accountType: "SUB_LEDGER",
-                    parentAccountId: accountData.id,
-                    metadata: {
-                        transactionId,
-                        purpose: "SEGREGATED_CAUTION_LIABILITY",
-                    },
-                },
-                {
-                    headers: this.getHeaders(),
-                }
-            );
+            const virtualNuban = attributes.accountNumber || vData?.id;
+            const bankName = bankInfo.name ? `${bankInfo.name}` : "PROVIDUS BANK";
+            const accountName = attributes.accountName || `RentHub Escrow: ${tenantName}`;
 
             return {
-                ledgerId: accountData.id,
-                virtualNuban: accountData.accountNumber,
-                bankName: accountData.bankName || "Anchor / Partner Bank",
-                accountName: accountData.accountName,
-                cautionLedgerId: cautionResponse.data.data.id,
+                ledgerId: vData?.id || reference,
+                virtualNuban,
+                bankName,
+                accountName,
+                cautionLedgerId: `caution_${vData?.id || reference}`,
                 reference,
             };
         } catch (error: any) {
-            console.error("[AnchorService] Failed to create escrow sub-account:", error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || "Failed to create Anchor escrow sub-account");
+            console.error("[AnchorService] Failed to create escrow Virtual NUBAN:", error.response?.data || error.message);
+            throw new Error(error.response?.data?.errors?.[0]?.detail || error.response?.data?.message || "Failed to create Anchor Virtual NUBAN");
         }
     }
 
@@ -343,21 +348,21 @@ export class AnchorService {
             return false;
         }
 
-            // Optional timestamp check (only enforce if header is sent)
-            if (timestampHeader) {
-                const eventTime = parseInt(timestampHeader, 10);
-                const now = Math.floor(Date.now() / 1000);
-                const ts = eventTime > 1e12 ? Math.floor(eventTime / 1000) : eventTime;
-                if (!isNaN(ts) && Math.abs(now - ts) > 300) {
-                    console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
-                    return false;
-                }
+        // Optional timestamp check (only enforce if header is sent)
+        if (timestampHeader) {
+            const eventTime = parseInt(timestampHeader, 10);
+            const now = Math.floor(Date.now() / 1000);
+            const ts = eventTime > 1e12 ? Math.floor(eventTime / 1000) : eventTime;
+            if (!isNaN(ts) && Math.abs(now - ts) > 300) {
+                console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
+                return false;
             }
+        }
 
-            const raw = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, "utf8");
+        const raw = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, "utf8");
 
-            // 1. Official Anchor BaaS signature: Base64(HMAC_SHA1(rawBody, secretToken).digest('hex'))
-            try {
+        // 1. Official Anchor BaaS signature: Base64(HMAC_SHA1(rawBody, secretToken).digest('hex'))
+        try {
             const hexDigest = crypto.createHmac("sha1", this.webhookSecret).update(raw).digest("hex");
             const expectedBase64 = Buffer.from(hexDigest).toString("base64");
             if (
@@ -403,60 +408,60 @@ export class AnchorService {
         }
 
         try {
-            // Anchor endpoint: GET /api/v1/accounts/balance/{accountId}
-            const response = await axios.get(`${this.baseUrl}/accounts/balance/${ledgerId}`, {
-                headers: this.getHeaders(),
-            });
-            const data = response.data?.data || response.data?.attributes || response.data || {};
-            const bal = data.availableBalance ?? data.balance ?? 0;
-            return typeof bal === "number" ? bal : parseFloat(bal) || 0;
-        } catch (error: any) {
-            // Fallback: Query account details via GET /api/v1/accounts/{accountId}
-            try {
-                const accRes = await axios.get(`${this.baseUrl}/accounts/${ledgerId}`, {
+                // Anchor endpoint: GET /api/v1/accounts/balance/{accountId}
+                const response = await axios.get(`${this.baseUrl}/accounts/balance/${ledgerId}`, {
                     headers: this.getHeaders(),
                 });
-                const attr = accRes.data?.data?.attributes || {};
-                const bal = attr.availableBalance ?? attr.balance ?? 0;
+                const data = response.data?.data || response.data?.attributes || response.data || {};
+                const bal = data.availableBalance ?? data.balance ?? 0;
                 return typeof bal === "number" ? bal : parseFloat(bal) || 0;
-            } catch {}
-            console.warn(`[AnchorService] Balance unread for ledger ${ledgerId} (defaulting to 0):`, error.response?.data?.errors?.[0]?.detail || error.message);
-            return 0;
+            } catch (error: any) {
+                // Fallback: Query account details via GET /api/v1/accounts/{accountId}
+                try {
+                    const accRes = await axios.get(`${this.baseUrl}/accounts/${ledgerId}`, {
+                        headers: this.getHeaders(),
+                    });
+                    const attr = accRes.data?.data?.attributes || {};
+                    const bal = attr.availableBalance ?? attr.balance ?? 0;
+                    return typeof bal === "number" ? bal : parseFloat(bal) || 0;
+                } catch { }
+                console.warn(`[AnchorService] Balance unread for ledger ${ledgerId} (defaulting to 0):`, error.response?.data?.errors?.[0]?.detail || error.message);
+                return 0;
+            }
         }
-    }
 
     /**
      * Settle Landlord via Anchor NIP Transfer rail.
      * Creates or updates LandlordPayout record with payoutRail = "ANCHOR_NIP".
      * Idempotent — safe against retry loops.
      */
-    async disburseLandlordPayout(transactionId: string): Promise<void> {
-        const { prisma } = require("../config/database");
+    async disburseLandlordPayout(transactionId: string): Promise < void> {
+            const { prisma } = require("../config/database");
 
-        const transaction = await prisma.transaction.findUnique({
-            where: { id: transactionId },
-            include: {
-                property: {
-                    include: {
-                        landlord: true,
+            const transaction = await prisma.transaction.findUnique({
+                where: { id: transactionId },
+                include: {
+                    property: {
+                        include: {
+                            landlord: true,
+                        },
                     },
                 },
-            },
-        });
+            });
 
-        if (!transaction) {
-            console.error(`[AnchorService] Transaction ${transactionId} not found`);
-            return;
-        }
+            if(!transaction) {
+                console.error(`[AnchorService] Transaction ${transactionId} not found`);
+                return;
+            }
 
         const landlord = transaction.property.landlord;
-        const idempotencyKey = `payout_${transactionId}`;
+            const idempotencyKey = `payout_${transactionId}`;
 
-        const existingPayout = await prisma.landlordPayout.findUnique({
-            where: { idempotencyKey },
-        });
+            const existingPayout = await prisma.landlordPayout.findUnique({
+                where: { idempotencyKey },
+            });
 
-        if (existingPayout && existingPayout.status === "COMPLETED") {
+            if(existingPayout && existingPayout.status === "COMPLETED") {
             console.info(`[AnchorService] Payout for tx=${transactionId} already COMPLETED. Skipping.`);
             return;
         }
