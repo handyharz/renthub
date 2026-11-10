@@ -484,10 +484,10 @@ export class PaymentController {
                             ...(rentHubTransactionId ? [{ id: rentHubTransactionId }] : []),
                             ...(reference
                                 ? [
-                                      { afriExchangeRef: reference },
-                                      { afriExchangeRef: reference.replace(/^RQST-/i, "") },
-                                      { afriExchangeRef: `RQST-${reference.replace(/^RQST-/i, "")}` },
-                                  ]
+                                    { afriExchangeRef: reference },
+                                    { afriExchangeRef: reference.replace(/^RQST-/i, "") },
+                                    { afriExchangeRef: `RQST-${reference.replace(/^RQST-/i, "")}` },
+                                ]
                                 : []),
                         ],
                     },
@@ -518,9 +518,9 @@ export class PaymentController {
                             ...(rentHubTransactionId ? [{ id: rentHubTransactionId }] : []),
                             ...(reference
                                 ? [
-                                      { reference },
-                                      ...(cleanRef ? [{ reference: cleanRef }, { reference: `SIM-${cleanRef}` }] : []),
-                                  ]
+                                    { reference },
+                                    ...(cleanRef ? [{ reference: cleanRef }, { reference: `SIM-${cleanRef}` }] : []),
+                                ]
                                 : []),
                         ],
                     },
@@ -758,100 +758,100 @@ export class PaymentController {
             const timestamp = req.headers["x-anchor-timestamp"] as string;
             const rawPayload = req.rawBody ? req.rawBody.toString("utf8") : JSON.stringify(req.body);
 
-            if (timestamp && !isWebhookTimestampFresh(timestamp)) {
-                console.warn("[Anchor Webhook] Rejected stale timestamp from IP:", req.ip);
-                return res.status(401).json({
-                    success: false,
-                    message: "Invalid or stale webhook timestamp",
-                });
-            }
+                if (timestamp && !isWebhookTimestampFresh(timestamp)) {
+                    console.warn("[Anchor Webhook] Rejected stale timestamp from IP:", req.ip);
+                    return res.status(401).json({
+                        success: false,
+                        message: "Invalid or stale webhook timestamp",
+                    });
+                }
 
-            const isValid = anchorService.verifyWebhookSignature(rawPayload, signature, timestamp);
+                const isValid = anchorService.verifyWebhookSignature(rawPayload, signature, timestamp);
 
-            if (!isValid) {
-                console.warn("[Anchor Webhook] Unauthorized attempt with invalid signature from IP:", req.ip);
-                return res.status(401).json({
-                    success: false,
-                    message: "Invalid webhook signature",
-                });
-            }
+                if (!isValid) {
+                    console.warn("[Anchor Webhook] Unauthorized attempt with invalid signature from IP:", req.ip);
+                    return res.status(401).json({
+                        success: false,
+                        message: "Invalid webhook signature",
+                    });
+                }
 
-            const event = req.body;
-            const eventType = event.event || event.type;
-            const data = event.data || {};
+                const event = req.body;
+                const eventType = event.event || event.type;
+                const data = event.data || {};
 
-            console.info(`[Anchor Webhook] Received event: ${eventType}`);
+                console.info(`[Anchor Webhook] Received event: ${eventType}`);
 
-            // We listen for inbound account credit / transfer success events
-            const isCreditEvent =
-                eventType === "account.credited" ||
-                eventType === "inflow.success" ||
-                eventType === "transfer.success" ||
-                eventType === "inward_payment.success";
+                // We listen for inbound account credit / transfer success events
+                const isCreditEvent =
+                    eventType === "account.credited" ||
+                    eventType === "inflow.success" ||
+                    eventType === "transfer.success" ||
+                    eventType === "inward_payment.success";
 
-            if (isCreditEvent) {
-                const reference = data.reference || data.paymentReference;
-                const accountNumber = data.accountNumber;
-                const accountId = data.accountId || data.subAccountId;
-                const amountKobo = data.amount; // in kobo
+                if (isCreditEvent) {
+                    const reference = data.reference || data.paymentReference;
+                    const accountNumber = data.accountNumber;
+                    const accountId = data.accountId || data.subAccountId;
+                    const amountKobo = data.amount; // in kobo
 
-                // Locate transaction
-                const transaction = await prisma.transaction.findFirst({
-                    where: {
-                        OR: [
-                            ...(reference ? [{ anchorCollectionRef: reference }] : []),
-                            ...(accountNumber ? [{ anchorVirtualNuban: accountNumber }] : []),
-                            ...(accountId ? [{ anchorEscrowLedgerId: accountId }] : []),
-                        ],
-                    },
-                });
-
-                if (transaction) {
-                    if (!paidKoboMeetsExpected(amountKobo, transaction.totalAmount)) {
-                        console.warn(
-                            `[Anchor Webhook] Underpayment or missing amount for tx=${transaction.id}: received ${amountKobo}`
-                        );
-                        return res.status(200).json({
-                            success: false,
-                            message: "Underpayment detected. Escrow not funded.",
-                        });
-                    }
-
-                    const claimed = await transactionService.markEscrowedIfPayable(transaction.id, {
-                        paymentGateway: "ANCHOR",
+                    // Locate transaction
+                    const transaction = await prisma.transaction.findFirst({
+                        where: {
+                            OR: [
+                                ...(reference ? [{ anchorCollectionRef: reference }] : []),
+                                ...(accountNumber ? [{ anchorVirtualNuban: accountNumber }] : []),
+                                ...(accountId ? [{ anchorEscrowLedgerId: accountId }] : []),
+                            ],
+                        },
                     });
 
-                    if (claimed.count > 0) {
-                        console.info(`[Anchor Webhook] Transitioned tx=${transaction.id} to ESCROWED`);
-                        await propertyService.lockUnderOffer(transaction.propertyId);
+                    if (transaction) {
+                        if (!paidKoboMeetsExpected(amountKobo, transaction.totalAmount)) {
+                            console.warn(
+                                `[Anchor Webhook] Underpayment or missing amount for tx=${transaction.id}: received ${amountKobo}`
+                            );
+                            return res.status(200).json({
+                                success: false,
+                                message: "Underpayment detected. Escrow not funded.",
+                            });
+                        }
 
-                        // Deduct 2% platform protection fee to RentHub revenue ledger
-                        const feeKobo = anchorService.nairaToKobo(transaction.platformFee);
-                        if (transaction.anchorEscrowLedgerId && feeKobo > 0) {
-                            try {
-                                await anchorService.deductPlatformFee(
-                                    transaction.anchorEscrowLedgerId,
-                                    feeKobo,
-                                    transaction.id
-                                );
-                            } catch (feeErr) {
-                                console.warn("[Anchor Webhook] Platform fee transfer error:", feeErr);
+                        const claimed = await transactionService.markEscrowedIfPayable(transaction.id, {
+                            paymentGateway: "ANCHOR",
+                        });
+
+                        if (claimed.count > 0) {
+                            console.info(`[Anchor Webhook] Transitioned tx=${transaction.id} to ESCROWED`);
+                            await propertyService.lockUnderOffer(transaction.propertyId);
+
+                            // Deduct 2% platform protection fee to RentHub revenue ledger
+                            const feeKobo = anchorService.nairaToKobo(transaction.platformFee);
+                            if (transaction.anchorEscrowLedgerId && feeKobo > 0) {
+                                try {
+                                    await anchorService.deductPlatformFee(
+                                        transaction.anchorEscrowLedgerId,
+                                        feeKobo,
+                                        transaction.id
+                                    );
+                                } catch (feeErr) {
+                                    console.warn("[Anchor Webhook] Platform fee transfer error:", feeErr);
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            return res.status(200).json({ success: true, received: true });
-        } catch (error: any) {
-            console.error("[Anchor Webhook Error]:", error);
-            return res.status(500).json({
-                success: false,
-                message: "Webhook processing failed",
-            });
+                return res.status(200).json({ success: true, received: true });
+            } catch (error: any) {
+                console.error("[Anchor Webhook Error]:", error);
+                return res.status(500).json({
+                    success: false,
+                    message: "Webhook processing failed",
+                });
+            }
         }
-    }
 }
 
-export const paymentController = new PaymentController();
+    export const paymentController = new PaymentController();
 

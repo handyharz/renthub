@@ -343,21 +343,21 @@ export class AnchorService {
             return false;
         }
 
-        // Optional timestamp check (only enforce if header is sent)
-        if (timestampHeader) {
-            const eventTime = parseInt(timestampHeader, 10);
-            const now = Math.floor(Date.now() / 1000);
-            const ts = eventTime > 1e12 ? Math.floor(eventTime / 1000) : eventTime;
-            if (!isNaN(ts) && Math.abs(now - ts) > 300) {
-                console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
-                return false;
+            // Optional timestamp check (only enforce if header is sent)
+            if (timestampHeader) {
+                const eventTime = parseInt(timestampHeader, 10);
+                const now = Math.floor(Date.now() / 1000);
+                const ts = eventTime > 1e12 ? Math.floor(eventTime / 1000) : eventTime;
+                if (!isNaN(ts) && Math.abs(now - ts) > 300) {
+                    console.warn("[AnchorService] Webhook rejected: timestamp expired or drifted > 300s");
+                    return false;
+                }
             }
-        }
 
-        const raw = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, "utf8");
+            const raw = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, "utf8");
 
-        // 1. Official Anchor BaaS signature: Base64(HMAC_SHA1(rawBody, secretToken).digest('hex'))
-        try {
+            // 1. Official Anchor BaaS signature: Base64(HMAC_SHA1(rawBody, secretToken).digest('hex'))
+            try {
             const hexDigest = crypto.createHmac("sha1", this.webhookSecret).update(raw).digest("hex");
             const expectedBase64 = Buffer.from(hexDigest).toString("base64");
             if (
@@ -366,7 +366,7 @@ export class AnchorService {
             ) {
                 return true;
             }
-        } catch {}
+        } catch { }
 
         // 2. Direct Base64 digest of HMAC-SHA1
         try {
@@ -377,7 +377,7 @@ export class AnchorService {
             ) {
                 return true;
             }
-        } catch {}
+        } catch { }
 
         // 3. Fallback HMAC-SHA256 hex digest
         try {
@@ -388,7 +388,7 @@ export class AnchorService {
             ) {
                 return true;
             }
-        } catch {}
+        } catch { }
 
         return false;
     }
@@ -403,13 +403,25 @@ export class AnchorService {
         }
 
         try {
-            const response = await axios.get(`${this.baseUrl}/accounts/${ledgerId}/balance`, {
+            // Anchor endpoint: GET /api/v1/accounts/balance/{accountId}
+            const response = await axios.get(`${this.baseUrl}/accounts/balance/${ledgerId}`, {
                 headers: this.getHeaders(),
             });
-            return response.data.data.availableBalance || 0;
+            const data = response.data?.data || response.data?.attributes || response.data || {};
+            const bal = data.availableBalance ?? data.balance ?? 0;
+            return typeof bal === "number" ? bal : parseFloat(bal) || 0;
         } catch (error: any) {
-            console.error(`[AnchorService] Failed to fetch balance for ledger ${ledgerId}:`, error.message);
-            throw error;
+            // Fallback: Query account details via GET /api/v1/accounts/{accountId}
+            try {
+                const accRes = await axios.get(`${this.baseUrl}/accounts/${ledgerId}`, {
+                    headers: this.getHeaders(),
+                });
+                const attr = accRes.data?.data?.attributes || {};
+                const bal = attr.availableBalance ?? attr.balance ?? 0;
+                return typeof bal === "number" ? bal : parseFloat(bal) || 0;
+            } catch {}
+            console.warn(`[AnchorService] Balance unread for ledger ${ledgerId} (defaulting to 0):`, error.response?.data?.errors?.[0]?.detail || error.message);
+            return 0;
         }
     }
 
