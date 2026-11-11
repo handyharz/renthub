@@ -2,17 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { AnchorBankLinkingCard } from "@/components/payouts/AnchorBankLinkingCard";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
 import { LandlordPayoutHistory } from "@/components/payouts/LandlordPayoutHistory";
 import { Button } from "@/components/ui/Button";
 import api from "@/lib/api";
-import { ArrowLeft, Loader2, ShieldCheck, Wallet } from "lucide-react";
+import { ArrowLeft, Loader2, ShieldCheck, Wallet, Landmark, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export default function LandlordPayoutsPage() {
     const { user, isLoaded } = useUser();
     const [dbUser, setDbUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [activeRailTab, setActiveRailTab] = useState<"BANK" | "AFRIEXCHANGE">("BANK");
 
     const fetchUserProfile = async () => {
         if (!user) return;
@@ -76,21 +78,61 @@ export default function LandlordPayoutsPage() {
                             </Button>
                         </Link>
                         <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)]">
-                            AfriExchange Escrow Settlement
+                            Escrow Payouts & Settlements
                         </h1>
                         <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-1">
-                            Configure your verified 2FA payment route for receiving released tenant rent tokens.
+                            Configure your verified bank or mobile wallet route for receiving released tenant rent payments.
                         </p>
                     </div>
 
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 rounded-xl text-xs font-bold">
                         <ShieldCheck className="h-4 w-4" />
                         RentHub Escrow Protected
                     </div>
                 </div>
 
-                {/* AfriExchange Linking Card */}
-                <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchUserProfile} />
+                {/* Settlement Rail Tab Selector */}
+                <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full sm:w-fit">
+                    <button
+                        type="button"
+                        onClick={() => setActiveRailTab("BANK")}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                            activeRailTab === "BANK"
+                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                        }`}
+                    >
+                        <Landmark className="h-4 w-4 shrink-0" />
+                        <span>Commercial Bank (Anchor NIP)</span>
+                        <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-md ${
+                            activeRailTab === "BANK"
+                                ? "bg-white/20 text-white"
+                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        }`}>
+                            Recommended
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveRailTab("AFRIEXCHANGE")}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                            activeRailTab === "AFRIEXCHANGE"
+                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                        }`}
+                    >
+                        <Wallet className="h-4 w-4 shrink-0" />
+                        <span>AfriExchange Wallet (Crypto)</span>
+                    </button>
+                </div>
+
+                {/* Active Linking Card */}
+                {activeRailTab === "BANK" ? (
+                    <AnchorBankLinkingCard dbUser={dbUser} onRefresh={fetchUserProfile} />
+                ) : (
+                    <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchUserProfile} />
+                )}
 
                 {/* Landlord Escrow Settlements & Payout Records */}
                 <LandlordPayoutHistory />

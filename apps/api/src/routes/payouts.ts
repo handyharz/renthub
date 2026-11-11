@@ -41,6 +41,36 @@ router.get(
     payoutController.getAfriExchangeLinkStatus.bind(payoutController)
 );
 
+// ─── Nigerian Commercial Bank Linking (Anchor BaaS Rail) ─────────────────────
+router.get(
+    "/bank/supported",
+    payoutController.getSupportedBanks.bind(payoutController)
+);
+
+router.post(
+    "/bank/resolve",
+    requireAuth,
+    payoutController.resolveBankAccount.bind(payoutController)
+);
+
+router.post(
+    "/bank/link",
+    requireAuth,
+    payoutController.linkBankAccount.bind(payoutController)
+);
+
+router.delete(
+    "/bank/unlink",
+    requireAuth,
+    payoutController.unlinkBankAccount.bind(payoutController)
+);
+
+router.get(
+    "/bank/status",
+    requireAuth,
+    payoutController.getBankLinkStatus.bind(payoutController)
+);
+
 // Get all my payouts (landlord sees their payout history)
 router.get(
     "/my-payouts",

@@ -54,6 +54,13 @@ model User {
   afriExchangeAccountEmail  String?
   settlementLinkedAt        DateTime?
 
+  // Nigerian Commercial Bank settlement info (Anchor BaaS NIP Rail)
+  bankName                String?
+  bankCode                String?
+  accountNumber           String?
+  accountName             String?
+  bankLinkedAt            DateTime?
+
   // Agent relations
   agentProfile            AgentProfile?
   agentListings           AgentListing[] @relation("AgentListings")

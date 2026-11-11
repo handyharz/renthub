@@ -544,9 +544,9 @@ export class AnchorService {
             });
         }
 
-        const bankCode = (landlord as any).bankCode || "058";
-        const accountNumber = (landlord as any).accountNumber || "0123456789";
-        const accountName = `${landlord.firstName || ""} ${landlord.lastName || ""}`.trim() || "Landlord";
+        const bankCode = landlord.bankCode || "000014";
+        const accountNumber = landlord.accountNumber || "0123456789";
+        const accountName = landlord.accountName || `${landlord.firstName || ""} ${landlord.lastName || ""}`.trim() || "Landlord";
 
         try {
             const transferResult = await this.disburseToLandlord({
