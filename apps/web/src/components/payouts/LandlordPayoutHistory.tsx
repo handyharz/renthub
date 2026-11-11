@@ -34,6 +34,7 @@ export interface LandlordPayoutItem {
     netAmount: number;
     currency?: string;
     tokenType?: string;
+    payoutRail?: string;
     status: "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "SKIPPED";
     idempotencyKey: string;
     afriExchangePayoutId?: string;
@@ -448,7 +449,7 @@ export function LandlordPayoutHistory() {
 
                                             {/* Net Payout */}
                                             <td className="py-3.5 px-4 whitespace-nowrap font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                                                {formatPrice(payout.netAmount)} {payout.tokenType || "NT"}
+                                                {formatPrice(payout.netAmount)} {payout.payoutRail === "ANCHOR_NIP" ? "" : payout.tokenType || "NT"}
                                             </td>
 
                                             {/* Status Badge */}
@@ -549,7 +550,7 @@ export function LandlordPayoutHistory() {
                                     Net Landlord Payout:
                                 </span>
                                 <span className="font-mono text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                                    {formatPrice(selectedPayout.netAmount)} {selectedPayout.tokenType || "NT"}
+                                    {formatPrice(selectedPayout.netAmount)} {selectedPayout.payoutRail === "ANCHOR_NIP" ? "NGN" : selectedPayout.tokenType || "NT"}
                                 </span>
                             </div>
 
@@ -558,7 +559,9 @@ export function LandlordPayoutHistory() {
                                 <div className="h-1.5 rounded-full bg-emerald-500 w-[98%]"></div>
                             </div>
                             <p className="text-[10px] text-right text-[var(--text-muted)]">
-                                98% deposited directly to your AfriExchange wallet
+                                {selectedPayout.payoutRail === "ANCHOR_NIP"
+                                    ? "98% disbursed directly to your commercial bank account via NIP"
+                                    : "98% deposited directly to your AfriExchange wallet"}
                             </p>
                         </div>
 
@@ -567,7 +570,7 @@ export function LandlordPayoutHistory() {
                             <div className="flex justify-between items-center">
                                 <span className="text-[var(--text-muted)]">Payout Route:</span>
                                 <span className="font-semibold text-[var(--text-primary)]">
-                                    AfriExchange Mobile Rail
+                                    {selectedPayout.payoutRail === "ANCHOR_NIP" ? "Anchor BaaS Direct Bank NIP Rail" : "AfriExchange Mobile Rail"}
                                 </span>
                             </div>
 

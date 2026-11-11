@@ -185,3 +185,4 @@ Since we are in the Sandbox, you simulate the tenant making the bank transfer:
 ### 3. Webhook Not Updating Status
 * **Cause:** Webhook URL in Anchor Dashboard pointing to Vercel frontend instead of Render API backend.
 * **Fix:** Set Webhook URL to `https://renthub-4jhq.onrender.com/api/webhooks/anchor`.
+

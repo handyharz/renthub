@@ -778,7 +778,7 @@ export class PaymentController {
                 }
 
                 const event = req.body;
-                const eventType = event.event || event.type;
+                const eventType = event.event || event.type || event.data?.type;
                 const data = event.data || {};
 
                 console.info(`[Anchor Webhook] Received event: ${eventType}`);
@@ -788,13 +788,16 @@ export class PaymentController {
                     eventType === "account.credited" ||
                     eventType === "inflow.success" ||
                     eventType === "transfer.success" ||
-                    eventType === "inward_payment.success";
+                    eventType === "inward_payment.success" ||
+                    eventType === "payment.received" ||
+                    eventType === "payment.create";
 
                 if (isCreditEvent) {
-                    const reference = data.reference || data.paymentReference;
-                    const accountNumber = data.accountNumber;
-                    const accountId = data.accountId || data.subAccountId;
-                    const amountKobo = data.amount; // in kobo
+                    const paymentObj = data.attributes?.payment || data.payment || data;
+                    const reference = paymentObj.reference || paymentObj.paymentReference || data.reference;
+                    const accountNumber = paymentObj.virtualNuban?.accountNumber || paymentObj.accountNumber || data.accountNumber;
+                    const accountId = paymentObj.virtualNuban?.accountId || paymentObj.accountId || data.accountId;
+                    const amountKobo = paymentObj.amount !== undefined ? paymentObj.amount : data.amount;
 
                     // Locate transaction
                     const transaction = await prisma.transaction.findFirst({
