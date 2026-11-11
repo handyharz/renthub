@@ -29,7 +29,10 @@ import {
     Info,
     Sparkles,
     ShieldAlert,
-    Lock
+    Lock,
+    Landmark,
+    Copy,
+    Check
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -82,6 +85,9 @@ interface Transaction {
     totalAmount: number;
     status: string;
     paymentGateway?: string;
+    anchorVirtualNuban?: string;
+    anchorBankName?: string;
+    anchorCollectionRef?: string;
     createdAt: string;
     escrowHeld: boolean;
     escrowReleased: boolean;
@@ -122,6 +128,14 @@ export function ApplicationsTab() {
     const [isEscrowModalOpen, setIsEscrowModalOpen] = useState(false);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewedTxIds, setReviewedTxIds] = useState<string[]>([]);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    const copyToClipboard = (text: string, fieldId: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(fieldId);
+        toast.success("Copied to clipboard!");
+        setTimeout(() => setCopiedField(null), 2000);
+    };
 
     // Tab, Search, Filter & Pagination State
     const [activeTab, setActiveTab] = useState<"applications" | "escrow" | "renewals">("applications");
@@ -292,14 +306,20 @@ export function ApplicationsTab() {
             });
 
             const anchorData = payRes.data?.data;
+            const formatted = {
+                virtualNuban: anchorData?.virtualNuban || anchorData?.accountNumber,
+                bankName: anchorData?.bankName || "PROVIDUS BANK",
+                accountName: anchorData?.accountName || "RentHub Escrow",
+                reference: anchorData?.reference || anchorData?.collectionRef,
+                totalAmount: anchorData?.totalAmount || transaction.totalAmount,
+            };
 
             toast.success("Anchor Virtual Account Ready!", {
-                description: `Transfer ₦${(anchorData?.amountKobo / 100).toLocaleString()} to ${anchorData?.accountNumber} (${anchorData?.bankName}). Ref: ${anchorData?.collectionRef}`
+                description: `Transfer ${formatPrice(formatted.totalAmount)} to ${formatted.virtualNuban} (${formatted.bankName}).`
             });
 
-            setPaymentModalApp(null);
             await fetchData();
-            return anchorData;
+            return formatted;
         } catch (error: any) {
             console.error("Anchor payment initialization failed:", error);
             toast.error(error.response?.data?.message || "Failed to initialize Anchor bank transfer");
@@ -977,33 +997,123 @@ export function ApplicationsTab() {
                                             txForApp &&
                                             txForApp.status === "PENDING" &&
                                             !isHandoverCompleted && (
-                                                <div className="bg-amber-500/10 rounded-2xl p-4 sm:p-5 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                                    <div className="space-y-1 text-xs min-w-0">
-                                                        <div className="font-bold text-amber-600 dark:text-amber-400 text-sm flex items-center gap-1.5">
-                                                            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" /> Payment Initiated — Awaiting Confirmation
+                                                txForApp.paymentGateway === "ANCHOR" && txForApp.anchorVirtualNuban ? (
+                                                    <div className="bg-emerald-500/10 rounded-2xl p-4 sm:p-5 border border-emerald-500/30 space-y-3.5">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className="h-8 w-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                                                    <Landmark className="h-4 w-4" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-extrabold text-emerald-700 dark:text-emerald-400 text-sm flex items-center gap-1.5">
+                                                                        Dedicated Providus Escrow Account Ready
+                                                                    </div>
+                                                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">
+                                                                        Transfer from any Nigerian banking app. Escrow locks automatically upon receipt.
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-none text-[10px] font-bold py-1 px-2.5 self-start sm:self-center">
+                                                                Awaiting Inbound Transfer
+                                                            </Badge>
                                                         </div>
-                                                        <p className="text-[var(--text-secondary)] font-medium leading-relaxed">
-                                                            Your transaction was initiated via {txForApp.paymentGateway === "ANCHOR" ? "Anchor BaaS" : txForApp.paymentGateway === "AFRIEXCHANGE" ? "AfriExchange" : "Paystack"}. If you closed or cancelled the checkout session, you can switch payment methods or retry.
-                                                        </p>
+
+                                                        {/* Account Transfer Details Strip */}
+                                                        <div className="bg-[var(--bg-card)] rounded-xl p-3.5 border border-emerald-500/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                                            <div>
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Bank Name</span>
+                                                                <p className="font-extrabold text-[var(--text-primary)] mt-0.5">{txForApp.anchorBankName || "PROVIDUS BANK"}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Account Number</span>
+                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                    <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">{txForApp.anchorVirtualNuban}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copyToClipboard(txForApp.anchorVirtualNuban!, `app-nuban-${txForApp.id}`)}
+                                                                        className="p-1 rounded hover:bg-[var(--bg-muted)] text-[var(--text-secondary)] transition-all"
+                                                                        title="Copy account number"
+                                                                    >
+                                                                        {copiedField === `app-nuban-${txForApp.id}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Account Name</span>
+                                                                <p className="font-semibold text-[var(--text-primary)] truncate mt-0.5">RentHub: {user?.fullName || "Tenant"}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-secondary)]">Exact Amount</span>
+                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                    <span className="font-extrabold text-sm text-[var(--text-primary)]">{formatPrice(txForApp.totalAmount)}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copyToClipboard(String(txForApp.totalAmount), `app-amt-${txForApp.id}`)}
+                                                                        className="p-1 rounded hover:bg-[var(--bg-muted)] text-[var(--text-secondary)] transition-all"
+                                                                        title="Copy amount"
+                                                                    >
+                                                                        {copiedField === `app-amt-${txForApp.id}` ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-0.5">
+                                                            <p className="text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5">
+                                                                <Clock className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                                                Reconciles automatically within 10–30 seconds after transfer.
+                                                            </p>
+                                                            <div className="flex items-center gap-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => fetchData(true)}
+                                                                    disabled={refreshing}
+                                                                    className="text-xs h-8 px-3 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+                                                                >
+                                                                    <RefreshCw className={`h-3 w-3 mr-1 ${refreshing ? "animate-spin" : ""}`} /> Check Status
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    disabled={paymentLoading === txForApp.id}
+                                                                    onClick={() => handleCancelPendingPayment(txForApp.id)}
+                                                                    className="text-xs h-8 px-2.5 text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
+                                                                >
+                                                                    Cancel / Change Method
+                                                                </Button>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
-                                                        <Button
-                                                            variant="outline"
-                                                            disabled={paymentLoading === txForApp.id}
-                                                            onClick={() => handleCancelPendingPayment(txForApp.id)}
-                                                            className="text-xs h-9 px-3 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 w-full sm:w-auto text-center"
-                                                        >
-                                                            {paymentLoading === txForApp.id ? "Cancelling..." : "Cancel / Change Method"}
-                                                        </Button>
-                                                        <Button
-                                                            disabled={paymentLoading === app.id}
-                                                            onClick={() => setPaymentModalApp(app)}
-                                                            className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs h-9 px-4 w-full sm:w-auto text-center"
-                                                        >
-                                                            Retry Payment
-                                                        </Button>
+                                                ) : (
+                                                    <div className="bg-amber-500/10 rounded-2xl p-4 sm:p-5 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                        <div className="space-y-1 text-xs min-w-0">
+                                                            <div className="font-bold text-amber-600 dark:text-amber-400 text-sm flex items-center gap-1.5">
+                                                                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" /> Payment Initiated — Awaiting Confirmation
+                                                            </div>
+                                                            <p className="text-[var(--text-secondary)] font-medium leading-relaxed">
+                                                                Your transaction was initiated via {txForApp.paymentGateway === "ANCHOR" ? "Anchor BaaS" : txForApp.paymentGateway === "AFRIEXCHANGE" ? "AfriExchange" : "Paystack"}. If you closed or cancelled the checkout session, you can switch payment methods or retry.
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
+                                                            <Button
+                                                                variant="outline"
+                                                                disabled={paymentLoading === txForApp.id}
+                                                                onClick={() => handleCancelPendingPayment(txForApp.id)}
+                                                                className="text-xs h-9 px-3 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10 w-full sm:w-auto text-center"
+                                                            >
+                                                                {paymentLoading === txForApp.id ? "Cancelling..." : "Cancel / Change Method"}
+                                                            </Button>
+                                                            <Button
+                                                                disabled={paymentLoading === app.id}
+                                                                onClick={() => setPaymentModalApp(app)}
+                                                                className="bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold text-xs h-9 px-4 w-full sm:w-auto text-center"
+                                                            >
+                                                                Retry Payment
+                                                            </Button>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                )
                                             )}
 
                                         {/* Status: APPROVED with Funds Secured in Escrow */}
