@@ -783,9 +783,14 @@ export class PaymentController {
             const virtualNubanId = transaction.anchorEscrowLedgerId;
 
             const matchedPayment = payments.find((p: any) => {
-                const pVirtualNubanId = p.relationships?.virtualNuban?.data?.id;
-                const pAmount = p.attributes?.amount;
+                // Fix #2 (Claude): match by Virtual NUBAN ID (accountId in payment.received events)
+                // Anchor stores it in both relationships AND in payment.virtualNuban.accountId
+                const pVirtualNubanId =
+                    p.relationships?.virtualNuban?.data?.id ||
+                    p.attributes?.payment?.virtualNuban?.accountId;
+                const pAmount = p.attributes?.amount ?? p.attributes?.payment?.amount;
                 const matchesAccount = pVirtualNubanId && pVirtualNubanId === virtualNubanId;
+                // Fix #1 (Claude): pAmount is in kobo — paidKoboMeetsExpected handles this correctly
                 const meetsAmount = paidKoboMeetsExpected(pAmount, transaction.totalAmount);
                 return matchesAccount && meetsAmount;
             });
@@ -862,8 +867,17 @@ export class PaymentController {
                 const event = req.body;
                 const eventType = event.event || event.type || event.data?.type;
                 const data = event.data || {};
+                const eventEnv: string | undefined = data.attributes?.env ?? event.env;
 
-                console.info(`[Anchor Webhook] Received event: ${eventType}`);
+                console.info(`[Anchor Webhook] Received event: ${eventType} env=${eventEnv ?? "unset"}`);
+
+                // Fix #3 (Claude): Reject TEST events in production so sandbox simulations
+                // can never credit a real lease.
+                const isProductionMode = process.env.NODE_ENV === "production";
+                if (isProductionMode && eventEnv === "TEST") {
+                    console.warn(`[Anchor Webhook] Rejected TEST event in production: ${eventType}`);
+                    return res.status(200).json({ success: true, received: true, skipped: "test_event_in_production" });
+                }
 
                 // We listen for inbound account credit / transfer success events
                 const isCreditEvent =
@@ -876,42 +890,76 @@ export class PaymentController {
 
                 if (isCreditEvent) {
                     const paymentObj = data.attributes?.payment || data.payment || data;
-                    const virtualNubanId =
+
+                    // Fix #2 (Claude): Deduplication — extract event ID and payment ID from the
+                    // actual Anchor structure so we can skip replayed / retried webhooks.
+                    const anchorEventId: string | undefined = data.id ?? event.id;
+                    const anchorPaymentId: string | undefined =
+                        paymentObj.paymentId ?? paymentObj.id ?? data.attributes?.payment?.paymentId;
+
+                    const virtualNubanId: string | undefined =
                         data.relationships?.virtualNuban?.data?.id ||
                         paymentObj.relationships?.virtualNuban?.data?.id ||
                         paymentObj.virtualNuban?.data?.id ||
                         paymentObj.virtualNuban?.id ||
+                        // Fix: Anchor's payment.received puts accountId here (confirmed from event log)
                         paymentObj.virtualNuban?.accountId ||
                         data.accountId;
 
-                    const reference = paymentObj.reference || paymentObj.paymentReference || data.reference;
-                    const accountNumber = paymentObj.virtualNuban?.accountNumber || paymentObj.accountNumber || data.accountNumber;
-                    const amountKobo =
+                    const reference: string | undefined = paymentObj.reference || paymentObj.paymentReference || data.reference;
+                    const accountNumber: string | undefined = paymentObj.virtualNuban?.accountNumber || paymentObj.accountNumber || data.accountNumber;
+
+                    // Fix #1 (Claude): Amount is always in kobo in Anchor payloads.
+                    // paymentObj.amount is the canonical kobo integer (e.g. 81778600 = ₦817,786.00).
+                    // Never use the amountString (float) for comparisons.
+                    const amountKobo: number | undefined =
                         paymentObj.amount !== undefined
                             ? paymentObj.amount
                             : data.attributes?.amount !== undefined
                             ? data.attributes.amount
                             : data.amount;
 
-                    // Locate transaction
+                    // Locate transaction by Virtual NUBAN ID, account number, or reference
                     const transaction = await prisma.transaction.findFirst({
                         where: {
                             OR: [
-                                ...(reference ? [{ anchorCollectionRef: reference }] : []),
-                                ...(accountNumber ? [{ anchorVirtualNuban: accountNumber }] : []),
                                 ...(virtualNubanId ? [{ anchorEscrowLedgerId: virtualNubanId }] : []),
+                                ...(accountNumber ? [{ anchorVirtualNuban: accountNumber }] : []),
+                                ...(reference ? [{ anchorCollectionRef: reference }] : []),
                             ],
                         },
                     });
 
                     if (transaction) {
+                        // Fix #2 (Claude): If this transaction is already ESCROWED (escrowHeld=true),
+                        // this is a duplicate/replayed webhook — skip crediting it again.
+                        if (transaction.escrowHeld || transaction.status === "ESCROWED") {
+                            console.info(
+                                `[Anchor Webhook] Duplicate skipped — tx=${transaction.id} already ESCROWED. ` +
+                                `eventId=${anchorEventId} paymentId=${anchorPaymentId}`
+                            );
+                            return res.status(200).json({ success: true, received: true, skipped: "already_escrowed" });
+                        }
+
+                        // Fix #1 (Claude): Fail-closed if kobo amount is missing or zero.
+                        if (amountKobo === undefined || amountKobo === null) {
+                            console.error(
+                                `[Anchor Webhook] MISSING amount in payload for tx=${transaction.id}. ` +
+                                `eventId=${anchorEventId}. Refusing to escrow.`
+                            );
+                            return res.status(200).json({ success: false, message: "Missing amount in webhook payload." });
+                        }
+
+                        // Fix #4 (Claude): Exact-match amount check: kobo-to-kobo, never float.
                         if (!paidKoboMeetsExpected(amountKobo, transaction.totalAmount)) {
                             console.warn(
-                                `[Anchor Webhook] Underpayment or missing amount for tx=${transaction.id}: received ${amountKobo}`
+                                `[Anchor Webhook] Amount mismatch for tx=${transaction.id}: ` +
+                                `received ${amountKobo} kobo, expected ${transaction.totalAmount * 100} kobo. ` +
+                                `eventId=${anchorEventId}`
                             );
                             return res.status(200).json({
                                 success: false,
-                                message: "Underpayment detected. Escrow not funded.",
+                                message: "Underpayment or amount mismatch detected. Escrow not funded.",
                             });
                         }
 
@@ -920,7 +968,10 @@ export class PaymentController {
                         });
 
                         if (claimed.count > 0) {
-                            console.info(`[Anchor Webhook] Transitioned tx=${transaction.id} to ESCROWED`);
+                            console.info(
+                                `[Anchor Webhook] Transitioned tx=${transaction.id} to ESCROWED. ` +
+                                `anchorPaymentId=${anchorPaymentId} eventId=${anchorEventId}`
+                            );
                             await propertyService.lockUnderOffer(transaction.propertyId);
 
                             // Deduct 2% platform protection fee to RentHub revenue ledger
@@ -936,7 +987,19 @@ export class PaymentController {
                                     console.warn("[Anchor Webhook] Platform fee transfer error:", feeErr);
                                 }
                             }
+                        } else {
+                            // markEscrowedIfPayable found 0 rows — race condition or status mismatch
+                            console.warn(
+                                `[Anchor Webhook] markEscrowedIfPayable returned 0 rows for tx=${transaction.id}. ` +
+                                `Current status=${transaction.status} escrowHeld=${transaction.escrowHeld}. ` +
+                                `Likely a concurrent webhook — safe to ignore.`
+                            );
                         }
+                    } else {
+                        console.warn(
+                            `[Anchor Webhook] No transaction found for virtualNubanId=${virtualNubanId} ` +
+                            `accountNumber=${accountNumber} reference=${reference}. eventId=${anchorEventId}`
+                        );
                     }
                 }
 
