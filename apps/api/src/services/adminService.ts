@@ -565,10 +565,8 @@ export class AdminService {
             data: { status: PropertyStatus.RENTED },
         });
 
-        // Automatically trigger landlord payout dispatch via AfriExchange
-        afriExchangePayoutService.disburseLandlordPayout(transactionId).catch((err) => {
-            console.error(`[AdminService] Auto-payout dispatch error on dispute release tx=${transactionId}:`, err);
-        });
+        // Automatically trigger landlord payout dispatch via the appropriate rail (Anchor NIP or AfriExchange)
+        transactionService.enqueueLandlordPayout(transactionId, transaction.paymentGateway);
 
         return released;
     }
