@@ -24,6 +24,7 @@ import {
     Receipt,
     FileText,
     Wallet,
+    Landmark,
     AlertCircle,
     AlertTriangle,
     User,
@@ -72,6 +73,7 @@ import { LandlordApplicationsTab } from "@/components/dashboard/LandlordApplicat
 import { TransactionsTab } from "@/components/dashboard/TransactionsTab";
 import { MonetizationModal } from "@/components/landlord/MonetizationModal";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
+import { AnchorBankLinkingCard } from "@/components/payouts/AnchorBankLinkingCard";
 import { LandlordPayoutHistory } from "@/components/payouts/LandlordPayoutHistory";
 import AgentDashboard from "@/components/agent/AgentDashboard";
 import { LandlordAgentDelegationsTab } from "@/components/agent/LandlordAgentDelegationsTab";
@@ -116,6 +118,7 @@ function DashboardContent() {
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<string>(searchParams.get("tab") || "overview");
     const [activeConversationId, setActiveConversationId] = useState<string | null>(searchParams.get("convId"));
+    const [landlordRailTab, setLandlordRailTab] = useState<"BANK" | "AFRIEXCHANGE">("BANK");
     const [properties, setProperties] = useState<Property[]>([]);
     const [favorites, setFavorites] = useState<Property[]>([]);
     const [activities, setActivities] = useState<Activity[]>([]);
@@ -495,7 +498,48 @@ function DashboardContent() {
                         {activeTab === "transactions" && role === "LANDLORD" && <TransactionsTab />}
                         {activeTab === "payouts" && role === "LANDLORD" && (
                             <div className="space-y-6">
-                                <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchDashboardData} />
+                                {/* Settlement Rail Tab Selector */}
+                                <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full sm:w-fit">
+                                    <button
+                                        type="button"
+                                        onClick={() => setLandlordRailTab("BANK")}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                                            landlordRailTab === "BANK"
+                                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                                        }`}
+                                    >
+                                        <Landmark className="h-4 w-4 shrink-0" />
+                                        <span>Commercial Bank (Anchor NIP)</span>
+                                        <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                                            landlordRailTab === "BANK"
+                                                ? "bg-white/20 text-white"
+                                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                        }`}>
+                                            Recommended
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setLandlordRailTab("AFRIEXCHANGE")}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                                            landlordRailTab === "AFRIEXCHANGE"
+                                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                                        }`}
+                                    >
+                                        <Wallet className="h-4 w-4 shrink-0" />
+                                        <span>AfriExchange Wallet (Crypto)</span>
+                                    </button>
+                                </div>
+
+                                {landlordRailTab === "BANK" ? (
+                                    <AnchorBankLinkingCard dbUser={dbUser} onRefresh={fetchDashboardData} />
+                                ) : (
+                                    <AfriExchangeLinkingCard dbUser={dbUser} onRefresh={fetchDashboardData} />
+                                )}
+
                                 <LandlordPayoutHistory />
                             </div>
                         )}

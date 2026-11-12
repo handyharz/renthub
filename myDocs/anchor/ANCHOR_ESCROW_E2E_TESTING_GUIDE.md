@@ -152,9 +152,54 @@ Since we are in the Sandbox, you simulate the tenant making the bank transfer:
    * **Property Updated:** `status = "RENTED"`.
 5. **Split Automated Disbursement**:
    * **2% Platform Fee (RentHub)**: Swept from FBO account (`17943034048583-anc_acc`) to Revenue account (`17943034048272-anc_acc`) via intra-bank Book Transfer (Free, ₦0 fee).
-   * **98% Net Rent + Caution (Landlord)**: Disbursed directly from Anchor to the Landlord's verified Nigerian commercial bank account (GTBank, Zenith, Access, Kuda, etc.) via outbound NIP transfer (`ANCHOR_NIP`).
+   * **98% Net Rent + Caution (Landlord)**: Disbursed directly from Anchor to the Landlord's verified Nigerian commercial bank account (GTBank, Zenith, Access, Providus, Kuda, etc.) via outbound NIP transfer (`ANCHOR_NIP`).
    * **Payout Status:** `landlordPayout.status = "COMPLETED"`.
    * **Notification:** Landlord receives in-app and email alert confirming funds have hit their personal bank account.
+
+---
+
+### Step 6: Landlord Nigerian Bank Account Linking (Anchor BaaS Rail)
+
+To receive automated NIP bank disbursements upon escrow release, landlords link their verified Nigerian commercial bank account:
+
+1. Navigate to RentHub **Dashboard → Payouts & Settlements** tab (or **Profile → Payout Settlement**).
+2. Select the **Commercial Bank (Anchor NIP)** rail tab (highlighted as **Recommended**).
+3. Select your Nigerian bank from the dropdown (Access Bank, GTBank, Zenith, First Bank, Providus, UBA, etc.).
+4. Enter your **10-Digit NUBAN Account Number**.
+5. RentHub automatically resolves and verifies the account name against the Nigerian Inter-Bank Settlement System (NIBSS / Anchor BaaS).
+6. Click **"Link Verified Bank Account"**.
+
+#### 🧪 Sandbox Testing Hints & 1-Click Test Credentials
+In the Anchor Sandbox environment, commercial bank verification and outbound NIP disbursements can be tested using Anchor's standard test bank credentials:
+* **Bank:** `Access Bank` (CBN Code: `000014`)
+* **Account Number:** `0123456789`
+* **Account Name:** Auto-resolved to the Landlord's profile name
+* **⚡ 1-Click Fast Fill:** Click the **"Fill Test Details ⚡"** button directly inside the green sandbox hint banner on the bank linking card to pre-fill these credentials instantly!
+
+---
+
+### Step 7: Escrow Settlement Records Table & Rail Differentiation
+
+In the **Escrow Settlement Records** section of the Landlord Dashboard:
+
+1. **Dual-Rail Filtering**:
+   * **Rail Selector Pills:** Filter records by `[All Rails]`, `[Commercial Bank (NIP)]`, or `[AfriExchange Wallet]`.
+   * **Status Pills:** Filter by `[All]`, `[Settled]`, `[In Escrow]`, `[Deferred]`, or `[Attention]`.
+   * **Search Bar:** Real-time search by property title, tenant name, bank name, or reference ID.
+
+2. **Visual Rail Badges in Records Table**:
+   * **Anchor BaaS Rail:** Rendered with an emerald **`Commercial Bank (Anchor NIP)`** badge featuring a Landmark icon (`🏦`).
+   * **AfriExchange Rail:** Rendered with a purple **`AfriExchange Wallet (NT)`** badge featuring a Wallet icon (`📱`).
+   * **Net Payout Column:** Formatted clearly as Naira (`₦686,000`) for Anchor Bank NIP, and Naira Tokens (`₦686,000 NT`) for AfriExchange.
+   * **Status Badges:** Shows **`Settled to Bank (NIP)`** for completed Anchor payouts and **`Settled to Wallet`** for AfriExchange payouts.
+
+3. **Settlement Breakdown Modal**:
+   Clicking **"Breakdown"** on any record displays:
+   * **Payout Rail:** `Anchor BaaS Commercial Bank NIP` vs `AfriExchange Mobile Rail`.
+   * **Recipient Bank:** Verified bank name (e.g. `Access Bank (Sandbox)`) and masked account number (`•••• 6789`).
+   * **NIP Session ID:** Unique inter-bank settlement session ID for bank reconciliation.
+   * **Idempotency Reference:** Cryptographic payout reference with 1-click copy button.
+   * **Escrow Accounting:** Transparent itemization of Gross Rent Paid (100%), RentHub 2% Guarantee Fee, and Net Landlord Payout (98%).
 
 ---
 
@@ -168,7 +213,9 @@ Since we are in the Sandbox, you simulate the tenant making the bank transfer:
 | **4. Inflow Simulation**| Sandbox Inbound NIP | Verified ✅ | `POST /transaction-notification` returns 200 OK |
 | **5. Webhook Reconcile**| Express Webhook Rail| Verified ✅ | HMAC-SHA1 Base64 validation; flips status to `ESCROWED` |
 | **6. Handover OTP** | Email / SMS Rail | Verified ✅ | Resend high-contrast digit cards; 5-attempt rate limit |
-| **7. Landlord Payout** | Anchor Outbound NIP | Verified ✅ | `anchorService.disburseLandlordPayout` triggers NIP transfer |
+| **7. Landlord Bank Link**| Anchor NUBAN Resolve| Verified ✅ | `AnchorBankLinkingCard` with 1-click sandbox test fill button |
+| **8. Landlord Payout** | Anchor Outbound NIP | Verified ✅ | 2-step CounterParty + `NIPTransfer` dispatches funds to bank |
+| **9. Audit Records** | Settlement Table | Verified ✅ | Multi-rail filter, distinct badges, bank metadata breakdown |
 
 ---
 

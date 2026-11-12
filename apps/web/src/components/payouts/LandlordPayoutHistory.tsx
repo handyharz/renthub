@@ -21,6 +21,7 @@ import {
     X,
     Receipt,
     Wallet,
+    Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -68,6 +69,7 @@ export function LandlordPayoutHistory() {
     const [loading, setLoading] = useState(true);
     const [selectedPayout, setSelectedPayout] = useState<LandlordPayoutItem | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
+    const [railFilter, setRailFilter] = useState<string>("ALL");
     const [searchQuery, setSearchQuery] = useState("");
     const [linkStatus, setLinkStatus] = useState<{
         linked: boolean;
@@ -113,12 +115,19 @@ export function LandlordPayoutHistory() {
         let pendingInEscrow = 0;
         let platformFees = 0;
         let completedCount = 0;
+        let bankNipCount = 0;
+        let walletCount = 0;
 
         payouts.forEach((p) => {
             if (p.status === "COMPLETED") {
                 totalDisbursed += p.netAmount || 0;
                 platformFees += p.platformFee || 0;
                 completedCount++;
+                if (p.payoutRail === "ANCHOR_NIP") {
+                    bankNipCount++;
+                } else {
+                    walletCount++;
+                }
             } else if (p.status === "PENDING" || p.status === "PROCESSING" || p.status === "SKIPPED") {
                 pendingInEscrow += p.netAmount || 0;
             }
@@ -129,6 +138,8 @@ export function LandlordPayoutHistory() {
             pendingInEscrow,
             platformFees,
             completedCount,
+            bankNipCount,
+            walletCount,
             totalCount: payouts.length,
         };
     }, [payouts]);
@@ -146,6 +157,17 @@ export function LandlordPayoutHistory() {
                 }
             }
 
+            // Rail match
+            if (railFilter !== "ALL") {
+                const currentRail = p.payoutRail || "AFRIEXCHANGE_WALLET";
+                if (railFilter === "ANCHOR_NIP" && currentRail !== "ANCHOR_NIP") {
+                    return false;
+                }
+                if (railFilter === "AFRIEXCHANGE" && currentRail === "ANCHOR_NIP") {
+                    return false;
+                }
+            }
+
             // Search query match
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase();
@@ -158,16 +180,17 @@ export function LandlordPayoutHistory() {
                 const tenantName = `${p.transaction?.tenant?.firstName || ""} ${
                     p.transaction?.tenant?.lastName || ""
                 }`.toLowerCase();
+                const bank = (p.metadata?.bankName || "").toLowerCase();
                 const ref = (p.idempotencyKey || p.afriExchangeRef || p.id).toLowerCase();
 
-                if (!propertyTitle.includes(q) && !city.includes(q) && !tenantName.includes(q) && !ref.includes(q)) {
+                if (!propertyTitle.includes(q) && !city.includes(q) && !tenantName.includes(q) && !bank.includes(q) && !ref.includes(q)) {
                     return false;
                 }
             }
 
             return true;
         });
-    }, [payouts, statusFilter, searchQuery]);
+    }, [payouts, statusFilter, railFilter, searchQuery]);
 
     const copyToClipboard = (text: string, label: string) => {
         navigator.clipboard.writeText(text);
@@ -187,13 +210,13 @@ export function LandlordPayoutHistory() {
         }
     };
 
-    const getStatusBadge = (status: LandlordPayoutItem["status"]) => {
+    const getStatusBadge = (status: LandlordPayoutItem["status"], rail?: string) => {
         switch (status) {
             case "COMPLETED":
                 return (
                     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Settled to Wallet
+                        {rail === "ANCHOR_NIP" ? "Settled to Bank (NIP)" : "Settled to Wallet"}
                     </span>
                 );
             case "PENDING":
@@ -221,7 +244,7 @@ export function LandlordPayoutHistory() {
                 return (
                     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
                         <AlertCircle className="h-3.5 w-3.5" />
-                        Attention Needed
+                        Disbursement Failed
                     </span>
                 );
             default:
@@ -242,18 +265,15 @@ export function LandlordPayoutHistory() {
                     <div className="flex items-center justify-between">
                         <div className="min-w-0 flex-1">
                             <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] truncate">
-                                Total Settled to Wallet
+                                Total Settled Escrow
                             </p>
                             <div className="flex items-baseline gap-2 mt-1 min-w-0">
                                 <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 truncate">
                                     {formatPrice(stats.totalDisbursed)}
                                 </h3>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shrink-0">
-                                    NT
-                                </span>
                             </div>
                             <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
-                                {stats.completedCount} completed escrow releases • Settled in Naira Tokens (NT)
+                                {stats.completedCount} completed releases • {stats.bankNipCount} Bank (NIP), {stats.walletCount} AfriX
                             </p>
                         </div>
                         <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center border border-emerald-500/20 shrink-0 ml-3">
@@ -273,12 +293,9 @@ export function LandlordPayoutHistory() {
                                 <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 truncate">
                                     {formatPrice(stats.pendingInEscrow)}
                                 </h3>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0">
-                                    NT
-                                </span>
                             </div>
                             <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
-                                Released upon key handover verification • Secured in Naira Tokens (NT)
+                                Released upon key handover verification • Commercial Bank or AfriX
                             </p>
                         </div>
                         <div className="h-11 w-11 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center border border-amber-500/20 shrink-0 ml-3">
@@ -318,7 +335,7 @@ export function LandlordPayoutHistory() {
                                 <span>Escrow Settlement Records</span>
                             </h3>
                             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                                Transparent audit of your tenant rent escrows, platform commission, and wallet releases.
+                                Transparent audit of your tenant rent escrows, platform commission, and disbursement rails.
                             </p>
                         </div>
 
@@ -335,11 +352,54 @@ export function LandlordPayoutHistory() {
                     </div>
 
                     {/* Filter Pills and Search */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 w-full min-w-0">
-                        {/* Status Pills */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pb-1 sm:pb-0 w-full sm:w-auto min-w-0">
+                    <div className="flex flex-col gap-3 pt-2 w-full min-w-0">
+                        {/* Upper row: Rail switcher + Search */}
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full min-w-0">
+                            {/* Rail Selector Pills */}
+                            <div className="flex items-center gap-1.5 p-1 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl w-fit">
+                                {[
+                                    { key: "ALL", label: "All Rails", icon: null },
+                                    { key: "ANCHOR_NIP", label: "Commercial Bank (NIP)", icon: Landmark },
+                                    { key: "AFRIEXCHANGE", label: "AfriExchange Wallet", icon: Wallet },
+                                ].map((tab) => {
+                                    const Icon = tab.icon;
+                                    const active = railFilter === tab.key;
+                                    return (
+                                        <button
+                                            key={tab.key}
+                                            type="button"
+                                            onClick={() => setRailFilter(tab.key)}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                                                active
+                                                    ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                                            }`}
+                                        >
+                                            {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+                                            <span>{tab.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Search Input */}
+                            <div className="relative w-full lg:w-auto lg:min-w-[260px] min-w-0">
+                                <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                                <input
+                                    type="text"
+                                    placeholder="Search property, tenant, bank, ref..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full text-xs pl-8 pr-3 py-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--color-brand-green)]"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Lower row: Status Pills */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth pb-1 sm:pb-0 w-full min-w-0">
+                            <span className="text-[11px] font-semibold text-[var(--text-muted)] shrink-0 mr-1">Status:</span>
                             {[
-                                { key: "ALL", label: "All Payouts" },
+                                { key: "ALL", label: "All" },
                                 { key: "COMPLETED", label: "Settled" },
                                 { key: "PENDING", label: "In Escrow" },
                                 { key: "SKIPPED", label: "Deferred" },
@@ -348,27 +408,15 @@ export function LandlordPayoutHistory() {
                                 <button
                                     key={pill.key}
                                     onClick={() => setStatusFilter(pill.key)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
+                                    className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-colors ${
                                         statusFilter === pill.key
-                                            ? "bg-[var(--color-brand-green)] text-white shadow-sm"
+                                            ? "bg-[var(--text-primary)] text-[var(--bg-card)] shadow-xs"
                                             : "bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-color)]"
                                     }`}
                                 >
                                     {pill.label}
                                 </button>
                             ))}
-                        </div>
-
-                        {/* Search Input */}
-                        <div className="relative w-full sm:w-auto sm:min-w-[220px] min-w-0">
-                            <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-                            <input
-                                type="text"
-                                placeholder="Search property, tenant, ref..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full text-xs pl-8 pr-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--color-brand-green)]"
-                            />
                         </div>
                     </div>
                 </div>
@@ -427,14 +475,29 @@ export function LandlordPayoutHistory() {
                                                 {formatDate(payout.createdAt)}
                                             </td>
 
-                                            {/* Property & Tenant */}
-                                            <td className="py-3.5 px-4 max-w-[220px]">
-                                                <p className="font-semibold text-[var(--text-primary)] truncate">
-                                                    {propertyTitle}
-                                                </p>
-                                                <p className="text-[11px] text-[var(--text-muted)] truncate">
-                                                    Tenant: {tenantName}
-                                                </p>
+                                            {/* Property & Tenant & Rail Badge */}
+                                            <td className="py-3.5 px-4 max-w-[260px]">
+                                                <div className="space-y-1">
+                                                    <p className="font-semibold text-[var(--text-primary)] truncate">
+                                                        {propertyTitle}
+                                                    </p>
+                                                    <p className="text-[11px] text-[var(--text-muted)] truncate">
+                                                        Tenant: {tenantName}
+                                                    </p>
+                                                    <div className="flex items-center gap-1.5 pt-0.5">
+                                                        {payout.payoutRail === "ANCHOR_NIP" ? (
+                                                            <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                                                                <Landmark className="h-3 w-3 shrink-0" />
+                                                                Commercial Bank (Anchor NIP)
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                                                                <Wallet className="h-3 w-3 shrink-0" />
+                                                                AfriExchange Wallet ({payout.tokenType || "NT"})
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </td>
 
                                             {/* Gross Rent */}
@@ -454,7 +517,7 @@ export function LandlordPayoutHistory() {
 
                                             {/* Status Badge */}
                                             <td className="py-3.5 px-4 whitespace-nowrap">
-                                                {getStatusBadge(payout.status)}
+                                                {getStatusBadge(payout.status, payout.payoutRail)}
                                             </td>
 
                                             {/* Actions */}
@@ -518,7 +581,25 @@ export function LandlordPayoutHistory() {
                             <span className="text-xs font-semibold text-[var(--text-secondary)]">
                                 Settlement Status
                             </span>
-                            {getStatusBadge(selectedPayout.status)}
+                            {getStatusBadge(selectedPayout.status, selectedPayout.payoutRail)}
+                        </div>
+
+                        {/* Payout Rail Card */}
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)]">
+                            <span className="text-xs font-semibold text-[var(--text-secondary)]">
+                                Payout Rail
+                            </span>
+                            {selectedPayout.payoutRail === "ANCHOR_NIP" ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                                    <Landmark className="h-3.5 w-3.5" />
+                                    Anchor BaaS Commercial Bank NIP
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                                    <Wallet className="h-3.5 w-3.5" />
+                                    AfriExchange Mobile Rail ({selectedPayout.tokenType || "NT"})
+                                </span>
+                            )}
                         </div>
 
                         {/* Financial Calculation Box */}
@@ -560,19 +641,57 @@ export function LandlordPayoutHistory() {
                             </div>
                             <p className="text-[10px] text-right text-[var(--text-muted)]">
                                 {selectedPayout.payoutRail === "ANCHOR_NIP"
-                                    ? "98% disbursed directly to your commercial bank account via NIP"
+                                    ? "98% disbursed directly to your verified commercial bank account via NIP"
                                     : "98% deposited directly to your AfriExchange wallet"}
                             </p>
                         </div>
 
                         {/* Settlement Route & Audit */}
                         <div className="space-y-2 text-xs rounded-xl border border-[var(--border-color)] p-4 bg-[var(--bg-primary)]/20 font-mono">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[var(--text-muted)]">Payout Route:</span>
-                                <span className="font-semibold text-[var(--text-primary)]">
-                                    {selectedPayout.payoutRail === "ANCHOR_NIP" ? "Anchor BaaS Direct Bank NIP Rail" : "AfriExchange Mobile Rail"}
-                                </span>
-                            </div>
+                            {selectedPayout.payoutRail === "ANCHOR_NIP" ? (
+                                <>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[var(--text-muted)]">Recipient Bank:</span>
+                                        <span className="font-semibold text-[var(--text-primary)]">
+                                            {selectedPayout.metadata?.bankName || "Commercial Bank"}
+                                        </span>
+                                    </div>
+                                    {selectedPayout.metadata?.accountNumber && (
+                                        <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]">
+                                            <span className="text-[var(--text-muted)]">Account Number:</span>
+                                            <span className="font-semibold text-[var(--text-primary)]">
+                                                •••• {selectedPayout.metadata.accountNumber.slice(-4)}
+                                                {selectedPayout.metadata?.accountName ? ` (${selectedPayout.metadata.accountName})` : ""}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {selectedPayout.metadata?.nipSessionId && (
+                                        <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]">
+                                            <span className="text-[var(--text-muted)]">NIP Session ID:</span>
+                                            <span className="text-emerald-600 truncate max-w-[180px]">
+                                                {selectedPayout.metadata.nipSessionId}
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[var(--text-muted)]">Payout Route:</span>
+                                        <span className="font-semibold text-[var(--text-primary)]">
+                                            AfriExchange Mobile Rail
+                                        </span>
+                                    </div>
+                                    {selectedPayout.afriExchangeRef && (
+                                        <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]">
+                                            <span className="text-[var(--text-muted)]">AfriX Tx ID:</span>
+                                            <span className="font-bold text-emerald-600 truncate max-w-[180px]">
+                                                {selectedPayout.afriExchangeRef}
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
 
                             <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]">
                                 <span className="text-[var(--text-muted)]">Idempotency Reference:</span>
@@ -585,27 +704,18 @@ export function LandlordPayoutHistory() {
                                 </button>
                             </div>
 
-                            {selectedPayout.afriExchangeRef && (
-                                <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]">
-                                    <span className="text-[var(--text-muted)]">AfriX Tx ID:</span>
-                                    <span className="font-bold text-emerald-600 truncate max-w-[180px]">
-                                        {selectedPayout.afriExchangeRef}
-                                    </span>
-                                </div>
-                            )}
-
                             {selectedPayout.failureReason && (
                                 <>
                                     {selectedPayout.failureReason.toLowerCase().includes("not linked") ? (
                                         linkStatus?.linked ? (
                                             <div className="pt-2 text-emerald-600 dark:text-emerald-400 text-[11px] border-t border-emerald-500/20 flex items-center gap-1.5">
                                                 <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
-                                                <span>AfriExchange account linked ({linkStatus.afriExchangeWalletAddress ? `${linkStatus.afriExchangeWalletAddress.slice(0, 8)}...` : linkStatus.afriExchangeAccountEmail}). Payout queued for escrow release.</span>
+                                                <span>Settlement account linked. Payout queued for escrow release.</span>
                                             </div>
                                         ) : (
                                             <div className="pt-2 text-amber-600 text-[11px] border-t border-amber-500/20 flex items-center gap-1.5">
                                                 <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                                                <span>Link your AfriExchange settlement account above to receive this payout.</span>
+                                                <span>Link your settlement bank or AfriExchange account above to receive this payout.</span>
                                             </div>
                                         )
                                     ) : (

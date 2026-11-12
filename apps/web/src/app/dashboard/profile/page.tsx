@@ -27,9 +27,12 @@ import {
     Save,
     Briefcase,
     RefreshCw,
+    Landmark,
+    Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { AnchorBankLinkingCard } from "@/components/payouts/AnchorBankLinkingCard";
 import { AfriExchangeLinkingCard } from "@/components/payouts/AfriExchangeLinkingCard";
 import { AgentDeactivationModal } from "@/components/agent/AgentDeactivationModal";
 
@@ -43,6 +46,7 @@ export default function ProfilePage() {
     const [showDeactivateModal, setShowDeactivateModal] = useState(false);
     const [switchingRole, setSwitchingRole] = useState(false);
     const [activeSection, setActiveSection] = useState<"all" | "personal" | "kyc" | "settlement">("all");
+    const [settlementRail, setSettlementRail] = useState<"BANK" | "AFRIEXCHANGE">("BANK");
 
     // Form Stats
     const [formData, setFormData] = useState({
@@ -494,15 +498,60 @@ export default function ProfilePage() {
                             </div>
                         )}
 
-                        {/* Section 3: AfriExchange Payout Settlement */}
+                        {/* Section 3: Payout Settlement (Bank & AfriExchange) */}
                         {(isLandlord || isAgent) && (activeSection === "all" || activeSection === "settlement") && (
                             <div className="space-y-4">
-                                <AfriExchangeLinkingCard
-                                    dbUser={dbUser}
-                                    onRefresh={fetchUserProfile}
-                                    title={isAgent ? "AfriExchange Commission Payout Settlement" : "AfriExchange Rent Payout Settlement"}
-                                    subtitle={isAgent ? "Your earned agent commissions are automatically settled directly into your linked AfriX mobile wallet or Nigerian bank account." : "Escrow releases are automatically settled directly into your linked AfriX mobile wallet."}
-                                />
+                                {/* Settlement Rail Tab Selector */}
+                                <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full sm:w-fit">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSettlementRail("BANK")}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                                            settlementRail === "BANK"
+                                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                                        }`}
+                                    >
+                                        <Landmark className="h-4 w-4 shrink-0" />
+                                        <span>Commercial Bank (Anchor NIP)</span>
+                                        <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                                            settlementRail === "BANK"
+                                                ? "bg-white/20 text-white"
+                                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                        }`}>
+                                            Recommended
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setSettlementRail("AFRIEXCHANGE")}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-1 sm:flex-initial ${
+                                            settlementRail === "AFRIEXCHANGE"
+                                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                                        }`}
+                                    >
+                                        <Wallet className="h-4 w-4 shrink-0" />
+                                        <span>AfriExchange Wallet (Crypto)</span>
+                                    </button>
+                                </div>
+
+                                {settlementRail === "BANK" ? (
+                                    <AnchorBankLinkingCard
+                                        dbUser={dbUser}
+                                        onRefresh={fetchUserProfile}
+                                        title={isAgent ? "Commercial Bank Account (Anchor NIP Settlement)" : "Nigerian Commercial Bank (Anchor NIP Settlement)"}
+                                        subtitle={isAgent ? "Earned commissions will be sent automatically via NIP to your verified Nigerian commercial bank account." : "Released rent escrow payments will be sent directly via NIP to your verified Nigerian commercial bank account."}
+                                    />
+                                ) : (
+                                    <AfriExchangeLinkingCard
+                                        dbUser={dbUser}
+                                        onRefresh={fetchUserProfile}
+                                        title={isAgent ? "AfriExchange Commission Payout Settlement" : "AfriExchange Rent Payout Settlement"}
+                                        subtitle={isAgent ? "Your earned agent commissions are automatically settled directly into your linked AfriX mobile wallet or Nigerian bank account." : "Escrow releases are automatically settled directly into your linked AfriX mobile wallet."}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>
