@@ -203,6 +203,81 @@ In the **Escrow Settlement Records** section of the Landlord Dashboard:
 
 ---
 
+### Step 8: Caution Deposit Custody, Move-Out Reclaim & Dispute Protocol
+
+The Caution Deposit flow is a completely closed-loop, tri-party protocol between the **Tenant**, the **Landlord**, and **Anchor BaaS Escrow**.
+
+#### 1. Financial Accounting & 4% Total Take-Rate
+RentHub operates on a **4% total platform commission**:
+* **Tenant-Side (2% Escrow Protection Fee):** Paid on top of the rent at checkout. *(e.g. ₦20,000 on a ₦1,000,000 lease).*
+* **Landlord-Side (2% Escrow Guarantee / Commission Fee):** Deducted from gross rent upon 6-digit key handover verification. *(e.g. ₦20,000 deducted, yielding ₦980,000 net payout).*
+* **Platform Earnings:** RentHub collects ₦40,000 total (4%), swept into RentHub's Anchor Revenue Ledger (`17943034048272-anc_acc`) via a ₦0 intra-bank book transfer.
+
+#### 2. Custodial Segregation: Who Holds the Caution Deposit?
+**RentHub holds the Caution Deposit in the Anchor FBO Segregated Vault (`17943034048583-anc_acc`), NOT the Landlord.**
+
+When the tenant hands over the 6-digit OTP and the landlord verifies it:
+1. **Net Rent (98%)** is disbursed to the landlord's commercial bank account.
+2. **Platform Commission (2% + 2%)** is swept to the RentHub revenue ledger.
+3. **Caution Deposit REMAINS in Anchor FBO Escrow** for the entire 12-month tenancy.
+
+> [!IMPORTANT]
+> **Why Landlords Must Never Hold the Caution Deposit (RentHub's Defensive Moat):**  
+> In traditional Nigerian real estate, landlords treat caution deposits as free spending money and almost **never refund them** (fabricating bogus "repairs" or dodging calls).  
+> By locking the deposit in Anchor BaaS:
+> * **Guaranteed Refund Assurance:** Tenants trust RentHub because landlords cannot touch or withhold their deposit.
+> * **1-Click ₦0 Caution Rollover (`renewalService.ts:95`):** On lease renewal, the existing caution deposit rolls over with **₦0 new caution deposit required**.
+> * **Custodial Float:** Building institutional escrow balances under custody in Anchor.
+
+#### 3. End-of-Tenancy Move-Out & Reclaim Protocol
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Tenant
+    participant RentHub as RentHub Platform
+    participant Anchor as Anchor FBO Escrow Pool
+    actor Landlord
+
+    Note over Tenant,Landlord: Step 1: Move-Out Condition Inspection
+    Landlord->>RentHub: Submits Move-Out Condition Report & Photos
+    alt Scenario A: Clean Move-Out (0 Deductions)
+        RentHub->>Anchor: Outbound NIP dispatches 100% Caution Refund to Tenant Bank
+        Anchor-->>Tenant: 100% Caution Deposit hits Tenant Bank
+    else Scenario B: Landlord Claims Damage Deductions
+        Tenant->>RentHub: Reviews itemized damage invoice
+        alt Tenant Accepts
+            RentHub->>Anchor: NIP dispatches repair amount to Landlord Bank
+            RentHub->>Anchor: NIP dispatches remaining balance to Tenant Bank
+        else Tenant Contests (Dispute Raised)
+            Tenant->>RentHub: Clicks "Contest Deductions"
+            Note over RentHub,Anchor: Funds ATOMICALLY FROZEN in Anchor Escrow
+            RentHub->>RentHub: Escrow Arbitration Desk compares Move-In vs Move-Out photos
+            RentHub->>Anchor: Arbitrated split disbursed to Landlord & Tenant
+        end
+    end
+```
+
+#### 4. The Dispute Connection & Arbitration Protocol
+1. **Tenant Instant Contest (`transactionService.ts:922`):**
+   * Tenant reviews the landlord's damage claim on the dashboard.
+   * Clicking **"Contest Deductions"** instantly transitions the transaction to:
+     * `disputed: true`
+     * `status: "CONTESTED_IN_ARBITRATION"`
+2. **Atomic Escrow Freeze:**
+   * The deposit is locked inside Anchor FBO escrow; neither party can withdraw or touch the funds.
+3. **Escrow Arbitration Desk Review (`adminService.ts:525`):**
+   * RentHub arbitrates using side-by-side evidence:
+     1. **Move-In Inventory Condition Photos** (recorded at key handover).
+     2. **Move-Out Report & Photos** submitted by the landlord.
+     3. **Statutory Standards:** Fair wear-and-tear (e.g. minor paint aging) is protected by law and cannot be deducted.
+4. **Arbitrated Settlement Payout:**
+   * Unjustified claims are dismissed and refunded 100% to the tenant.
+   * Legitimate repair quotes are approved to the landlord via Anchor NIP, and the remaining balance is refunded to the tenant via Anchor NIP.
+   * The dispute flag is cleared (`disputed: false`).
+
+---
+
 ## Verification & Status Checklist
 
 | Step | Component | Status | Verification Method |
@@ -216,6 +291,7 @@ In the **Escrow Settlement Records** section of the Landlord Dashboard:
 | **7. Landlord Bank Link**| Anchor NUBAN Resolve| Verified ✅ | `AnchorBankLinkingCard` with 1-click sandbox test fill button |
 | **8. Landlord Payout** | Anchor Outbound NIP | Verified ✅ | 2-step CounterParty + `NIPTransfer` dispatches funds to bank |
 | **9. Audit Records** | Settlement Table | Verified ✅ | Multi-rail filter, distinct badges, bank metadata breakdown |
+| **10. Caution Custody** | Anchor FBO Vault | Verified ✅ | Caution retained in FBO; move-out report & dispute protocol |
 
 ---
 
