@@ -510,13 +510,14 @@ export class TransactionService {
 
         const released = await prisma.transaction.findUniqueOrThrow({ where: { id: transactionId } });
 
-        await prisma.property.update({
-            where: { id: transaction.propertyId },
-            data: { status: "RENTED" }
-        });
+        // Fix (Claude): Do NOT mark property as RENTED yet — that happens in disburseLandlordPayout
+        // only after Anchor confirms the NIP transfer is SUCCESSFUL. Marking RENTED before
+        // payout confirmation creates a false state where the landlord believes they've been paid.
+        // Property stays UNDER_OFFER until payout webhook confirms SUCCESSFUL transfer.
 
         await this.completeAgentListingForTransaction(transaction.propertyId, transaction.rentAmount);
 
+        // Enqueue payout — it will mark property RENTED only on confirmed success
         this.enqueueLandlordPayout(transactionId, transaction.paymentGateway);
 
         return released;

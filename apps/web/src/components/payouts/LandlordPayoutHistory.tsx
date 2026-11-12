@@ -230,7 +230,8 @@ export function LandlordPayoutHistory() {
                 return (
                     <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Disbursing
+                        {/* Fix (Claude): Transfer submitted but not yet confirmed by Anchor webhook */}
+                        Payout Processing
                     </span>
                 );
             case "SKIPPED":
@@ -711,6 +712,20 @@ export function LandlordPayoutHistory() {
                                         {selectedPayout.payoutRail === "ANCHOR_NIP"
                                             ? "Funds successfully settled and confirmed via NIP direct bank rail."
                                             : "Funds successfully settled into AfriExchange wallet."}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Fix (Claude): PROCESSING means payout was submitted to Anchor
+                                but we haven't received a transfer.success webhook yet.
+                                Do NOT show "confirmed" language until COMPLETED. */}
+                            {selectedPayout.status === "PROCESSING" && (
+                                <div className="pt-2 text-blue-600 dark:text-blue-400 text-[11px] border-t border-blue-500/20 flex items-center gap-1.5">
+                                    <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin" />
+                                    <span>
+                                        {selectedPayout.payoutRail === "ANCHOR_NIP"
+                                            ? "NIP transfer submitted to Anchor. Funds are on their way and will arrive within minutes. This status updates automatically."
+                                            : "Payout is being processed. Please wait for confirmation."}
                                     </span>
                                 </div>
                             )}

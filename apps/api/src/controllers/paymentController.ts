@@ -883,10 +883,81 @@ export class PaymentController {
                 const isCreditEvent =
                     eventType === "account.credited" ||
                     eventType === "inflow.success" ||
-                    eventType === "transfer.success" ||
                     eventType === "inward_payment.success" ||
                     eventType === "payment.received" ||
                     eventType === "payment.create";
+
+                // Outbound transfer confirmation events — used to confirm landlord payout
+                const isTransferConfirmEvent =
+                    eventType === "transfer.success" ||
+                    eventType === "transfer.completed" ||
+                    eventType === "nip_transfer.success";
+
+                if (isTransferConfirmEvent) {
+                    // Fix (Claude): When Anchor confirms the outbound NIP transfer,
+                    // mark the payout COMPLETED and property RENTED.
+                    const transferObj = data.attributes?.transfer || data.transfer || data;
+                    const transferRef: string | undefined =
+                        transferObj?.reference ||
+                        transferObj?.attributes?.reference ||
+                        data.attributes?.reference;
+                    const transferId: string | undefined =
+                        data.id ?? transferObj?.id ?? transferObj?.transferId;
+
+                    if (transferRef) {
+                        const payout = await prisma.landlordPayout.findFirst({
+                            where: {
+                                OR: [
+                                    { idempotencyKey: transferRef },
+                                    { anchorReference: transferRef },
+                                    ...(transferId ? [{ anchorTransferId: transferId }] : []),
+                                ],
+                            },
+                            include: { transaction: { include: { property: true } } },
+                        });
+
+                        if (payout && payout.status !== "COMPLETED") {
+                            await prisma.landlordPayout.update({
+                                where: { id: payout.id },
+                                data: {
+                                    status: "COMPLETED",
+                                    failureReason: null,
+                                    processedAt: new Date(),
+                                    anchorTransferId: transferId || payout.anchorTransferId,
+                                },
+                            });
+
+                            // Now safe to mark the property as RENTED
+                            await prisma.property.update({
+                                where: { id: payout.transaction.propertyId },
+                                data: { status: "RENTED" },
+                            });
+
+                            console.info(
+                                `[Anchor Webhook] Transfer confirmed — payout ${payout.id} → COMPLETED. ` +
+                                `Property ${payout.transaction.propertyId} → RENTED. ref=${transferRef}`
+                            );
+
+                            // Notify landlord of confirmed disbursement
+                            const landlordId = payout.landlordId;
+                            const netAmount = payout.netAmount;
+                            await prisma.notification.create({
+                                data: {
+                                    userId: landlordId,
+                                    type: "PAYMENT_SUCCESS",
+                                    title: "Payout Confirmed ✓",
+                                    message: `₦${netAmount.toLocaleString()} has been confirmed by NIP and is on its way to your bank account.`,
+                                    actionUrl: "/dashboard/payouts",
+                                    actionText: "View Payout",
+                                },
+                            }).catch((e: any) => console.warn("[Anchor Webhook] Payout confirm notify error:", e));
+                        } else if (payout) {
+                            console.info(`[Anchor Webhook] Transfer confirm skipped — payout ${payout.id} already COMPLETED. ref=${transferRef}`);
+                        } else {
+                            console.warn(`[Anchor Webhook] Transfer confirm — no payout found for ref=${transferRef} transferId=${transferId}`);
+                        }
+                    }
+                }
 
                 if (isCreditEvent) {
                     const paymentObj = data.attributes?.payment || data.payment || data;

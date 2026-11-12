@@ -220,8 +220,21 @@ export class AnchorService {
     }
 
     /**
-     * Disburse escrowed rent to Landlord via Anchor NIP Transfer rail (₦20 flat fee).
-     * Enforces deterministic idempotency key = "payout_" + transactionId.
+     * Calculate the actual Anchor NIP transfer fee for a given kobo amount.
+     * Anchor charges: ₦50 flat + 0.1% of amount, capped at ₦50,000.
+     * (Note: values < ₦10,000 are free — but rent amounts always exceed this.)
+     */
+    computeAnchorNipFeeKobo(amountKobo: number): number {
+        const flatFeeKobo = 5000;                       // ₦50 flat
+        const percentFeeKobo = Math.round(amountKobo * 0.001); // 0.1%
+        const rawFeeKobo = flatFeeKobo + percentFeeKobo;
+        return Math.min(rawFeeKobo, 5000000);            // cap at ₦50,000
+    }
+
+    /**
+     * Disburse escrowed rent to Landlord via Anchor NIP Transfer rail.
+     * Fee: ₦50 + 0.1% (capped at ₦50,000). Enforces deterministic
+     * idempotency key = "payout_" + transactionId.
      */
     async disburseToLandlord(params: AnchorPayoutParams): Promise<AnchorPayoutResult> {
         const {
@@ -240,7 +253,7 @@ export class AnchorService {
                 transferId: `trf_mock_${transactionId.slice(-8)}`,
                 reference: idempotencyKey,
                 status: "SUCCESSFUL",
-                feeKobo: 2000, // ₦20 flat in kobo
+                feeKobo: this.computeAnchorNipFeeKobo(amountKobo),
                 destinationAccount: `${destinationAccountNumber} (${destinationBankCode})`,
             };
         }
@@ -258,7 +271,9 @@ export class AnchorService {
                                 bankCode: destinationBankCode,
                                 accountName: destinationAccountName,
                                 accountNumber: destinationAccountNumber,
-                                verifyName: false,
+                                // Fix (Claude): In production, verify the account name matches
+                                // the landlord's registered account to prevent misdirected payouts.
+                                verifyName: process.env.NODE_ENV === "production",
                             },
                         },
                     },
@@ -310,25 +325,36 @@ export class AnchorService {
             );
 
             const transfer = response.data?.data;
+            const transferStatus = transfer?.attributes?.status;
+            // Anchor may return "SUCCESS", "PENDING", "PROCESSING", or "FAILED"
+            const normalizedStatus: AnchorPayoutResult["status"] =
+                transferStatus === "SUCCESS" || transferStatus === "SUCCESSFUL"
+                    ? "SUCCESSFUL"
+                    : transferStatus === "FAILED"
+                    ? "FAILED"
+                    : "PENDING";
+            const computedFee = this.computeAnchorNipFeeKobo(amountKobo);
             return {
                 transferId: transfer?.id || `trf_${Date.now()}`,
                 reference: transfer?.attributes?.reference || idempotencyKey,
-                status: transfer?.attributes?.status === "SUCCESS" ? "SUCCESSFUL" : "PENDING",
-                feeKobo: transfer?.attributes?.fee || 5000,
+                status: normalizedStatus,
+                feeKobo: transfer?.attributes?.fee ?? computedFee,
                 destinationAccount: `${destinationAccountNumber} (${destinationBankCode})`,
             };
         } catch (error: any) {
             console.error("[AnchorService] Landlord NIP disbursement failed:", error.response?.data || error.message);
-            // In Sandbox mode, if Anchor returns 500 because the organization parent account has an uninitialized core ledger reference
+            // Fix (Claude): A 500 from Anchor means the transfer did NOT go through —
+            // likely because the payment is still unsettled on Anchor's side.
+            // We MUST NOT simulate success here — throw so disburseLandlordPayout
+            // marks the payout as FAILED and keeps the property in PAYOUT_PENDING state.
+            // The sandbox "Internal Error" is a real error, not a quirk to work around.
             if (this.baseUrl.includes("sandbox") && (error.response?.status === 500 || error.response?.data?.errors?.[0]?.title === "Internal Error")) {
-                console.warn(`[AnchorService] Sandbox ledger float pending from Anchor for ${this.escrowPoolId}. Completing simulated sandbox NIP payout.`);
-                return {
-                    transferId: `trf_sandbox_${transactionId.slice(-8)}`,
-                    reference: idempotencyKey,
-                    status: "SUCCESSFUL",
-                    feeKobo: 5000, // ₦50 in kobo
-                    destinationAccount: `${destinationAccountNumber} (${destinationBankCode})`,
-                };
+                console.warn(
+                    `[AnchorService] Anchor sandbox returned 500 on POST /transfers for tx=${transactionId}. ` +
+                    `This likely means the payment (${idempotencyKey}) is unsettled. ` +
+                    `Ask Fortunate at Anchor to settle it and retry payout.`
+                );
+                // Re-throw as a retriable error — do NOT fake success
             }
             throw new Error(error.response?.data?.errors?.[0]?.detail || error.response?.data?.message || "Anchor NIP disbursement failed");
         }
@@ -571,14 +597,19 @@ export class AnchorService {
                 narration: `RentHub Escrow Release for ${transaction.property.title}`,
             });
 
+            // Fix (Claude): Only mark COMPLETED when Anchor confirms the transfer.
+            // If Anchor returns PENDING (queued transfer), keep payout as PROCESSING until
+            // a transfer webhook confirms it. Never mark COMPLETED on a 500 or unknown status.
+            const payoutStatus = transferResult.status === "SUCCESSFUL" ? "COMPLETED" : "PROCESSING";
+
             await prisma.landlordPayout.update({
                 where: { id: payout.id },
                 data: {
-                    status: "COMPLETED",
+                    status: payoutStatus,
                     failureReason: null,
                     anchorTransferId: transferResult.transferId,
                     anchorReference: transferResult.reference,
-                    processedAt: new Date(),
+                    processedAt: payoutStatus === "COMPLETED" ? new Date() : null,
                     metadata: {
                         rail: "ANCHOR_NIP",
                         feeKobo: transferResult.feeKobo,
@@ -587,20 +618,49 @@ export class AnchorService {
                 },
             });
 
-            // Dispatch in-app notification to landlord
-            try {
-                await prisma.notification.create({
-                    data: {
-                        userId: landlord.id,
-                        type: "PAYMENT_SUCCESS",
-                        title: "Escrow Disbursed to Bank Account",
-                        message: `₦${netAmount.toLocaleString()} has been disbursed via NIP to your bank account (${accountNumber}) for ${transaction.property.title}.`,
-                        actionUrl: "/dashboard/payouts",
-                        actionText: "View Payout",
-                    },
+            // Fix (Claude): Only mark property RENTED and notify landlord when
+            // the transfer is confirmed SUCCESSFUL, not while it's still PROCESSING.
+            if (payoutStatus === "COMPLETED") {
+                await prisma.property.update({
+                    where: { id: transaction.propertyId },
+                    data: { status: "RENTED" },
                 });
-            } catch (notifyErr) {
-                console.warn("[AnchorService] Failed to create payout notification:", notifyErr);
+
+                // Dispatch in-app notification to landlord
+                try {
+                    await prisma.notification.create({
+                        data: {
+                            userId: landlord.id,
+                            type: "PAYMENT_SUCCESS",
+                            title: "Escrow Disbursed to Bank Account",
+                            message: `₦${netAmount.toLocaleString()} has been disbursed via NIP to your bank account (${accountNumber}) for ${transaction.property.title}.`,
+                            actionUrl: "/dashboard/payouts",
+                            actionText: "View Payout",
+                        },
+                    });
+                } catch (notifyErr) {
+                    console.warn("[AnchorService] Failed to create payout notification:", notifyErr);
+                }
+            } else {
+                // Payout is queued on Anchor's side — notify landlord of pending state
+                console.info(
+                    `[AnchorService] Payout for tx=${transactionId} queued on Anchor (status=PROCESSING). ` +
+                    `transferId=${transferResult.transferId}. Awaiting transfer webhook to confirm.`
+                );
+                try {
+                    await prisma.notification.create({
+                        data: {
+                            userId: landlord.id,
+                            type: "PAYMENT_SUCCESS",
+                            title: "Payout Processing",
+                            message: `Your payout of ₦${netAmount.toLocaleString()} for ${transaction.property.title} is being processed via NIP. It will arrive within 1 business day.`,
+                            actionUrl: "/dashboard/payouts",
+                            actionText: "View Payout",
+                        },
+                    });
+                } catch (notifyErr) {
+                    console.warn("[AnchorService] Failed to create payout-processing notification:", notifyErr);
+                }
             }
         } catch (disburseErr: any) {
             console.error(`[AnchorService] NIP transfer failed for tx=${transactionId}:`, disburseErr.message);
