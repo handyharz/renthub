@@ -3,6 +3,7 @@ import { Prisma, PayoutStatus } from "@prisma/client";
 import { prisma } from "../config/database";
 import { afriExchangePayoutService } from "../services/afriExchangePayoutService";
 import { afriExchangeAccountVerificationService } from "../services/afriExchangeAccountVerificationService";
+import { anchorService } from "../services/anchorService";
 
 /** Helper to extract a safe error message from unknown catch values */
 const getErrorMessage = (error: unknown): string =>
@@ -683,6 +684,24 @@ export class PayoutController {
                     bankLinkedAt: true,
                 },
             });
+
+            // Auto-disburse any previously SKIPPED Anchor payouts for this landlord now that bank is linked
+            try {
+                const skippedPayouts = await prisma.landlordPayout.findMany({
+                    where: {
+                        landlordId: userId,
+                        payoutRail: "ANCHOR_NIP",
+                        status: "SKIPPED",
+                    },
+                });
+                for (const p of skippedPayouts) {
+                    anchorService.disburseLandlordPayout(p.transactionId).catch((err: any) =>
+                        console.error(`[payoutController] Auto-disburse Anchor payout failed for tx=${p.transactionId}:`, err)
+                    );
+                }
+            } catch (autoQueueErr) {
+                console.warn("[payoutController] Failed to auto-disburse skipped Anchor payouts after bank link:", autoQueueErr);
+            }
 
             return res.status(200).json({
                 success: true,

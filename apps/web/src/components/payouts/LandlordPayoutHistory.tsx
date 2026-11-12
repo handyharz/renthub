@@ -704,7 +704,18 @@ export function LandlordPayoutHistory() {
                                 </button>
                             </div>
 
-                            {selectedPayout.failureReason && (
+                            {selectedPayout.status === "COMPLETED" && (
+                                <div className="pt-2 text-emerald-600 dark:text-emerald-400 text-[11px] border-t border-emerald-500/20 flex items-center gap-1.5">
+                                    <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                                    <span>
+                                        {selectedPayout.payoutRail === "ANCHOR_NIP"
+                                            ? "Funds successfully settled and confirmed via NIP direct bank rail."
+                                            : "Funds successfully settled into AfriExchange wallet."}
+                                    </span>
+                                </div>
+                            )}
+
+                            {selectedPayout.status !== "COMPLETED" && selectedPayout.failureReason && (
                                 <>
                                     {selectedPayout.failureReason.toLowerCase().includes("not linked") ? (
                                         linkStatus?.linked ? (

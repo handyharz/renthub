@@ -544,6 +544,19 @@ export class AnchorService {
             });
         }
 
+        const isLive = process.env.NODE_ENV === "production" && !this.baseUrl.includes("sandbox");
+        if (isLive && (!landlord.bankCode || !landlord.accountNumber)) {
+            console.warn(`[AnchorService] Landlord ${landlord.id} has no linked bank account in live mode. Marking payout as SKIPPED.`);
+            await prisma.landlordPayout.update({
+                where: { id: payout.id },
+                data: {
+                    status: "SKIPPED",
+                    failureReason: "Landlord bank account not linked. Please link your commercial bank account under Payouts & Settlements to receive this escrow release.",
+                },
+            });
+            return;
+        }
+
         const bankCode = landlord.bankCode || "000014";
         const accountNumber = landlord.accountNumber || "0123456789";
         const accountName = landlord.accountName || `${landlord.firstName || ""} ${landlord.lastName || ""}`.trim() || "Landlord";
@@ -562,6 +575,7 @@ export class AnchorService {
                 where: { id: payout.id },
                 data: {
                     status: "COMPLETED",
+                    failureReason: null,
                     anchorTransferId: transferResult.transferId,
                     anchorReference: transferResult.reference,
                     processedAt: new Date(),
