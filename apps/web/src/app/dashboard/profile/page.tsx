@@ -269,19 +269,17 @@ export default function ProfilePage() {
                         <ShieldCheck className="h-3.5 w-3.5" />
                         Government ID & KYC
                     </button>
-                    {(isLandlord || isAgent) && (
-                        <button
-                            onClick={() => setActiveSection("settlement")}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
-                                activeSection === "settlement"
-                                    ? "bg-[var(--color-brand-green)] text-white shadow-xs"
-                                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
-                            }`}
-                        >
-                            <Building2 className="h-3.5 w-3.5" />
-                            AfriExchange Payouts
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setActiveSection("settlement")}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 ${
+                            activeSection === "settlement"
+                                ? "bg-[var(--color-brand-green)] text-white shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                        }`}
+                    >
+                        <Building2 className="h-3.5 w-3.5" />
+                        {isLandlord ? "Rent Payouts & Bank" : isAgent ? "Commissions & Bank" : "Caution Refund Account"}
+                    </button>
                 </div>
 
                 {/* Two-Column Grid: Form & Settings on Left, Trust Score & Tips on Right */}
@@ -498,8 +496,8 @@ export default function ProfilePage() {
                             </div>
                         )}
 
-                        {/* Section 3: Payout Settlement (Bank & AfriExchange) */}
-                        {(isLandlord || isAgent) && (activeSection === "all" || activeSection === "settlement") && (
+                        {/* Section 3: Payout Settlement & Caution Refund (Bank & AfriExchange) */}
+                        {(activeSection === "all" || activeSection === "settlement") && (
                             <div className="space-y-4">
                                 {/* Settlement Rail Tab Selector */}
                                 <div className="flex items-center gap-2 p-1.5 bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl w-full sm:w-fit">
@@ -541,15 +539,39 @@ export default function ProfilePage() {
                                     <AnchorBankLinkingCard
                                         dbUser={dbUser}
                                         onRefresh={fetchUserProfile}
-                                        title={isAgent ? "Commercial Bank Account (Anchor NIP Settlement)" : "Nigerian Commercial Bank (Anchor NIP Settlement)"}
-                                        subtitle={isAgent ? "Earned commissions will be sent automatically via NIP to your verified Nigerian commercial bank account." : "Released rent escrow payments will be sent directly via NIP to your verified Nigerian commercial bank account."}
+                                        title={
+                                            isLandlord
+                                                ? "Nigerian Commercial Bank (Anchor NIP Settlement)"
+                                                : isAgent
+                                                ? "Commercial Bank Account (Anchor NIP Settlement)"
+                                                : "Caution Deposit Refund Account (Anchor NIP)"
+                                        }
+                                        subtitle={
+                                            isLandlord
+                                                ? "Released rent escrow payments will be sent directly via NIP to your verified Nigerian commercial bank account."
+                                                : isAgent
+                                                ? "Earned commissions will be sent automatically via NIP to your verified Nigerian commercial bank account."
+                                                : "Your refundable caution deposit will be disbursed directly via NIP to your verified Nigerian commercial bank account upon lease completion."
+                                        }
                                     />
                                 ) : (
                                     <AfriExchangeLinkingCard
                                         dbUser={dbUser}
                                         onRefresh={fetchUserProfile}
-                                        title={isAgent ? "AfriExchange Commission Payout Settlement" : "AfriExchange Rent Payout Settlement"}
-                                        subtitle={isAgent ? "Your earned agent commissions are automatically settled directly into your linked AfriX mobile wallet or Nigerian bank account." : "Escrow releases are automatically settled directly into your linked AfriX mobile wallet."}
+                                        title={
+                                            isLandlord
+                                                ? "AfriExchange Rent Payout Settlement"
+                                                : isAgent
+                                                ? "AfriExchange Commission Payout Settlement"
+                                                : "AfriExchange Caution Refund Wallet"
+                                        }
+                                        subtitle={
+                                            isLandlord
+                                                ? "Escrow releases are automatically settled directly into your linked AfriX mobile wallet."
+                                                : isAgent
+                                                ? "Your earned agent commissions are automatically settled directly into your linked AfriX mobile wallet."
+                                                : "Your refundable caution deposit can be settled directly into your linked AfriX mobile wallet."
+                                        }
                                     />
                                 )}
                             </div>
