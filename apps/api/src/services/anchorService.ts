@@ -617,6 +617,25 @@ export class AnchorService {
     }
 
     /**
+     * Query recent incoming payments from Anchor API.
+     */
+    async getRecentPayments(): Promise<any[]> {
+        if (!this.apiKey || process.env.NODE_ENV === "test" || process.env.ANCHOR_MOCK === "true") {
+            return [];
+        }
+
+        try {
+            const response = await axios.get(`${this.baseUrl}/payments`, {
+                headers: this.getHeaders(),
+            });
+            return response.data?.data || [];
+        } catch (error: any) {
+            console.error("[AnchorService] Failed to fetch payments list:", error.response?.data || error.message);
+            return [];
+        }
+    }
+
+    /**
      * Query total balance in the organization escrow pool account.
      */
     async getEscrowPoolBalance(): Promise<number> {

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { TransactionStatus } from "@prisma/client";
 import { paymentService } from "../services/paymentService";
 import { transactionService } from "../services/transactionService";
 import { afriExchangePaymentService } from "../services/afriExchangePaymentService";
@@ -750,6 +751,87 @@ export class PaymentController {
     }
 
     /**
+     * Active Verification of Anchor Payment
+     * POST /api/payments/anchor/verify/:transactionId
+     * Queries Anchor API payments list directly for matches against the Virtual NUBAN ID.
+     */
+    async verifyAnchorPayment(req: Request, res: Response) {
+        try {
+            const transactionId = req.params.transactionId as string;
+
+            const transaction = await prisma.transaction.findUnique({
+                where: { id: transactionId },
+                include: { property: true },
+            });
+
+            if (!transaction) {
+                return res.status(404).json({ success: false, message: "Transaction not found" });
+            }
+
+            if (transaction.status === TransactionStatus.ESCROWED || transaction.escrowHeld) {
+                return res.status(200).json({
+                    success: true,
+                    status: "ESCROWED",
+                    escrowHeld: true,
+                    message: "Payment already verified and secured in escrow vault.",
+                    data: transaction,
+                });
+            }
+
+            // Query Anchor API for recent payments
+            const payments = await anchorService.getRecentPayments();
+            const virtualNubanId = transaction.anchorEscrowLedgerId;
+
+            const matchedPayment = payments.find((p: any) => {
+                const pVirtualNubanId = p.relationships?.virtualNuban?.data?.id;
+                const pAmount = p.attributes?.amount;
+                const matchesAccount = pVirtualNubanId && pVirtualNubanId === virtualNubanId;
+                const meetsAmount = paidKoboMeetsExpected(pAmount, transaction.totalAmount);
+                return matchesAccount && meetsAmount;
+            });
+
+            if (!matchedPayment) {
+                return res.status(200).json({
+                    success: false,
+                    status: transaction.status,
+                    escrowHeld: false,
+                    message: "Payment transfer not yet detected on Providus / Anchor rail. Please allow 15-30 seconds after sending.",
+                });
+            }
+
+            // Reconcile and transition to ESCROWED
+            const claimed = await transactionService.markEscrowedIfPayable(transaction.id, {
+                paymentGateway: "ANCHOR",
+            });
+
+            if (claimed.count > 0) {
+                await propertyService.lockUnderOffer(transaction.propertyId);
+
+                // Deduct platform fee
+                const feeKobo = anchorService.nairaToKobo(transaction.platformFee);
+                if (transaction.anchorEscrowLedgerId && feeKobo > 0) {
+                    anchorService.deductPlatformFee(transaction.anchorEscrowLedgerId, feeKobo, transaction.id).catch(console.warn);
+                }
+            }
+
+            const updated = await prisma.transaction.findUnique({ where: { id: transactionId } });
+            return res.status(200).json({
+                success: true,
+                status: "ESCROWED",
+                escrowHeld: true,
+                message: "Payment verified! Funds secured in escrow vault.",
+                data: updated,
+            });
+        } catch (error: any) {
+            console.error("[Anchor Payment Verify Error]:", error);
+            return res.status(500).json({
+                success: false,
+                message: error.message || "Failed to verify Anchor payment",
+            });
+        }
+    }
+
+    /**
      * Handle incoming Anchor BaaS webhooks
      * POST /api/webhooks/anchor
      */
@@ -794,10 +876,22 @@ export class PaymentController {
 
                 if (isCreditEvent) {
                     const paymentObj = data.attributes?.payment || data.payment || data;
+                    const virtualNubanId =
+                        data.relationships?.virtualNuban?.data?.id ||
+                        paymentObj.relationships?.virtualNuban?.data?.id ||
+                        paymentObj.virtualNuban?.data?.id ||
+                        paymentObj.virtualNuban?.id ||
+                        paymentObj.virtualNuban?.accountId ||
+                        data.accountId;
+
                     const reference = paymentObj.reference || paymentObj.paymentReference || data.reference;
                     const accountNumber = paymentObj.virtualNuban?.accountNumber || paymentObj.accountNumber || data.accountNumber;
-                    const accountId = paymentObj.virtualNuban?.accountId || paymentObj.accountId || data.accountId;
-                    const amountKobo = paymentObj.amount !== undefined ? paymentObj.amount : data.amount;
+                    const amountKobo =
+                        paymentObj.amount !== undefined
+                            ? paymentObj.amount
+                            : data.attributes?.amount !== undefined
+                            ? data.attributes.amount
+                            : data.amount;
 
                     // Locate transaction
                     const transaction = await prisma.transaction.findFirst({
@@ -805,7 +899,7 @@ export class PaymentController {
                             OR: [
                                 ...(reference ? [{ anchorCollectionRef: reference }] : []),
                                 ...(accountNumber ? [{ anchorVirtualNuban: accountNumber }] : []),
-                                ...(accountId ? [{ anchorEscrowLedgerId: accountId }] : []),
+                                ...(virtualNubanId ? [{ anchorEscrowLedgerId: virtualNubanId }] : []),
                             ],
                         },
                     });

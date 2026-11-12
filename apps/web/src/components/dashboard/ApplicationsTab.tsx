@@ -121,6 +121,7 @@ export function ApplicationsTab() {
     const [refreshing, setRefreshing] = useState(false);
     const [paymentLoading, setPaymentLoading] = useState<string | null>(null);
     const [otpLoading, setOtpLoading] = useState<string | null>(null);
+    const [checkingAnchorStatus, setCheckingAnchorStatus] = useState<string | null>(null);
     const [paymentModalApp, setPaymentModalApp] = useState<RentalApplication | null>(null);
     const [otpRequestedIds, setOtpRequestedIds] = useState<Record<string, boolean>>({});
 
@@ -342,6 +343,25 @@ export function ApplicationsTab() {
             toast.error(error.response?.data?.message || "Failed to cancel payment attempt");
         } finally {
             setPaymentLoading(null);
+        }
+    };
+
+    const handleCheckAnchorStatus = async (txId: string) => {
+        try {
+            setCheckingAnchorStatus(txId);
+            const res = await api.post(`/payments/anchor/verify/${txId}`);
+            if (res.data?.success && res.data?.escrowHeld) {
+                toast.success(res.data?.message || "Payment verified! Funds secured in escrow vault.");
+                await fetchData(true);
+            } else {
+                toast.info(res.data?.message || "Transfer not yet confirmed on bank rail. Rechecking shortly.");
+                await fetchData(true);
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to check Anchor payment status");
+            await fetchData(true);
+        } finally {
+            setCheckingAnchorStatus(null);
         }
     };
 
@@ -1067,11 +1087,11 @@ export function ApplicationsTab() {
                                                                 <Button
                                                                     variant="outline"
                                                                     size="sm"
-                                                                    onClick={() => fetchData(true)}
-                                                                    disabled={refreshing}
+                                                                    onClick={() => handleCheckAnchorStatus(txForApp.id)}
+                                                                    disabled={refreshing || checkingAnchorStatus === txForApp.id}
                                                                     className="text-xs h-8 px-3 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
                                                                 >
-                                                                    <RefreshCw className={`h-3 w-3 mr-1 ${refreshing ? "animate-spin" : ""}`} /> Check Status
+                                                                    <RefreshCw className={`h-3 w-3 mr-1 ${refreshing || checkingAnchorStatus === txForApp.id ? "animate-spin" : ""}`} /> Check Status
                                                                 </Button>
                                                                 <Button
                                                                     variant="ghost"
@@ -1096,6 +1116,17 @@ export function ApplicationsTab() {
                                                             </p>
                                                         </div>
                                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
+                                                            {txForApp.paymentGateway === "ANCHOR" && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleCheckAnchorStatus(txForApp.id)}
+                                                                    disabled={refreshing || checkingAnchorStatus === txForApp.id}
+                                                                    className="text-xs h-9 px-3 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 w-full sm:w-auto text-center"
+                                                                >
+                                                                    <RefreshCw className={`h-3 w-3 mr-1 ${refreshing || checkingAnchorStatus === txForApp.id ? "animate-spin" : ""}`} /> Check Status
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 variant="outline"
                                                                 disabled={paymentLoading === txForApp.id}

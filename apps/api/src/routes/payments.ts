@@ -8,6 +8,7 @@ const router: Router = Router();
 router.post("/initialize", requireAuth, requireDbUser, requireEscrowOperational, paymentController.initializePayment.bind(paymentController));
 router.post("/anchor/initialize", requireAuth, requireDbUser, requireEscrowOperational, paymentController.initializeAnchorPayment.bind(paymentController));
 router.get("/anchor/status/:transactionId", requireAuth, requireDbUser, paymentController.getAnchorAccountDetails.bind(paymentController));
+router.post("/anchor/verify/:transactionId", requireAuth, requireDbUser, paymentController.verifyAnchorPayment.bind(paymentController));
 router.post("/afriexchange/pay", requireAuth, requireDbUser, requireEscrowOperational, paymentController.payWithAfriExchange.bind(paymentController));
 router.get(
     "/afriexchange/verify/:reference",
