@@ -88,6 +88,7 @@ interface Transaction {
     anchorVirtualNuban?: string;
     anchorBankName?: string;
     anchorCollectionRef?: string;
+    anchorEscrowLedgerId?: string;
     createdAt: string;
     escrowHeld: boolean;
     escrowReleased: boolean;
@@ -1077,6 +1078,41 @@ export function ApplicationsTab() {
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        {/* Sandbox Simulation Guide Helper Box */}
+                                                        {txForApp.anchorEscrowLedgerId && (
+                                                            <div className="bg-emerald-500/5 rounded-xl p-3 border border-emerald-500/20 text-xs space-y-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5 text-[11px]">
+                                                                        🧪 Anchor Sandbox Testing Helper
+                                                                    </span>
+                                                                    <span className="text-[10px] text-[var(--text-secondary)]">For Anchor Dashboard &ldquo;Simulate Transfer&rdquo;</span>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] bg-[var(--bg-card)]/80 p-2.5 rounded-lg border border-emerald-500/10">
+                                                                    <div>
+                                                                        <span className="text-[10px] text-[var(--text-secondary)] font-medium">Anchor Account Number ID *</span>
+                                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                                            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold truncate">{txForApp.anchorEscrowLedgerId}</span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => copyToClipboard(txForApp.anchorEscrowLedgerId!, `app-ledger-${txForApp.id}`)}
+                                                                                className="p-1 rounded hover:bg-[var(--bg-muted)] text-[var(--text-secondary)] transition-all shrink-0"
+                                                                                title="Copy Anchor Account ID"
+                                                                            >
+                                                                                {copiedField === `app-ledger-${txForApp.id}` ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] text-[var(--text-secondary)] font-medium">Source Account (Sender)</span>
+                                                                        <p className="font-medium text-[var(--text-primary)] mt-0.5 truncate">Any Mock Bank (e.g. Stanbic / 0123456789)</p>
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
+                                                                    💡 In Anchor Dashboard &gt; <strong>Simulate Transfer</strong>: paste the <strong>Anchor Account Number ID</strong> above into <code>Account Number ID *</code>, and <code>{txForApp.totalAmount}</code> into <code>Amount *</code>. Once simulated, click <strong>Check Status</strong> below to verify!
+                                                                </p>
+                                                            </div>
+                                                        )}
 
                                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-0.5">
                                                             <p className="text-[11px] text-[var(--text-secondary)] flex items-center gap-1.5">
