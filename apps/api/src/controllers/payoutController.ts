@@ -427,13 +427,31 @@ export class PayoutController {
         try {
             const payoutId = req.params.payoutId as string;
 
-            await afriExchangePayoutService.retryFailedPayout(payoutId);
+            const payout = await prisma.landlordPayout.findUnique({
+                where: { id: payoutId },
+                include: { transaction: true },
+            });
+
+            if (!payout) {
+                return res.status(404).json({ success: false, message: "Payout record not found" });
+            }
+
+            if (payout.status === "COMPLETED") {
+                return res.status(400).json({ success: false, message: "Payout is already completed" });
+            }
+
+            // Route to correct gateway based on payoutRail or transaction gateway
+            if (payout.payoutRail === "ANCHOR_NIP" || payout.transaction?.paymentGateway === "ANCHOR") {
+                await anchorService.disburseLandlordPayout(payout.transactionId);
+            } else {
+                await afriExchangePayoutService.retryFailedPayout(payoutId);
+            }
 
             const updated = await prisma.landlordPayout.findUnique({ where: { id: payoutId } });
 
             return res.status(200).json({
                 success: true,
-                message: `Payout retry triggered. New status: ${updated?.status}`,
+                message: `Payout retry triggered via ${payout.payoutRail || "default rail"}. New status: ${updated?.status}`,
                 data: updated,
             });
         } catch (error: unknown) {
@@ -504,17 +522,29 @@ export class PayoutController {
     async adminDisbursePayout(req: Request, res: Response) {
         try {
             const transactionId = req.params.transactionId as string;
-            await afriExchangePayoutService.disburseLandlordPayout(transactionId);
 
-            const idempotencyKey = `RENTHUB-ESCROW-${transactionId}`;
-            const payout = await prisma.landlordPayout.findUnique({
-                where: { idempotencyKey },
+            const tx = await prisma.transaction.findUnique({
+                where: { id: transactionId },
+            });
+
+            if (!tx) {
+                return res.status(404).json({ success: false, message: "Transaction not found" });
+            }
+
+            if (tx.paymentGateway === "ANCHOR") {
+                await anchorService.disburseLandlordPayout(transactionId);
+            } else {
+                await afriExchangePayoutService.disburseLandlordPayout(transactionId);
+            }
+
+            const payout = await prisma.landlordPayout.findFirst({
+                where: { transactionId },
                 include: { landlord: true },
             });
 
             return res.status(200).json({
                 success: true,
-                message: `Payout disburse processed. Status: ${payout?.status}`,
+                message: `Payout disburse processed via ${tx.paymentGateway}. Status: ${payout?.status}`,
                 data: payout,
             });
         } catch (error: unknown) {

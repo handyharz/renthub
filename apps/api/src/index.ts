@@ -7,6 +7,7 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { logger } from "./utils/logger";
 import { startComplianceJobs } from "./jobs/complianceJobs";
 import { startAnchorEscrowReconciliationJob } from "./jobs/reconcileAnchorEscrow";
+import { anchorService } from "./services/anchorService";
 
 dotenv.config();
 
@@ -104,6 +105,19 @@ app.listen(PORT, () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   startComplianceJobs();
   startAnchorEscrowReconciliationJob();
+
+  // Validate Anchor BaaS environment configuration
+  const anchorConfig = anchorService.validateConfiguration();
+  if (anchorConfig.errors.length > 0) {
+    anchorConfig.errors.forEach((err) => logger.error(`[Anchor Config Error] ❌ ${err}`));
+  }
+  if (anchorConfig.warnings.length > 0) {
+    anchorConfig.warnings.forEach((warn) => logger.warn(`[Anchor Config Note] ⚠️ ${warn}`));
+  }
+  if (anchorConfig.valid && anchorConfig.warnings.length === 0) {
+    logger.info(`[Anchor Config] ✓ Pool account and API credentials validated`);
+  }
+
   logger.info(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
   logger.info(`🔗 API available at http://localhost:${PORT}/api`);
 });

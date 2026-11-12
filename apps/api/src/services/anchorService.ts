@@ -47,11 +47,42 @@ export class AnchorService {
         this.apiKey = process.env.ANCHOR_API_KEY || "";
         this.webhookSecret = process.env.ANCHOR_WEBHOOK_SECRET || "";
         this.revenueLedgerId = process.env.ANCHOR_REVENUE_LEDGER_ID || "ledg_rev_renthub_platform_fees";
-        this.escrowPoolId = process.env.ANCHOR_ESCROW_POOL_ID || "ledg_escrow_pool_holding";
+        this.escrowPoolId = process.env.ANCHOR_ESCROW_POOL_ID || "17943034048583-anc_acc";
 
         if (!this.apiKey && process.env.NODE_ENV === "production") {
             console.warn("⚠️  ANCHOR_API_KEY is not set in environment variables");
         }
+    }
+
+    /**
+     * Startup verification: validates that Anchor environment variables are correctly provisioned
+     * and alerts or fails fast if an invalid placeholder or missing FBO account ID is detected.
+     */
+    validateConfiguration(): { valid: boolean; warnings: string[]; errors: string[] } {
+        const warnings: string[] = [];
+        const errors: string[] = [];
+
+        if (!this.apiKey) {
+            if (process.env.NODE_ENV === "production") {
+                errors.push("ANCHOR_API_KEY is missing in production environment");
+            } else {
+                warnings.push("ANCHOR_API_KEY is not set (mock mode enabled)");
+            }
+        }
+
+        // Check if escrowPoolId is invalid or placeholder
+        if (!this.escrowPoolId || this.escrowPoolId.startsWith("ledg_")) {
+            const msg = `ANCHOR_ESCROW_POOL_ID is set to placeholder ('${this.escrowPoolId}'). Anchor requires a valid DepositAccount ID (e.g. 17943034048583-anc_acc). Transfers will fail.`;
+            if (process.env.NODE_ENV === "production") {
+                errors.push(msg);
+            } else {
+                warnings.push(msg);
+            }
+        } else if (!this.escrowPoolId.endsWith("-anc_acc")) {
+            warnings.push(`ANCHOR_ESCROW_POOL_ID ('${this.escrowPoolId}') does not match expected Anchor DepositAccount format ('...-anc_acc').`);
+        }
+
+        return { valid: errors.length === 0, warnings, errors };
     }
 
     /**
