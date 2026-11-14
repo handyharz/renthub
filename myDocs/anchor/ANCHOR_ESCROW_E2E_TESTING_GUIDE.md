@@ -149,10 +149,10 @@ Since we are in the Sandbox, you simulate the tenant making the bank transfer:
 4. RentHub verifies the OTP:
    * **Brute-Force Guard:** Maximum 5 attempts allowed; atomic lock protection.
    * **Transaction Marked RELEASED:** `status = "RELEASED"`, `escrowReleased = true`.
-   * **Property Updated:** `status = "RENTED"`.
+   * **Property Updated to RENTED upon Payout Confirmation:** Property transitions to `status = "RENTED"` once Anchor confirms the outbound NIP transfer (`transfer.success` webhook). While the payout is in flight, the payout status shows `PROCESSING` to prevent false "settled" claims.
 5. **Split Automated Disbursement**:
    * **2% Platform Fee (RentHub)**: Swept from FBO account (`17943034048583-anc_acc`) to Revenue account (`17943034048272-anc_acc`) via intra-bank Book Transfer (Free, ₦0 fee).
-   * **98% Net Rent + Caution (Landlord)**: Disbursed directly from Anchor to the Landlord's verified Nigerian commercial bank account (GTBank, Zenith, Access, Providus, Kuda, etc.) via outbound NIP transfer (`ANCHOR_NIP`).
+   * **98% Net Rent (Landlord)**: Disbursed directly from Anchor FBO to the Landlord's verified Nigerian commercial bank account via outbound NIP transfer (`ANCHOR_NIP`). (Note: The Caution Deposit remains safely held in the FBO caution sub-ledger for the duration of the tenancy and is NEVER disbursed to the landlord upfront).
    * **Payout Status:** `landlordPayout.status = "COMPLETED"`.
    * **Notification:** Landlord receives in-app and email alert confirming funds have hit their personal bank account.
 
