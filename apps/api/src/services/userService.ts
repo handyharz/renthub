@@ -35,6 +35,11 @@ export class UserService {
         return await prisma.user.findUnique({
             where: { id },
             include: {
+                _count: {
+                    select: {
+                        propertiesOwned: true,
+                    },
+                },
                 propertiesOwned: {
                     where: { deletedAt: null },
                     take: 5,

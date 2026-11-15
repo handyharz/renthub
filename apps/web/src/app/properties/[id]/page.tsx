@@ -26,6 +26,7 @@ import {
     Car,
     Phone,
     ArrowLeft,
+    ArrowUpRight,
     Sparkles,
     Building2,
     Droplets,
@@ -909,8 +910,11 @@ export default function PropertyDetailsPage() {
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-4">
-                                <div className="h-16 w-16 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative border border-[var(--border-color)] shrink-0">
+                            <Link
+                                href={`/landlords/${property.landlord?.id || property.landlordId}`}
+                                className="group flex items-center gap-4 hover:opacity-95 transition-opacity"
+                            >
+                                <div className="h-16 w-16 rounded-2xl bg-[var(--bg-muted)] overflow-hidden relative border border-[var(--border-color)] group-hover:border-[var(--color-brand-green)] shrink-0 transition-colors">
                                     {property.landlord?.avatar ? (
                                         <Image
                                             src={property.landlord.avatar}
@@ -926,9 +930,12 @@ export default function PropertyDetailsPage() {
                                     )}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-base font-black text-[var(--text-primary)] truncate">
-                                        {property.landlord?.firstName || "Verified"} {property.landlord?.lastName || "Landlord"}
-                                    </p>
+                                    <div className="flex items-center gap-1">
+                                        <p className="text-base font-black text-[var(--text-primary)] group-hover:text-[var(--color-brand-green)] truncate transition-colors">
+                                            {property.landlord?.firstName || "Verified"} {property.landlord?.lastName || "Landlord"}
+                                        </p>
+                                        <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--color-brand-green)] transition-all shrink-0" />
+                                    </div>
                                     <div className="flex items-center gap-1.5 text-xs text-[var(--text-secondary)] font-semibold mt-0.5">
                                         <Calendar className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                                         <span>
@@ -936,12 +943,12 @@ export default function PropertyDetailsPage() {
                                         </span>
                                     </div>
                                     {property.landlord?._count?.propertiesOwned > 0 && (
-                                        <p className="text-xs text-[var(--text-muted)] font-medium mt-0.5">
+                                        <p className="text-xs text-[var(--color-brand-green)] font-bold mt-0.5">
                                             {property.landlord._count.propertiesOwned} Managed Properties
                                         </p>
                                     )}
                                 </div>
-                            </div>
+                            </Link>
 
                             {property.landlord?.verified && (
                                 <div className="p-3 rounded-xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] flex items-center gap-2 text-xs font-bold text-[var(--color-brand-green)]">
@@ -949,6 +956,18 @@ export default function PropertyDetailsPage() {
                                     <span>Government ID & NIN Verified Landlord</span>
                                 </div>
                             )}
+
+                            {/* View Landlord Public Profile CTA */}
+                            <Button
+                                asChild
+                                variant="outline"
+                                className="w-full justify-between h-10 px-4 text-xs font-black border-[var(--border-color)] hover:border-[var(--color-brand-green)] hover:text-[var(--color-brand-green)] bg-[var(--bg-card)] rounded-2xl transition-all"
+                            >
+                                <Link href={`/landlords/${property.landlord?.id || property.landlordId}`}>
+                                    <span>View Landlord Public Profile</span>
+                                    <ChevronRight className="w-4 h-4 text-[var(--color-brand-green)]" />
+                                </Link>
+                            </Button>
 
                             {/* Contact Landlord Actions */}
                             <div className="space-y-2.5 pt-2">

@@ -78,6 +78,11 @@ export class UserController {
                 role: user.role,
                 verified: user.verified,
                 createdAt: user.createdAt,
+                phone: user.phone,
+                landlordAvgRating: user.landlordAvgRating,
+                landlordReviewCount: user.landlordReviewCount,
+                trustScore: user.trustScore,
+                propertiesCount: (user as any)._count?.propertiesOwned ?? (user as any).propertiesOwned?.length ?? 0,
             };
 
             return res.status(200).json({
