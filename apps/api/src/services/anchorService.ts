@@ -417,7 +417,8 @@ export class AnchorService {
 
     /**
      * Query Anchor API to verify the status of a transfer by its unique idempotency reference.
-     * Uses Anchor's official verification endpoint: GET /api/v1/transfers/verify/:reference
+     * Tries Anchor's official customer-reference endpoint first: GET /api/v1/transfers/by-reference/:customer-reference
+     * Falls back to: GET /api/v1/transfers/verify/:reference
      */
     async verifyTransferByReference(reference: string): Promise<AnchorPayoutResult | null> {
         if (!this.apiKey || process.env.NODE_ENV === "test" || process.env.ANCHOR_MOCK === "true") {
@@ -425,10 +426,25 @@ export class AnchorService {
         }
 
         try {
-            const response = await axios.get(`${this.baseUrl}/transfers/verify/${reference}`, {
-                headers: this.getHeaders(),
-            });
-            const transfer = response.data?.data;
+            let transfer: any = null;
+            // 1. Official reference lookup
+            try {
+                const response = await axios.get(`${this.baseUrl}/transfers/by-reference/${reference}`, {
+                    headers: this.getHeaders(),
+                });
+                transfer = response.data?.data;
+            } catch (err: any) {
+                // If 404 or unsupported route, fallback to verify endpoint
+                if (err.response?.status === 404 || !err.response) {
+                    const fallbackRes = await axios.get(`${this.baseUrl}/transfers/verify/${reference}`, {
+                        headers: this.getHeaders(),
+                    });
+                    transfer = fallbackRes.data?.data;
+                } else {
+                    throw err;
+                }
+            }
+
             if (!transfer) return null;
 
             const transferStatus = transfer.attributes?.status;

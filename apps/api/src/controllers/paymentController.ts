@@ -882,12 +882,18 @@ export class PaymentController {
                 // Normalize event type for robust matching across dot and underscore formats
                 const normalizedType = (eventType || "").toLowerCase().replace(/_/g, ".");
 
-                // We listen for inbound account credit / transfer success events
+                // We listen for inbound account credit / transfer success events (Anchor docs: payin.received, payment.received, payment.settled, nip.inbound.completed)
                 const isCreditEvent =
                     normalizedType === "account.credited" ||
                     normalizedType === "inflow.success" ||
                     normalizedType === "inward.payment.success" ||
                     normalizedType === "payment.received" ||
+                    normalizedType === "payment.settled" ||
+                    normalizedType === "payin.received" ||
+                    normalizedType === "nip.inbound.completed" ||
+                    normalizedType === "nip.incomingtransfer.received" ||
+                    normalizedType === "nip.incoming.transfer.received" ||
+                    (normalizedType.includes("incoming") && normalizedType.includes("transfer")) ||
                     normalizedType === "payment.create";
 
                 // Outbound transfer confirmation events (NIP / Book payout to landlord)
