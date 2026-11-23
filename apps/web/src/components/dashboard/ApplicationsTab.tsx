@@ -1088,7 +1088,7 @@ export function ApplicationsTab() {
                                                                     </span>
                                                                     <span className="text-[10px] text-[var(--text-secondary)]">For Anchor Dashboard &ldquo;Simulate Transfer&rdquo;</span>
                                                                 </div>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] bg-[var(--bg-card)]/80 p-2.5 rounded-lg border border-emerald-500/10">
+                                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] bg-[var(--bg-card)]/80 p-2.5 rounded-lg border border-emerald-500/10">
                                                                     <div>
                                                                         <span className="text-[10px] text-[var(--text-secondary)] font-medium">Anchor Account Number ID *</span>
                                                                         <div className="flex items-center gap-1.5 mt-0.5">
@@ -1116,6 +1116,10 @@ export function ApplicationsTab() {
                                                                                 {copiedField === `app-kobo-${txForApp.id}` ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
                                                                             </button>
                                                                         </div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="text-[10px] text-[var(--text-secondary)] font-medium">Source Account (Sender)</span>
+                                                                        <p className="font-medium text-[var(--text-primary)] mt-0.5 truncate">0123456789 (Stanbic / Mock Bank)</p>
                                                                     </div>
                                                                 </div>
                                                                 <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
