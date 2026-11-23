@@ -1104,12 +1104,22 @@ export function ApplicationsTab() {
                                                                         </div>
                                                                     </div>
                                                                     <div>
-                                                                        <span className="text-[10px] text-[var(--text-secondary)] font-medium">Source Account (Sender)</span>
-                                                                        <p className="font-medium text-[var(--text-primary)] mt-0.5 truncate">Any Mock Bank (e.g. Stanbic / 0123456789)</p>
+                                                                        <span className="text-[10px] text-[var(--text-secondary)] font-medium">Amount in Kobo (Anchor takes Kobo!) *</span>
+                                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                                            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{Math.round(txForApp.totalAmount * 100)}</span>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => copyToClipboard(String(Math.round(txForApp.totalAmount * 100)), `app-kobo-${txForApp.id}`)}
+                                                                                className="p-1 rounded hover:bg-[var(--bg-muted)] text-[var(--text-secondary)] transition-all shrink-0"
+                                                                                title="Copy Kobo Amount"
+                                                                            >
+                                                                                {copiedField === `app-kobo-${txForApp.id}` ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                                 <p className="text-[10px] text-[var(--text-secondary)] leading-relaxed">
-                                                                    💡 In Anchor Dashboard &gt; <strong>Simulate Transfer</strong>: paste the <strong>Anchor Account Number ID</strong> above into <code>Account Number ID *</code>, and <code>{txForApp.totalAmount}</code> into <code>Amount *</code>. Once simulated, click <strong>Check Status</strong> below to verify!
+                                                                    💡 In Anchor Dashboard &gt; <strong>Simulate Transfer</strong>: paste the <strong>Anchor Account Number ID</strong> into <code>Account Number ID *</code>, and <code>{Math.round(txForApp.totalAmount * 100)}</code> into <code>Amount *</code> (Anchor requires Kobo: ₦{txForApp.totalAmount.toLocaleString()} = {Math.round(txForApp.totalAmount * 100)} kobo). Once simulated, click <strong>Check Status</strong> below to verify!
                                                                 </p>
                                                             </div>
                                                         )}
