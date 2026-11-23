@@ -36,7 +36,7 @@ export function isEscrowOperational(): boolean {
  */
 export async function runAnchorEscrowReconciliation(): Promise<ReconciliationReport> {
     try {
-        const [anchorTransactions, afriTransactions] = await Promise.all([
+        const [anchorTransactions, afriTransactions, inFlightAnchorPayouts] = await Promise.all([
             prisma.transaction.findMany({
                 where: {
                     status: "ESCROWED",
@@ -64,7 +64,20 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
                     cautionFee: true,
                 },
             }),
+            prisma.landlordPayout.findMany({
+                where: {
+                    payoutRail: "ANCHOR_NIP",
+                    status: "PROCESSING",
+                },
+                select: {
+                    netAmount: true,
+                },
+            }),
         ]);
+
+        const inFlightAnchorPayoutsKobo = BigInt(
+            inFlightAnchorPayouts.reduce((acc, p) => acc + anchorService.nairaToKobo(p.netAmount), 0)
+        );
 
         const anchorTotalNaira = anchorTransactions.reduce((acc, tx) => acc + (tx.rentAmount + tx.cautionFee), 0);
         const anchorDbExpectedKobo = BigInt(anchorService.nairaToKobo(anchorTotalNaira));
@@ -93,10 +106,11 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
             afriFetched = true;
         }
 
-        // Solvency reconciliation: A deficit exists only if live pool balance is LESS than expected escrow liabilities.
-        // Holding reserve liquidity or surplus capital in the merchant vault guarantees 100%+ collateralization.
-        const anchorDeficit = anchorFetched && anchorLedgerTotalKobo < anchorDbExpectedKobo
-            ? anchorDbExpectedKobo - anchorLedgerTotalKobo
+        // Solvency reconciliation: A deficit exists only if live pool balance (+ any in-flight payouts debited by Anchor)
+        // is LESS than expected escrow liabilities. Holding reserve liquidity guarantees 100%+ collateralization.
+        const effectiveAnchorPoolKobo = anchorLedgerTotalKobo + inFlightAnchorPayoutsKobo;
+        const anchorDeficit = anchorFetched && effectiveAnchorPoolKobo < anchorDbExpectedKobo
+            ? anchorDbExpectedKobo - effectiveAnchorPoolKobo
             : BigInt(0);
         const afriDeficit = afriFetched && afriExchangeLedgerTotalKobo < afriDbExpectedKobo
             ? afriDbExpectedKobo - afriExchangeLedgerTotalKobo
@@ -143,6 +157,8 @@ export async function runAnchorEscrowReconciliation(): Promise<ReconciliationRep
                     afriTotalNaira,
                     anchorFetched,
                     afriFetched,
+                    inFlightAnchorPayoutsCount: inFlightAnchorPayouts.length,
+                    inFlightAnchorPayoutsKobo: inFlightAnchorPayoutsKobo.toString(),
                 },
             },
         });

@@ -289,6 +289,21 @@ export class AnchorService {
             };
         }
 
+        // Fix (Claude Double-Payout Guard): Pre-flight check before initiating transfer.
+        // If Anchor already has an in-flight or completed transfer with this reference,
+        // adopt the existing record immediately instead of sending a duplicate POST request.
+        try {
+            const existingTransfer = await this.verifyTransferByReference(idempotencyKey);
+            if (existingTransfer && (existingTransfer.status === "SUCCESSFUL" || existingTransfer.status === "PENDING")) {
+                console.info(
+                    `[AnchorService] Transfer ${idempotencyKey} already exists in Anchor (status: ${existingTransfer.status}). Adopting existing record.`
+                );
+                return existingTransfer;
+            }
+        } catch {
+            // Transfer does not exist yet; proceed to create it
+        }
+
         try {
             // Step 1: Register or resolve CounterParty in Anchor
             let counterPartyId: string | undefined;
@@ -359,7 +374,7 @@ export class AnchorService {
             const transferStatus = transfer?.attributes?.status;
             // Anchor may return "SUCCESS", "PENDING", "PROCESSING", or "FAILED"
             const normalizedStatus: AnchorPayoutResult["status"] =
-                transferStatus === "SUCCESS" || transferStatus === "SUCCESSFUL"
+                transferStatus === "SUCCESS" || transferStatus === "SUCCESSFUL" || transferStatus === "COMPLETED"
                     ? "SUCCESSFUL"
                     : transferStatus === "FAILED"
                     ? "FAILED"
@@ -374,20 +389,65 @@ export class AnchorService {
             };
         } catch (error: any) {
             console.error("[AnchorService] Landlord NIP disbursement failed:", error.response?.data || error.message);
-            // Fix (Claude): A 500 from Anchor means the transfer did NOT go through —
-            // likely because the payment is still unsettled on Anchor's side.
-            // We MUST NOT simulate success here — throw so disburseLandlordPayout
-            // marks the payout as FAILED and keeps the property in PAYOUT_PENDING state.
-            // The sandbox "Internal Error" is a real error, not a quirk to work around.
+
+            // Fix (Claude Ambiguous Errors Guard): If a network timeout, disconnect, or 500 error occurred,
+            // query Anchor's verification endpoint before marking the payout as failed.
+            // If Anchor actually accepted and initiated the transfer, adopt it safely as PENDING/SUCCESSFUL.
+            try {
+                const verified = await this.verifyTransferByReference(idempotencyKey);
+                if (verified && (verified.status === "SUCCESSFUL" || verified.status === "PENDING")) {
+                    console.warn(
+                        `[AnchorService] Transfer ${idempotencyKey} threw on POST but verified live on Anchor (status: ${verified.status}). Recovered safely.`
+                    );
+                    return verified;
+                }
+            } catch {
+                // Verification confirmed transfer was not received by Anchor
+            }
+
             if (this.baseUrl.includes("sandbox") && (error.response?.status === 500 || error.response?.data?.errors?.[0]?.title === "Internal Error")) {
                 console.warn(
                     `[AnchorService] Anchor sandbox returned 500 on POST /transfers for tx=${transactionId}. ` +
-                    `This likely means the payment (${idempotencyKey}) is unsettled. ` +
-                    `Ask Fortunate at Anchor to settle it and retry payout.`
+                    `Reference=${idempotencyKey}.`
                 );
-                // Re-throw as a retriable error — do NOT fake success
             }
             throw new Error(error.response?.data?.errors?.[0]?.detail || error.response?.data?.message || "Anchor NIP disbursement failed");
+        }
+    }
+
+    /**
+     * Query Anchor API to verify the status of a transfer by its unique idempotency reference.
+     * Uses Anchor's official verification endpoint: GET /api/v1/transfers/verify/:reference
+     */
+    async verifyTransferByReference(reference: string): Promise<AnchorPayoutResult | null> {
+        if (!this.apiKey || process.env.NODE_ENV === "test" || process.env.ANCHOR_MOCK === "true") {
+            return null;
+        }
+
+        try {
+            const response = await axios.get(`${this.baseUrl}/transfers/verify/${reference}`, {
+                headers: this.getHeaders(),
+            });
+            const transfer = response.data?.data;
+            if (!transfer) return null;
+
+            const transferStatus = transfer.attributes?.status;
+            const normalizedStatus: AnchorPayoutResult["status"] =
+                transferStatus === "SUCCESS" || transferStatus === "SUCCESSFUL" || transferStatus === "COMPLETED"
+                    ? "SUCCESSFUL"
+                    : transferStatus === "FAILED"
+                    ? "FAILED"
+                    : "PENDING";
+
+            return {
+                transferId: transfer.id || `trf_${reference}`,
+                reference: transfer.attributes?.reference || reference,
+                status: normalizedStatus,
+                feeKobo: transfer.attributes?.fee ?? 5000,
+                destinationAccount: transfer.relationships?.counterParty?.data?.id || "Verified CounterParty",
+            };
+        } catch {
+            return null;
         }
     }
 
