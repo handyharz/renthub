@@ -202,19 +202,21 @@ export class AnchorService {
     }
 
     /**
-     * Deduct 2% RentHub platform protection fee from the escrow ledger into the organization revenue ledger.
-     * Uses Anchor Custom Fee API (/api/v1/fee/custom-fee).
+     * Sweep earned platform revenue (Tenant 2% + Landlord 2% + Legal fees) from FBO to Anchor Revenue Account.
+     * Uses Anchor's native intra-account Book Transfer API (/api/v1/transfers with type "BookTransfer").
+     * ₦0 transfer fee, instant settlement.
      */
-    async deductPlatformFee(
+    async sweepPlatformFee(
         sourceLedgerId: string,
         feeKobo: number,
-        transactionId: string
+        transactionId: string,
+        description?: string
     ): Promise<AnchorCustomFeeResult> {
-        const idempotencyKey = `fee_${transactionId}`;
+        const idempotencyKey = `sweep_${transactionId}_${Date.now()}`;
 
         if (!this.apiKey || process.env.NODE_ENV === "test" || process.env.ANCHOR_MOCK === "true") {
             return {
-                feeId: `fee_mock_${transactionId.slice(-8)}`,
+                feeId: `sweep_mock_${transactionId.slice(-8)}`,
                 amountKobo: feeKobo,
                 sourceLedgerId,
                 destinationLedgerId: this.revenueLedgerId,
@@ -224,30 +226,65 @@ export class AnchorService {
 
         try {
             const response = await axios.post(
-                `${this.baseUrl}/fee/custom-fee`,
+                `${this.baseUrl}/transfers`,
                 {
-                    sourceAccountId: sourceLedgerId,
-                    destinationAccountId: this.revenueLedgerId,
-                    amount: feeKobo,
-                    currency: "NGN",
-                    description: `RentHub 2% Escrow Protection Fee for tx=${transactionId}`,
+                    data: {
+                        type: "BookTransfer",
+                        attributes: {
+                            currency: "NGN",
+                            amount: feeKobo,
+                            reason: description || `RentHub Revenue Sweep for tx=${transactionId}`,
+                            reference: idempotencyKey,
+                        },
+                        relationships: {
+                            account: {
+                                data: {
+                                    type: "DepositAccount",
+                                    id: sourceLedgerId || this.escrowPoolId,
+                                },
+                            },
+                            destinationAccount: {
+                                data: {
+                                    type: "DepositAccount",
+                                    id: this.revenueLedgerId,
+                                },
+                            },
+                        },
+                    },
                 },
                 {
                     headers: this.getHeaders({ "Idempotency-Key": idempotencyKey }),
                 }
             );
 
+            const transferData = response.data?.data;
+            console.info(
+                `[AnchorService] Revenue sweep successful: tx=${transactionId}, amount=${feeKobo} kobo, transferId=${transferData?.id}`
+            );
+
             return {
-                feeId: response.data.data.id,
-                amountKobo: response.data.data.amount,
+                feeId: transferData?.id || `sweep_${idempotencyKey}`,
+                amountKobo: transferData?.attributes?.amount || feeKobo,
                 sourceLedgerId,
                 destinationLedgerId: this.revenueLedgerId,
-                status: response.data.data.status,
+                status: transferData?.attributes?.status || "COMPLETED",
             };
         } catch (error: any) {
-            console.error("[AnchorService] Platform fee deduction failed:", error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || "Failed to deduct platform fee via Anchor");
+            console.error("[AnchorService] Platform revenue sweep failed:", error.response?.data || error.message);
+            throw new Error(error.response?.data?.errors?.[0]?.detail || error.response?.data?.message || "Failed to sweep revenue via Anchor BookTransfer");
         }
+    }
+
+    /**
+     * Deduct 2% RentHub platform protection fee from the escrow ledger into the organization revenue ledger.
+     * Backwards-compatible alias for sweepPlatformFee.
+     */
+    async deductPlatformFee(
+        sourceLedgerId: string,
+        feeKobo: number,
+        transactionId: string
+    ): Promise<AnchorCustomFeeResult> {
+        return this.sweepPlatformFee(sourceLedgerId, feeKobo, transactionId);
     }
 
     /**
