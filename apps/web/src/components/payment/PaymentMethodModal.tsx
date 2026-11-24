@@ -68,6 +68,7 @@ export const TOKEN_RATES: Record<
 interface PaymentMethodModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess?: () => void;
     totalAmount: number;
     propertyTitle: string;
     defaultEmail?: string;
@@ -90,6 +91,7 @@ interface PaymentMethodModalProps {
 export function PaymentMethodModal({
     isOpen,
     onClose,
+    onSuccess,
     totalAmount,
     propertyTitle,
     defaultEmail = "",
@@ -146,10 +148,10 @@ export function PaymentMethodModal({
                                 toast.success("Boost Payment Confirmed!", {
                                     description: "Listing boost is now active for 30 consecutive days.",
                                 });
-                                onClose();
-                                if (typeof window !== "undefined") {
-                                    window.location.reload();
+                                if (onSuccess) {
+                                    onSuccess();
                                 }
+                                onClose();
                                 return;
                             } else {
                                 toast.info("Payment Pending Detection", {

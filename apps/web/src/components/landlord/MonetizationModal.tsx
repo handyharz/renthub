@@ -232,6 +232,11 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                 <PaymentMethodModal
                     isOpen={!!activeService}
                     onClose={() => setActiveService(null)}
+                    onSuccess={() => {
+                        setActiveService(null);
+                        onSuccess();
+                        onClose();
+                    }}
                     totalAmount={activeService.amount}
                     propertyTitle={activeService.title}
                     defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
