@@ -13,6 +13,7 @@ interface MonetizationModalProps {
     isOpen: boolean;
     isVerified?: boolean;
     isFeatured?: boolean;
+    isRented?: boolean;
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -22,6 +23,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
     isOpen,
     isVerified = false,
     isFeatured = false,
+    isRented = false,
     onClose,
     onSuccess,
 }) => {
@@ -193,15 +195,21 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
 
                         <RevenueCard
                             title="Feature Listing"
-                            description="Skyrocket listing impressions. Get pinned right at the top of search results and featured on the RentHub homepage for 30 consecutive days."
+                            description={
+                                isRented
+                                    ? "This property is currently rented to an active tenant. Boosts are exclusively for vacant/available listings."
+                                    : "Skyrocket listing impressions. Get pinned right at the top of search results and featured on the RentHub homepage for 30 consecutive days."
+                            }
                             price="₦50,000"
                             buttonText={
-                                isFeatured
+                                isRented
+                                    ? "Property Rented Out"
+                                    : isFeatured
                                     ? "Already Featured"
                                     : "Feature Property"
                             }
-                            disabled={isFeatured}
-                            isPopular={true}
+                            disabled={isFeatured || isRented}
+                            isPopular={!isRented && !isFeatured}
                             icon={<Sparkles className="h-6 w-6" />}
                             onClick={() =>
                                 setActiveService({

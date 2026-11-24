@@ -204,6 +204,26 @@ export class PropertyService {
                         where: { isPrimary: true },
                         take: 1,
                     },
+                    transactions: {
+                        where: {
+                            status: { in: [PropertyStatus.AVAILABLE ? "ESCROWED" : "ESCROWED", "RELEASED"] as any },
+                        },
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
+                        select: {
+                            id: true,
+                            status: true,
+                            tenant: {
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                    email: true,
+                                    phone: true,
+                                },
+                            },
+                        },
+                    },
                     agentListings: {
                         where: { status: "AUTHORIZED" },
                         take: 1,

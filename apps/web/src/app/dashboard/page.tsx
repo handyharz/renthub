@@ -100,6 +100,17 @@ interface Property {
     landlord?: {
         verified: boolean;
     };
+    transactions?: {
+        id: string;
+        status: string;
+        tenant?: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone?: string;
+        };
+    }[];
     createdAt: string;
 }
 
@@ -4059,6 +4070,25 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                                             ~{formatPrice(Math.round(property.pricePerYear / 12))}/mo
                                         </p>
                                     </div>
+
+                                    {/* Rented by Tenant Banner */}
+                                    {property.status === "RENTED" && (
+                                        <div className="mt-3 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs">
+                                            <p className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                                                <User className="h-3 w-3" /> Rented By:
+                                            </p>
+                                            <p className="font-bold text-[var(--text-primary)] mt-0.5 truncate">
+                                                {property.transactions?.[0]?.tenant
+                                                    ? `${property.transactions[0].tenant.firstName || ""} ${property.transactions[0].tenant.lastName || ""}`.trim() || property.transactions[0].tenant.email
+                                                    : "Active Tenant (View Transactions)"}
+                                            </p>
+                                            {property.transactions?.[0]?.tenant?.phone && (
+                                                <p className="text-[11px] text-[var(--text-muted)] font-mono mt-0.5">
+                                                    {property.transactions[0].tenant.phone}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Action Buttons Footer */}
@@ -4077,12 +4107,25 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                                     <Button
                                         variant="outline"
                                         size="sm"
+                                        disabled={property.status === "RENTED" || property.featured}
                                         onClick={() => handleBoostClick(property.id)}
-                                        className="h-9 px-3 rounded-xl border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 text-xs font-bold gap-1"
-                                        title="Boost & Feature"
+                                        className={`h-9 px-3 rounded-xl border text-xs font-bold gap-1 ${
+                                            property.status === "RENTED"
+                                                ? "border-[var(--border-color)] text-[var(--text-muted)] opacity-50 cursor-not-allowed"
+                                                : property.featured
+                                                ? "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5 cursor-default"
+                                                : "border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                                        }`}
+                                        title={
+                                            property.status === "RENTED"
+                                                ? "Rented properties cannot be boosted"
+                                                : property.featured
+                                                ? "Listing is currently boosted (Active)"
+                                                : "Boost & Feature"
+                                        }
                                     >
                                         <Rocket className="h-3.5 w-3.5" />
-                                        Boost
+                                        {property.featured ? "Boosted" : "Boost"}
                                     </Button>
 
                                     <Button
@@ -4156,6 +4199,14 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                                                         <MapPin className="h-3 w-3 shrink-0" />
                                                         {property.address}, {property.city}
                                                     </p>
+                                                    {property.status === "RENTED" && (
+                                                        <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold mt-0.5 truncate flex items-center gap-1">
+                                                            <User className="h-2.5 w-2.5 shrink-0" />
+                                                            {property.transactions?.[0]?.tenant
+                                                                ? `Rented to: ${property.transactions[0].tenant.firstName || ""} ${property.transactions[0].tenant.lastName || ""}`.trim()
+                                                                : "Rented to active tenant"}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -4203,9 +4254,22 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
+                                                    disabled={property.status === "RENTED" || property.featured}
                                                     onClick={() => handleBoostClick(property.id)}
-                                                    className="h-8 px-2.5 rounded-lg border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 text-xs font-bold"
-                                                    title="Boost"
+                                                    className={`h-8 px-2.5 rounded-lg border text-xs font-bold ${
+                                                        property.status === "RENTED"
+                                                            ? "border-[var(--border-color)] text-[var(--text-muted)] opacity-50 cursor-not-allowed"
+                                                            : property.featured
+                                                            ? "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5 cursor-default"
+                                                            : "border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10"
+                                                    }`}
+                                                    title={
+                                                        property.status === "RENTED"
+                                                            ? "Rented properties cannot be boosted"
+                                                            : property.featured
+                                                            ? "Listing is currently boosted"
+                                                            : "Boost"
+                                                    }
                                                 >
                                                     <Rocket className="h-3.5 w-3.5" />
                                                 </Button>
@@ -4249,6 +4313,7 @@ function PropertiesTab({ properties, loading, onRefresh }: { properties: Propert
                     isOpen={isMonetizationOpen}
                     isVerified={properties.find((p) => p.id === selectedPropertyId)?.verified}
                     isFeatured={properties.find((p) => p.id === selectedPropertyId)?.featured}
+                    isRented={properties.find((p) => p.id === selectedPropertyId)?.status === "RENTED"}
                     onClose={() => setIsMonetizationOpen(false)}
                     onSuccess={handleMonetizationSuccess}
                 />
