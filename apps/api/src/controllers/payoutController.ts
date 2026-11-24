@@ -326,6 +326,45 @@ export class PayoutController {
                 orderBy: { createdAt: "desc" },
             });
 
+            // Auto-reconcile in-flight Anchor NIP payouts live against Anchor BaaS
+            for (const p of payouts) {
+                if (p.status === "PROCESSING" && (p.payoutRail === "ANCHOR_NIP" || p.anchorReference || p.idempotencyKey)) {
+                    const ref = p.anchorReference || p.idempotencyKey;
+                    if (ref) {
+                        try {
+                            const verified = await anchorService.verifyTransferByReference(ref);
+                            if (verified && (verified.status === "SUCCESSFUL" || (verified as any).status === "COMPLETED")) {
+                                await prisma.landlordPayout.update({
+                                    where: { id: p.id },
+                                    data: {
+                                        status: "COMPLETED",
+                                        processedAt: new Date(),
+                                        anchorTransferId: verified.transferId || p.anchorTransferId,
+                                    },
+                                });
+                                p.status = "COMPLETED";
+                                p.processedAt = new Date();
+
+                                if (p.transactionId) {
+                                    const tx = await prisma.transaction.findUnique({
+                                        where: { id: p.transactionId },
+                                        select: { propertyId: true },
+                                    });
+                                    if (tx?.propertyId) {
+                                        await prisma.property.update({
+                                            where: { id: tx.propertyId },
+                                            data: { status: "RENTED" },
+                                        }).catch(() => {});
+                                    }
+                                }
+                            }
+                        } catch (vErr) {
+                            console.warn("[payoutController] Failed to auto-verify in-flight payout:", vErr);
+                        }
+                    }
+                }
+            }
+
             // Enrich with transaction/property details
             const enriched = await Promise.all(
                 payouts.map(async (p) => {
