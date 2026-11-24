@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import api from "@/lib/api";
+import { toast } from "sonner";
 import {
     Dialog,
     DialogContent,
@@ -137,7 +139,30 @@ export function PaymentMethodModal({
         try {
             if (selectedMethod === "ANCHOR") {
                 if (anchorDetails) {
-                    // Tenant already has account and confirms they paid
+                    if (isServicePayment) {
+                        try {
+                            const verifyRes = await api.get(`/services/verify?reference=${anchorDetails.reference}`);
+                            if (verifyRes.data?.data?.status === "success" || verifyRes.data?.data?.status === "already_verified") {
+                                toast.success("Boost Payment Confirmed!", {
+                                    description: "Listing boost is now active for 30 consecutive days.",
+                                });
+                                onClose();
+                                if (typeof window !== "undefined") {
+                                    window.location.reload();
+                                }
+                                return;
+                            } else {
+                                toast.info("Payment Pending Detection", {
+                                    description: "Anchor has not yet detected the inbound transfer. If you just sent it via simulation, please allow 10-15 seconds and click Check again.",
+                                });
+                                return;
+                            }
+                        } catch (vErr: any) {
+                            console.warn("Verification check error:", vErr);
+                            onClose();
+                            return;
+                        }
+                    }
                     onClose();
                     return;
                 }
@@ -412,6 +437,38 @@ export function PaymentMethodModal({
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Sandbox Simulation Helper */}
+                                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                                            🧪 Sandbox Simulation Helper
+                                        </span>
+                                        <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                                            Anchor takes Kobo!
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between bg-[var(--bg-card)] p-2.5 rounded-lg border border-amber-500/20">
+                                        <div>
+                                            <p className="text-[10px] text-[var(--text-secondary)]">Amount in Kobo (Required by Anchor)</p>
+                                            <p className="font-mono font-extrabold text-sm text-amber-600 dark:text-amber-400">
+                                                {Math.round(totalAmount * 100).toLocaleString()} kobo
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => copyToClipboard(String(Math.round(totalAmount * 100)), "kobo")}
+                                            className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] flex items-center gap-1.5 shadow-sm transition-all"
+                                            title="Copy Kobo Amount for Anchor Simulation"
+                                        >
+                                            {copiedField === "kobo" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                                            <span>Copy Kobo</span>
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-amber-800/90 dark:text-amber-300/90 leading-relaxed">
+                                        In Anchor Dashboard → <strong>Simulate Transfer</strong>: paste <code>{anchorDetails.virtualNuban}</code> into <strong>Account Number ID *</strong>, and <code>{Math.round(totalAmount * 100)}</code> into <strong>Amount *</strong>.
+                                    </p>
+                                </div>
                                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed italic">
                                     {isServicePayment
                                         ? "💡 Transfer the exact amount from any Nigerian bank app. Service activates automatically upon receipt."
@@ -594,7 +651,7 @@ export function PaymentMethodModal({
                         ) : selectedMethod === "ANCHOR" ? (
                             anchorDetails ? (
                                 <>
-                                    I Have Completed Transfer <CheckCircle2 className="h-4 w-4" />
+                                    {isServicePayment ? "Check Payment Status" : "I Have Completed Transfer"} <CheckCircle2 className="h-4 w-4" />
                                 </>
                             ) : (
                                 <>
