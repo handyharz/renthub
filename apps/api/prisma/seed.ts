@@ -150,6 +150,7 @@ async function main() {
             // Random amenities and images
             const selectedAmenities = [...allAmenities].sort(() => 0.5 - Math.random()).slice(0, 5);
             const selectedImages = [...PROPERTY_IMAGES].sort(() => 0.5 - Math.random()).slice(0, 3);
+            const isFeatured = Math.random() > 0.8;
 
             await prisma.property.create({
                 data: {
@@ -191,7 +192,8 @@ async function main() {
 
                     landlordId: landlordId,
                     verified: true, // Auto-verify seed data
-                    featured: Math.random() > 0.8,
+                    featured: isFeatured,
+                    featuredExpiresAt: isFeatured ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
                     amenities: {
                         create: selectedAmenities.map(a => ({
                             amenity: { connect: { id: a.id } }
