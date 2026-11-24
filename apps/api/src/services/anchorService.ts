@@ -54,6 +54,14 @@ export class AnchorService {
         }
     }
 
+    getEscrowPoolId(): string {
+        return this.escrowPoolId;
+    }
+
+    getRevenueLedgerId(): string {
+        return this.revenueLedgerId;
+    }
+
     /**
      * Startup verification: validates that Anchor environment variables are correctly provisioned
      * and alerts or fails fast if an invalid placeholder or missing FBO account ID is detected.
@@ -198,6 +206,91 @@ export class AnchorService {
         } catch (error: any) {
             console.error("[AnchorService] Failed to create escrow Virtual NUBAN:", error.response?.data || error.message);
             throw new Error(error.response?.data?.errors?.[0]?.detail || error.response?.data?.message || "Failed to create Anchor Virtual NUBAN");
+        }
+    }
+
+    /**
+     * Generate dedicated Virtual NUBAN linked directly to the Anchor Revenue Account.
+     * Used for non-escrow platform service revenues (e.g., Boost Listing / Property Verification).
+     * Settlement account is explicitly set to this.revenueLedgerId (17943034048272-anc_acc).
+     */
+    async createRevenueSubAccount(
+        reference: string,
+        amountNaira: number,
+        landlordName: string,
+        serviceType: string,
+        landlordEmail?: string,
+        landlordBvn?: string
+    ): Promise<AnchorVirtualAccountResult> {
+        // Development / Test mock fallback when API key is not configured or in test mode
+        if (!this.apiKey || process.env.NODE_ENV === "test" || process.env.ANCHOR_MOCK === "true") {
+            const hash = crypto.createHash("md5").update(reference).digest("hex");
+            const virtualNuban = "99" + hash.replace(/\D/g, "").slice(0, 8).padEnd(8, "0");
+            const ledgerId = `ledg_rev_${reference.slice(-8)}`;
+
+            return {
+                ledgerId,
+                virtualNuban,
+                bankName: "Providus Bank / Anchor BaaS",
+                accountName: `RentHub Revenue: ${landlordName.slice(0, 15)}`,
+                cautionLedgerId: `caution_${ledgerId}`,
+                reference,
+            };
+        }
+
+        try {
+            // Anchor BaaS Official Virtual NUBAN (JSON:API format) linked to REVENUE Account
+            const virtualNubanPayload = {
+                data: {
+                    type: "VirtualNuban",
+                    attributes: {
+                        virtualAccountDetail: {
+                            name: `RentHub Rev: ${landlordName.slice(0, 18)}`,
+                            bvn: landlordBvn || "22222222226", // Sandbox test BVN fallback
+                            reference,
+                            email: landlordEmail || "revenue@renthub.ng",
+                            description: `RentHub ${serviceType} (Landlord: ${landlordName})`,
+                            permanent: false,
+                        },
+                    },
+                    relationships: {
+                        settlementAccount: {
+                            data: {
+                                type: "DepositAccount",
+                                id: this.revenueLedgerId, // 17943034048272-anc_acc (Direct Revenue Settlement)
+                            },
+                        },
+                    },
+                },
+            };
+
+            const response = await axios.post(
+                `${this.baseUrl}/virtual-nubans`,
+                virtualNubanPayload,
+                {
+                    headers: this.getHeaders(),
+                }
+            );
+
+            const vData = response.data?.data;
+            const attributes = vData?.attributes || {};
+            const bankInfo = attributes?.bank || {};
+
+            const virtualNuban = attributes.accountNumber || vData?.id;
+            const bankName = bankInfo.name ? `${bankInfo.name}` : "PROVIDUS BANK";
+            const accountName = attributes.accountName || `RentHub Revenue: ${landlordName}`;
+
+            return {
+                ledgerId: vData?.id || reference,
+                virtualNuban,
+                bankName,
+                accountName,
+                cautionLedgerId: `caution_${vData?.id || reference}`,
+                reference,
+            };
+        } catch (error: any) {
+            console.error("[AnchorService] Failed to create revenue Virtual NUBAN:", error.response?.data || error.message);
+            throw new Error(error.response?.data?.errors?.[0]?.detail || error.response?.data?.message || "Failed to create Anchor Revenue Virtual NUBAN");
         }
     }
 

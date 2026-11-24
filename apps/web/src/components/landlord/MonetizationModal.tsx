@@ -60,6 +60,39 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
         }
     };
 
+    const handleAnchorPayment = async () => {
+        if (!activeService) return;
+        try {
+            const response = await api.post(`/services/anchor/pay?clerkId=${user?.id}`, {
+                type: activeService.type,
+                propertyId,
+            });
+
+            const data = response.data?.data;
+            if (data?.virtualNuban) {
+                return {
+                    virtualNuban: data.virtualNuban,
+                    bankName: data.bankName || "Providus Bank / Anchor BaaS",
+                    accountName: data.accountName || "RentHub Revenue Account",
+                    reference: data.reference,
+                    totalAmount: activeService.amount,
+                };
+            }
+            throw new Error("Failed to generate Anchor Bank Account");
+        } catch (error: any) {
+            console.error("Anchor service payment initiation failed", error);
+            const message =
+                error.response?.data?.error ||
+                error.response?.data?.message ||
+                error.message ||
+                "Failed to initialize Anchor payment.";
+            toast.error("Bank Transfer Setup Failed", {
+                description: message,
+            });
+            throw error;
+        }
+    };
+
     const handleAfriExchangePayment = async ({
         accountEmail,
         walletAddress,
@@ -180,21 +213,21 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                         />
                     </div>
 
-                    {/* Security & Dual-Gateway Payment Notice Footer */}
+                    {/* Security & Multi-Gateway Payment Notice Footer */}
                     <div className="p-5 sm:p-6 bg-[var(--bg-muted)]/70 border-t border-[var(--border-color)] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
                         <div className="flex items-center gap-2 font-medium">
                             <Lock className="h-4 w-4 text-[var(--color-brand-green)] shrink-0" />
-                            <span>Supported Gateways: Paystack (Cards & Bank) & AfriExchange (NT, CT, USDT)</span>
+                            <span>Supported Gateways: Anchor BaaS (Direct Bank Transfer), Paystack (Cards & USSD) & AfriExchange (NT, CT, USDT)</span>
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] font-semibold">
                             <Zap className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                            <span>Dual Gateway Checkout Enabled</span>
+                            <span>Triple Gateway Checkout Enabled</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Dual Gateway Payment Selection Modal */}
+            {/* Multi-Gateway Payment Selection Modal */}
             {activeService && (
                 <PaymentMethodModal
                     isOpen={!!activeService}
@@ -202,6 +235,7 @@ export const MonetizationModal: React.FC<MonetizationModalProps> = ({
                     totalAmount={activeService.amount}
                     propertyTitle={activeService.title}
                     defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
+                    onAnchor={handleAnchorPayment}
                     onPaystack={handlePaystackPayment}
                     onAfriExchange={handleAfriExchangePayment}
                 />

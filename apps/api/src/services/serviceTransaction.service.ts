@@ -1,6 +1,7 @@
 import { PrismaClient, ServiceType, TransactionStatus } from "@prisma/client";
 import { prisma } from "../config/database";
 import { paymentService } from "./paymentService";
+import { anchorService } from "./anchorService";
 import axios from "axios";
 import { getCleanAfriExchangeUrl, getAfriExchangeApiKey } from "../config/afriExchange";
 
@@ -76,6 +77,78 @@ export class ServiceTransactionService {
             authorizationUrl: paymentData.authorization_url,
             accessCode: paymentData.access_code,
             reference: paymentData.reference,
+        };
+    }
+
+    /**
+     * Initiate a service payment with Anchor BaaS (Revenue Account settlement)
+     * Dedicated Providus Virtual NUBAN routes funds straight to the REVENUE account (17943034048272-anc_acc).
+     */
+    async initiateAnchorTransaction(userId: string, type: ServiceType, propertyId?: string) {
+        let amount = 0;
+        switch (type) {
+            case ServiceType.PROPERTY_VERIFICATION:
+                amount = 20000; // 20,000 NGN
+                break;
+            case ServiceType.FEATURED_LISTING:
+                amount = 50000; // 50,000 NGN
+                break;
+            case ServiceType.USER_VERIFICATION:
+                amount = 5000; // 5,000 NGN
+                break;
+            default:
+                throw new Error("Invalid service type");
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true, firstName: true, lastName: true },
+        });
+
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        const landlordName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Landlord";
+        const reference = paymentService.generateReference(
+            type === ServiceType.FEATURED_LISTING ? "FEAT-ANC" : "VERI-ANC"
+        );
+
+        // Generate virtual NUBAN linked directly to REVENUE Account (17943034048272-anc_acc)
+        const virtualAccount = await anchorService.createRevenueSubAccount(
+            reference,
+            amount,
+            landlordName,
+            type,
+            user.email || undefined
+        );
+
+        const transaction = await prisma.serviceTransaction.create({
+            data: {
+                userId,
+                propertyId,
+                type,
+                amount,
+                status: TransactionStatus.PENDING,
+                reference,
+                metadata: {
+                    gateway: "ANCHOR",
+                    revenueAccountId: anchorService.getRevenueLedgerId(),
+                    anchorLedgerId: virtualAccount.ledgerId,
+                    anchorVirtualNuban: virtualAccount.virtualNuban,
+                    anchorBankName: virtualAccount.bankName,
+                    anchorAccountName: virtualAccount.accountName,
+                },
+            },
+        });
+
+        return {
+            transaction,
+            virtualNuban: virtualAccount.virtualNuban,
+            bankName: virtualAccount.bankName,
+            accountName: virtualAccount.accountName,
+            reference,
+            amount,
         };
     }
 
@@ -330,6 +403,37 @@ export class ServiceTransactionService {
         const meta = transaction.metadata as any;
         if (meta?.gateway === "AFRIEXCHANGE" || reference.includes("AFRI") || reference.startsWith("SIM-")) {
             return await this.completeServicePayment(reference);
+        }
+
+        // Anchor BaaS Bank Transfer verification (Settled directly to REVENUE account)
+        if (meta?.gateway === "ANCHOR" || reference.includes("ANC")) {
+            const payments = await anchorService.getRecentPayments();
+            const virtualNuban = meta?.anchorVirtualNuban;
+            const ledgerId = meta?.anchorLedgerId;
+
+            const matchedPayment = payments.find((p: any) => {
+                const pVirtualNubanId =
+                    p.relationships?.virtualNuban?.data?.id ||
+                    p.attributes?.payment?.virtualNuban?.accountId;
+                const pAccountNumber =
+                    p.attributes?.payment?.virtualNuban?.accountNumber ||
+                    p.attributes?.accountNumber;
+                const pAmount = p.attributes?.amount ?? p.attributes?.payment?.amount;
+                const matchesAccount =
+                    (ledgerId && pVirtualNubanId === ledgerId) ||
+                    (virtualNuban && pAccountNumber === virtualNuban);
+                const meetsAmount = pAmount !== undefined && pAmount >= transaction.amount * 100;
+                return matchesAccount && meetsAmount;
+            });
+
+            if (matchedPayment || process.env.ANCHOR_MOCK === "true") {
+                return await this.completeServicePayment(reference);
+            }
+
+            return {
+                status: "pending",
+                message: "Payment transfer not yet detected on Providus / Anchor rail. Please allow 15-30 seconds after sending.",
+            };
         }
 
         // Real Paystack verification

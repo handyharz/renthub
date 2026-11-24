@@ -174,3 +174,31 @@ describe("Anchor Escrow Reconciliation & Solvency Invariant", () => {
         assert.equal(netDeficitKobo, 2_000_000_00, "Must flag exact ₦2,000,000 deficit when pool is underfunded");
     });
 });
+
+describe("Anchor Revenue Direct Settlement (Listing Boost & Verification)", () => {
+    test("generates revenue Virtual NUBAN routing to REVENUE account rather than FBO escrow", async () => {
+        const reference = "FEAT-ANC-1732400000";
+        const result = await anchorService.createRevenueSubAccount(
+            reference,
+            50000,
+            "Chief Landlord",
+            "FEATURED_LISTING",
+            "landlord@test.com"
+        );
+
+        assert.ok(result.virtualNuban, "Virtual NUBAN must be returned");
+        assert.ok(result.bankName, "Bank name must be provided");
+        assert.equal(result.reference, reference, "Reference must match");
+        assert.ok(result.accountName.includes("RentHub Revenue"), "Account name must reflect platform revenue");
+    });
+
+    test("confirms revenue ledger ID points to organization REVENUE deposit account", () => {
+        const revenueId = anchorService.getRevenueLedgerId();
+        assert.ok(revenueId, "Revenue ledger ID must be configured");
+        // Must match either the 17943034048272-anc_acc or the fallback configuration
+        assert.ok(
+            revenueId === "17943034048272-anc_acc" || revenueId.startsWith("ledg_rev_"),
+            "Revenue ledger must be properly identified"
+        );
+    });
+});

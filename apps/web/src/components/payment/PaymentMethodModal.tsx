@@ -116,6 +116,12 @@ export function PaymentMethodModal({
     } | null>(null);
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
+    const isServicePayment =
+        propertyTitle.toLowerCase().includes("featured") ||
+        propertyTitle.toLowerCase().includes("verification") ||
+        propertyTitle.toLowerCase().includes("boost") ||
+        propertyTitle.toLowerCase().includes("badge");
+
     const convertedTokenAmount = TOKEN_RATES[tokenType].convert(totalAmount);
 
     const copyToClipboard = (text: string, field: string) => {
@@ -189,10 +195,12 @@ export function PaymentMethodModal({
                         </div>
                         <div>
                             <DialogTitle className="text-lg font-extrabold text-[var(--text-primary)]">
-                                Choose Escrow Payment Gateway
+                                {isServicePayment ? "Choose Payment Method" : "Choose Escrow Payment Gateway"}
                             </DialogTitle>
                             <DialogDescription className="text-xs text-[var(--text-secondary)] font-medium">
-                                Funds are safely held in RentHub Escrow until physical key handover.
+                                {isServicePayment
+                                    ? "Instant activation upon payment confirmation. Direct settlement to RentHub Revenue."
+                                    : "Funds are safely held in RentHub Escrow until physical key handover."}
                             </DialogDescription>
                         </div>
                     </div>
@@ -202,7 +210,7 @@ export function PaymentMethodModal({
                 <div className="bg-[var(--bg-muted)]/70 rounded-2xl p-4 border border-[var(--border-color)] flex items-center justify-between gap-3 min-w-0">
                     <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-                            Total Escrow Amount
+                            {isServicePayment ? "Total Service Fee" : "Total Escrow Amount"}
                         </p>
                         <p className="text-xs font-bold text-[var(--text-primary)] truncate" title={propertyTitle}>
                             {propertyTitle}
@@ -313,7 +321,7 @@ export function PaymentMethodModal({
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <p className="font-bold text-sm text-[var(--text-primary)]">
-                                            Bank Transfer (Dedicated Escrow)
+                                            {isServicePayment ? "Bank Transfer (Direct Revenue)" : "Bank Transfer (Dedicated Escrow)"}
                                         </p>
                                         <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none text-[10px] font-bold py-0.5 flex items-center gap-1">
                                             <Sparkles className="h-2.5 w-2.5" />
@@ -405,7 +413,9 @@ export function PaymentMethodModal({
                                     </div>
                                 </div>
                                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed italic">
-                                    💡 Transfer the exact amount from any Nigerian bank app. Escrow funds automatically upon receipt.
+                                    {isServicePayment
+                                        ? "💡 Transfer the exact amount from any Nigerian bank app. Service activates automatically upon receipt."
+                                        : "💡 Transfer the exact amount from any Nigerian bank app. Escrow funds automatically upon receipt."}
                                 </p>
                             </div>
                         )}
@@ -588,7 +598,7 @@ export function PaymentMethodModal({
                                 </>
                             ) : (
                                 <>
-                                    Generate Escrow Bank Account <ArrowRight className="h-4 w-4" />
+                                    {isServicePayment ? "Generate Bank Account" : "Generate Escrow Bank Account"} <ArrowRight className="h-4 w-4" />
                                 </>
                             )
                         ) : selectedMethod === "PAYSTACK" ? (

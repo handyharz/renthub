@@ -47,6 +47,48 @@ export class ServiceTransactionController {
     }
 
     /**
+     * INITIATE ANCHOR DIRECT BANK TRANSFER PAYMENT (REVENUE ACCOUNT)
+     * POST /api/services/anchor/pay
+     * Body: { type: 'PROPERTY_VERIFICATION' | 'FEATURED_LISTING', propertyId: string }
+     */
+    async initiateAnchor(req: Request, res: Response): Promise<void> {
+        try {
+            const userId = req.user?.id;
+
+            if (!userId) {
+                res.status(401).json({ error: "Unauthorized: User not found" });
+                return;
+            }
+
+            const { type, propertyId } = req.body;
+
+            if (!type || !Object.values(ServiceType).includes(type)) {
+                res.status(400).json({ error: "Invalid service type" });
+                return;
+            }
+
+            if (
+                (type === ServiceType.PROPERTY_VERIFICATION || type === ServiceType.FEATURED_LISTING) &&
+                !propertyId
+            ) {
+                res.status(400).json({ error: "Property ID is required for this service" });
+                return;
+            }
+
+            const result = await serviceTransactionService.initiateAnchorTransaction(userId, type, propertyId);
+
+            res.status(201).json({
+                success: true,
+                message: "Anchor Bank Transfer account generated successfully",
+                data: result,
+            });
+        } catch (error: any) {
+            console.error("Initiate Anchor payment error:", error);
+            res.status(500).json({ error: error.message || "Internal server error" });
+        }
+    }
+
+    /**
      * INITIATE AFRIEXCHANGE PAYMENT
      * POST /api/services/afriexchange/pay
      * Body: { type, propertyId, accountEmail, walletAddress, tokenType, amountInToken, returnUrl }
@@ -123,6 +165,14 @@ export class ServiceTransactionController {
 
             if (result.status === "failed") {
                 res.status(400).json({ error: "Payment verification failed" });
+                return;
+            }
+
+            if (result.status === "pending") {
+                res.status(200).json({
+                    message: (result as any).message || "Payment transfer pending detection",
+                    data: result,
+                });
                 return;
             }
 

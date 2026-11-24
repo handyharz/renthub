@@ -1141,10 +1141,52 @@ export class PaymentController {
                             );
                         }
                     } else {
-                        console.warn(
-                            `[Anchor Webhook] No transaction found for virtualNubanId=${virtualNubanId} ` +
-                            `accountNumber=${accountNumber} reference=${reference}. eventId=${anchorEventId}`
-                        );
+                        // Check if inbound payment is for a platform service transaction (Boost Listing / Verification)
+                        let serviceTx = reference
+                            ? await prisma.serviceTransaction.findUnique({ where: { reference } })
+                            : null;
+
+                        if (!serviceTx && (virtualNubanId || accountNumber)) {
+                            const pendingServiceTxs = await prisma.serviceTransaction.findMany({
+                                where: { status: TransactionStatus.PENDING },
+                            });
+                            serviceTx =
+                                pendingServiceTxs.find((st: any) => {
+                                    const meta = st.metadata as any;
+                                    return (
+                                        meta?.gateway === "ANCHOR" &&
+                                        ((virtualNubanId && meta?.anchorLedgerId === virtualNubanId) ||
+                                            (accountNumber && meta?.anchorVirtualNuban === accountNumber))
+                                    );
+                                }) || null;
+                        }
+
+                        if (serviceTx) {
+                            if (amountKobo !== undefined && amountKobo >= serviceTx.amount * 100) {
+                                console.info(
+                                    `[Anchor Webhook] Found matching ServiceTransaction ${serviceTx.id} (${serviceTx.type}) for reference ${serviceTx.reference}. Paid: ${amountKobo} kobo. Completing direct revenue settlement!`
+                                );
+                                const { ServiceTransactionService } = require("../services/serviceTransaction.service");
+                                const serviceTxService = new ServiceTransactionService();
+                                await serviceTxService.completeServicePayment(serviceTx.reference);
+                                return res.status(200).json({
+                                    success: true,
+                                    received: true,
+                                    serviceTransactionId: serviceTx.id,
+                                    type: serviceTx.type,
+                                    settlement: "REVENUE_ACCOUNT",
+                                });
+                            } else {
+                                console.warn(
+                                    `[Anchor Webhook] ServiceTransaction ${serviceTx.id} underpayment: received ${amountKobo} kobo, expected ${serviceTx.amount * 100} kobo.`
+                                );
+                            }
+                        } else {
+                            console.warn(
+                                `[Anchor Webhook] No transaction or serviceTransaction found for virtualNubanId=${virtualNubanId} ` +
+                                    `accountNumber=${accountNumber} reference=${reference}. eventId=${anchorEventId}`
+                            );
+                        }
                     }
                 }
 
