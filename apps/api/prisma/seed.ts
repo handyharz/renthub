@@ -1,5 +1,6 @@
-import process from "node:process";
 import { PrismaClient, AmenityCategory, UserRole, PropertyType, PropertyStatus, PaymentTerms, PowerSupply, WaterSupply } from "@prisma/client";
+
+declare const process: { exit: (code?: number) => never; env: Record<string, string | undefined> };
 
 const prisma = new PrismaClient();
 
