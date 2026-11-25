@@ -143,8 +143,10 @@ export function PaymentMethodModal({
                 if (anchorDetails) {
                     if (isServicePayment) {
                         try {
-                            const verifyRes = await api.get(`/services/verify?reference=${anchorDetails.reference}`);
-                            if (verifyRes.data?.data?.status === "success" || verifyRes.data?.data?.status === "already_verified") {
+                            const ref = encodeURIComponent(anchorDetails.reference);
+                            const verifyRes = await api.get(`/services/verify/${ref}`);
+                            const verifyData = verifyRes.data?.data;
+                            if (verifyData?.status === "success" || verifyData?.status === "already_verified") {
                                 toast.success("Boost Payment Confirmed!", {
                                     description: "Listing boost is now active for 30 consecutive days.",
                                 });
@@ -155,13 +157,32 @@ export function PaymentMethodModal({
                                 return;
                             } else {
                                 toast.info("Payment Pending Detection", {
-                                    description: "Anchor has not yet detected the inbound transfer. If you just sent it via simulation, please allow 10-15 seconds and click Check again.",
+                                    description: verifyData?.message || "Anchor has not yet detected the inbound transfer. If you just sent it via simulation, please allow 10-15 seconds and click Check again.",
                                 });
                                 return;
                             }
                         } catch (vErr: any) {
                             console.warn("Verification check error:", vErr);
-                            onClose();
+                            // Fallback to POST /services/verify
+                            try {
+                                const postRes = await api.post("/services/verify", { reference: anchorDetails.reference });
+                                const postData = postRes.data?.data;
+                                if (postData?.status === "success" || postData?.status === "already_verified") {
+                                    toast.success("Boost Payment Confirmed!", {
+                                        description: "Listing boost is now active for 30 consecutive days.",
+                                    });
+                                    if (onSuccess) {
+                                        onSuccess();
+                                    }
+                                    onClose();
+                                    return;
+                                }
+                            } catch (fallbackErr) {}
+
+                            const msg = vErr.response?.data?.message || vErr.response?.data?.error || vErr.message || "Failed to verify transfer status.";
+                            toast.error("Status Check", {
+                                description: msg,
+                            });
                             return;
                         }
                     }
