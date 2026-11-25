@@ -32,7 +32,9 @@ import {
     Lock,
     Landmark,
     Copy,
-    Check
+    Check,
+    LayoutGrid,
+    List,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -141,6 +143,7 @@ export function ApplicationsTab() {
 
     // Tab, Search, Filter & Pagination State
     const [activeTab, setActiveTab] = useState<"applications" | "escrow" | "renewals">("applications");
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [appSearchQuery, setAppSearchQuery] = useState("");
     const [appStatusFilter, setAppStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
     const [escrowFilter, setEscrowFilter] = useState<"all" | "active" | "completed">("all");
@@ -776,6 +779,36 @@ export function ApplicationsTab() {
                                 );
                             })}
                         </div>
+
+                        {/* View Switcher: Grid View (Default) vs List View */}
+                        <div className="flex items-center p-1 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)] shrink-0 self-end md:self-auto">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode("grid")}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    viewMode === "grid"
+                                        ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                }`}
+                                title="Grid View (Default)"
+                            >
+                                <LayoutGrid className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Grid (Default)</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode("list")}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    viewMode === "list"
+                                        ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                }`}
+                                title="List View"
+                            >
+                                <List className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">List</span>
+                            </button>
+                        </div>
                     </div>
 
                     {applications.length === 0 ? (
@@ -814,7 +847,7 @@ export function ApplicationsTab() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="grid gap-4 w-full min-w-0 max-w-full">
+                        <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0 max-w-full" : "grid grid-cols-1 gap-4 w-full min-w-0 max-w-full"}>
                             {paginatedApps.map((app) => {
                                 const primaryImage =
                                     app.property.images?.find((img) => img.isPrimary)?.url ||
@@ -941,6 +974,21 @@ export function ApplicationsTab() {
                                                 <span className="font-semibold text-[var(--text-secondary)] mt-0.5 block truncate">
                                                     {new Date(app.createdAt).toLocaleDateString()}
                                                 </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Transparent Price Clarity Note */}
+                                        <div className="p-3 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] text-xs space-y-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-[var(--text-secondary)] font-medium">Advertised Listing Rent:</span>
+                                                <span className="font-extrabold text-[var(--text-primary)] tabular-nums">{formatPrice(app.property.pricePerYear)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-1 border-t border-[var(--border-color)]/60">
+                                                <div>
+                                                    <span className="font-bold text-[var(--color-brand-green)]">Est. Move-In Escrow:</span>
+                                                    <span className="text-[10px] text-[var(--text-muted)] block">Rent + {formatPrice(totalEstimated - app.property.pricePerYear)} refundable caution & fees</span>
+                                                </div>
+                                                <span className="font-black text-sm text-[var(--color-brand-green)] tabular-nums">{formatPrice(totalEstimated)}</span>
                                             </div>
                                         </div>
 

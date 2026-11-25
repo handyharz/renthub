@@ -26,7 +26,9 @@ import {
     Sparkles,
     MessageSquare,
     Check,
-    X
+    X,
+    LayoutGrid,
+    List,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -77,6 +79,7 @@ export function LandlordApplicationsTab() {
     const [activeSection, setActiveSection] = useState<"applications" | "renewals">("applications");
 
     // Search, filter & pagination state
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
     const [currentPage, setCurrentPage] = useState(1);
@@ -423,6 +426,36 @@ export function LandlordApplicationsTab() {
                         );
                     })}
                 </div>
+
+                {/* View Switcher: Grid View (Default) vs List View */}
+                <div className="flex items-center p-1 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)] shrink-0 self-end md:self-auto">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "grid"
+                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="Grid View (Default)"
+                    >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Grid (Default)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "list"
+                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="List View"
+                    >
+                        <List className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">List</span>
+                    </button>
+                </div>
             </div>
 
             {/* Applications List */}
@@ -464,7 +497,7 @@ export function LandlordApplicationsTab() {
                 </div>
             ) : (
                 <div className="space-y-4 w-full min-w-0 max-w-full">
-                    <div className="grid gap-4 w-full min-w-0 max-w-full">
+                    <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0 max-w-full" : "grid grid-cols-1 gap-4 w-full min-w-0 max-w-full"}>
                         {paginatedApplications.map((app) => {
                             const primaryImage =
                                 app.property.images?.find((img) => img.isPrimary)?.url ||
