@@ -37,7 +37,7 @@ export class FavoritesService {
      * Get user's favorites
      */
     async getUserFavorites(userId: string) {
-        return await prisma.favorite.findMany({
+        const favorites = await prisma.favorite.findMany({
             where: { userId },
             include: {
                 property: {
@@ -50,6 +50,15 @@ export class FavoritesService {
                 },
             },
             orderBy: { createdAt: "desc" },
+        });
+
+        // Option 1: Prioritize AVAILABLE properties first, sinking RENTED properties to bottom
+        return favorites.sort((a, b) => {
+            const isRentedA = a.property?.status === "RENTED" || a.property?.status === "UNAVAILABLE";
+            const isRentedB = b.property?.status === "RENTED" || b.property?.status === "UNAVAILABLE";
+            if (isRentedA && !isRentedB) return 1;
+            if (!isRentedA && isRentedB) return -1;
+            return 0;
         });
     }
 

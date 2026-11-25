@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from "react";
+import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -1079,7 +1079,15 @@ function TenantOverviewTab({
     dbUser: any;
 }) {
     const trustScore = calculateTrustScore(dbUser);
-    const userFavorites = favorites || [];
+    const rawFavorites = favorites || [];
+    // Option 1: Prioritize AVAILABLE listings first, sinking RENTED listings to bottom
+    const userFavorites = [...rawFavorites].sort((a, b) => {
+        const isRentedA = a.status === "RENTED" || a.status === "UNAVAILABLE";
+        const isRentedB = b.status === "RENTED" || b.status === "UNAVAILABLE";
+        if (isRentedA && !isRentedB) return 1;
+        if (!isRentedA && isRentedB) return -1;
+        return 0;
+    });
 
     const statCards = [
         {
@@ -1523,6 +1531,9 @@ function TenantOverviewTab({
 function DashboardForRentTab() {
     const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedState, setSelectedState] = useState("");
@@ -1533,6 +1544,9 @@ function DashboardForRentTab() {
     const [onlyServiced, setOnlyServiced] = useState(false);
     const [onlyVerified, setOnlyVerified] = useState(false);
     const [sortBy, setSortBy] = useState("newest");
+
+    const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+    const PAGE_SIZE = 12;
 
     const POPULAR_HUBS = [
         { label: "All Nigeria", state: "" },
@@ -1555,37 +1569,50 @@ function DashboardForRentTab() {
         { label: "₦6M+", value: "OVER_6M" },
     ];
 
+    const buildParams = (offset: number) => {
+        const params = new URLSearchParams();
+        if (searchQuery.trim()) params.append("q", searchQuery.trim());
+        if (selectedState) params.append("state", selectedState);
+        if (selectedCity) params.append("city", selectedCity);
+        if (selectedType !== "ALL") params.append("propertyType", selectedType);
+
+        if (priceRange === "UNDER_500K") params.append("maxPrice", "500000");
+        else if (priceRange === "500K_1_5M") {
+            params.append("minPrice", "500000");
+            params.append("maxPrice", "1500000");
+        } else if (priceRange === "1_5M_3M") {
+            params.append("minPrice", "1500000");
+            params.append("maxPrice", "3000000");
+        } else if (priceRange === "3M_6M") {
+            params.append("minPrice", "3000000");
+            params.append("maxPrice", "6000000");
+        } else if (priceRange === "OVER_6M") {
+            params.append("minPrice", "6000000");
+        }
+
+        if (onlySolar) params.append("powerSupply", "GRID_AND_SOLAR");
+        if (onlyServiced) params.append("serviced", "true");
+        if (onlyVerified) params.append("verified", "true");
+        if (sortBy) params.append("sortBy", sortBy);
+
+        params.append("limit", PAGE_SIZE.toString());
+        params.append("offset", offset.toString());
+        return params;
+    };
+
+    // Initial batch fetch on filter/search change
     useEffect(() => {
+        let isMounted = true;
         const fetchProperties = async () => {
             setLoading(true);
             try {
-                const params = new URLSearchParams();
-                if (searchQuery.trim()) params.append("q", searchQuery.trim());
-                if (selectedState) params.append("state", selectedState);
-                if (selectedCity) params.append("city", selectedCity);
-                if (selectedType !== "ALL") params.append("propertyType", selectedType);
-
-                if (priceRange === "UNDER_500K") params.append("maxPrice", "500000");
-                else if (priceRange === "500K_1_5M") {
-                    params.append("minPrice", "500000");
-                    params.append("maxPrice", "1500000");
-                } else if (priceRange === "1_5M_3M") {
-                    params.append("minPrice", "1500000");
-                    params.append("maxPrice", "3000000");
-                } else if (priceRange === "3M_6M") {
-                    params.append("minPrice", "3000000");
-                    params.append("maxPrice", "6000000");
-                } else if (priceRange === "OVER_6M") {
-                    params.append("minPrice", "6000000");
-                }
-
-                if (onlySolar) params.append("powerSupply", "GRID_AND_SOLAR");
-                if (onlyServiced) params.append("serviced", "true");
-                if (onlyVerified) params.append("verified", "true");
-                if (sortBy) params.append("sortBy", sortBy);
-
+                const params = buildParams(0);
                 const res = await api.get(`/properties?${params.toString()}`);
+                if (!isMounted) return;
+
                 const rawProperties: Property[] = res.data?.data?.properties || [];
+                const total: number = res.data?.data?.total ?? rawProperties.length;
+
                 // Option 1: Prioritize AVAILABLE listings first, sinking RENTED listings to the bottom
                 const sorted = [...rawProperties].sort((a, b) => {
                     const isRentedA = a.status === "RENTED" || a.status === "UNAVAILABLE";
@@ -1594,18 +1621,81 @@ function DashboardForRentTab() {
                     if (!isRentedA && isRentedB) return -1;
                     return 0;
                 });
+
                 setProperties(sorted);
+                setTotalCount(total);
+                setHasMore(sorted.length < total && rawProperties.length >= PAGE_SIZE);
             } catch (error) {
                 console.error("Failed to fetch dashboard rental properties:", error);
-                setProperties([]);
+                if (isMounted) {
+                    setProperties([]);
+                    setTotalCount(0);
+                    setHasMore(false);
+                }
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
         const timer = setTimeout(fetchProperties, 200);
-        return () => clearTimeout(timer);
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
     }, [searchQuery, selectedState, selectedCity, selectedType, priceRange, onlySolar, onlyServiced, onlyVerified, sortBy]);
+
+    // Lazy load next batch (Infinite scroll)
+    const loadMoreProperties = async () => {
+        if (loadingMore || !hasMore || loading) return;
+        setLoadingMore(true);
+        try {
+            const nextOffset = properties.length;
+            const params = buildParams(nextOffset);
+            const res = await api.get(`/properties?${params.toString()}`);
+            const newProps: Property[] = res.data?.data?.properties || [];
+            const total: number = res.data?.data?.total ?? (properties.length + newProps.length);
+
+            // Deduplicate incoming properties
+            const existingIds = new Set(properties.map((p) => p.id));
+            const uniqueNewProps = newProps.filter((p) => !existingIds.has(p.id));
+
+            const combined = [...properties, ...uniqueNewProps];
+            const sorted = combined.sort((a, b) => {
+                const isRentedA = a.status === "RENTED" || a.status === "UNAVAILABLE";
+                const isRentedB = b.status === "RENTED" || b.status === "UNAVAILABLE";
+                if (isRentedA && !isRentedB) return 1;
+                if (!isRentedA && isRentedB) return -1;
+                return 0;
+            });
+
+            setProperties(sorted);
+            setTotalCount(total);
+            setHasMore(sorted.length < total && newProps.length >= PAGE_SIZE);
+        } catch (error) {
+            console.error("Failed to lazy load more properties:", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    // Auto-trigger load more when user scrolls near the bottom sentinel
+    useEffect(() => {
+        if (!hasMore || loading || loadingMore) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    loadMoreProperties();
+                }
+            },
+            { rootMargin: "300px" }
+        );
+
+        const current = loadMoreSentinelRef.current;
+        if (current) observer.observe(current);
+        return () => {
+            if (current) observer.unobserve(current);
+        };
+    }, [hasMore, loading, loadingMore, properties.length]);
 
     const citiesInState = selectedState && NIGERIAN_LOCATIONS[selectedState] ? NIGERIAN_LOCATIONS[selectedState] : [];
 
@@ -1807,7 +1897,7 @@ function DashboardForRentTab() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 w-full min-w-0">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-[var(--text-primary)]">
-                        {loading ? "Searching verified homes..." : `${properties.length} ${properties.length === 1 ? "home" : "homes"} available`}
+                        {loading ? "Searching verified homes..." : `${totalCount || properties.length} ${(totalCount || properties.length) === 1 ? "home" : "homes"} available`}
                     </span>
                     {selectedState && (
                         <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/20">
@@ -1903,6 +1993,33 @@ function DashboardForRentTab() {
                             }}
                         />
                     ))}
+                </div>
+            )}
+
+            {/* Infinite Scroll / Lazy Loading Sentinel & Load More Action */}
+            {!loading && properties.length > 0 && (
+                <div className="py-6 flex flex-col items-center justify-center gap-3 w-full">
+                    <div ref={loadMoreSentinelRef} className="h-2 w-full pointer-events-none" />
+                    {loadingMore ? (
+                        <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-xs text-xs font-bold text-[var(--color-brand-green)]">
+                            <RefreshCw className="h-4 w-4 animate-spin text-[var(--color-brand-green)]" />
+                            <span>Lazy loading more verified homes...</span>
+                        </div>
+                    ) : hasMore ? (
+                        <Button
+                            variant="outline"
+                            onClick={loadMoreProperties}
+                            className="rounded-2xl px-6 h-11 border-[var(--border-color)] hover:border-[var(--color-brand-green)] hover:bg-[var(--bg-muted)] text-xs font-extrabold text-[var(--text-primary)] gap-2 shadow-2xs cursor-pointer"
+                        >
+                            <ChevronDown className="h-4 w-4 text-[var(--color-brand-green)]" />
+                            <span>Load More Properties ({Math.max(0, totalCount - properties.length)} remaining)</span>
+                        </Button>
+                    ) : properties.length >= 12 ? (
+                        <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)] py-2">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                            <span>You have viewed all {properties.length} homes</span>
+                        </div>
+                    ) : null}
                 </div>
             )}
         </div>
@@ -2376,6 +2493,12 @@ function FavoritesTab({
                 return matchesSearch && matchesType && matchesAvailability;
             })
             .sort((a, b) => {
+                // Option 1: Prioritize AVAILABLE listings first, sinking RENTED listings to the bottom
+                const aRented = a.status === "RENTED" || a.status === "UNAVAILABLE";
+                const bRented = b.status === "RENTED" || b.status === "UNAVAILABLE";
+                if (aRented && !bRented) return 1;
+                if (!aRented && bRented) return -1;
+
                 if (sortBy === "PRICE_ASC") return (a.pricePerYear || 0) - (b.pricePerYear || 0);
                 if (sortBy === "PRICE_DESC") return (b.pricePerYear || 0) - (a.pricePerYear || 0);
                 if (sortBy === "BEDS_DESC") return (b.bedrooms || 0) - (a.bedrooms || 0);
