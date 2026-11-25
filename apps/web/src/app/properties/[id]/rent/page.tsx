@@ -18,6 +18,9 @@ import {
     CheckCircle2,
     Lock,
     Sparkles,
+    LayoutGrid,
+    List,
+    Info,
 } from "lucide-react";
 import Link from "next/link";
 import { PaymentMethodModal } from "@/components/payment/PaymentMethodModal";
@@ -31,6 +34,7 @@ export default function RentPropertyPage() {
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [costViewMode, setCostViewMode] = useState<"grid" | "list">("grid");
 
     useEffect(() => {
         if (id) fetchProperty();
@@ -275,13 +279,236 @@ export default function RentPropertyPage() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left: Application Steps & Guarantee */}
-                    <div className="lg:col-span-2 space-y-5">
+                    {/* Left: Application Steps, Price Clarity & Guarantee */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Price Clarity & Cost Breakdown Card */}
+                        <div className="bg-[var(--bg-card)] p-6 rounded-3xl border border-[var(--border-color)] shadow-xs space-y-5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-base font-black text-[var(--text-primary)]">
+                                            Price Clarity & Payment Breakdown
+                                        </h2>
+                                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                            Zero Hidden Fees
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-[var(--text-secondary)] font-medium mt-0.5">
+                                        Understanding the shown property rent vs. your total upfront escrow deposit
+                                    </p>
+                                </div>
+
+                                {/* View Switcher Toggle: Grid View (Default) vs List View */}
+                                <div className="flex items-center p-1 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)] self-start sm:self-auto shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCostViewMode("grid")}
+                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                            costViewMode === "grid"
+                                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                        }`}
+                                    >
+                                        <LayoutGrid className="h-3.5 w-3.5" />
+                                        <span>Grid View (Default)</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCostViewMode("list")}
+                                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                            costViewMode === "list"
+                                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                        }`}
+                                    >
+                                        <List className="h-3.5 w-3.5" />
+                                        <span>List View</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Transparent Price Bridge Banner */}
+                            <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] flex flex-wrap items-center justify-between gap-3 text-xs">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[var(--text-secondary)] font-medium">Shown Property Rent:</span>
+                                    <span className="font-extrabold text-[var(--text-primary)] tabular-nums">{formatPrice(property.pricePerYear)}</span>
+                                </div>
+                                <span className="text-[var(--text-muted)] font-black hidden sm:inline">+</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[var(--text-secondary)] font-medium">Refundable Caution & Fees:</span>
+                                    <span className="font-extrabold text-[var(--text-primary)] tabular-nums">{formatPrice(totalUpfront - property.pricePerYear)}</span>
+                                </div>
+                                <span className="text-[var(--text-muted)] font-black hidden sm:inline">=</span>
+                                <div className="flex items-center gap-2 bg-[var(--color-brand-green)]/10 px-3 py-1 rounded-xl border border-[var(--color-brand-green)]/20">
+                                    <span className="text-[var(--color-brand-green)] font-bold">Total Escrow Deposit:</span>
+                                    <span className="font-black text-sm text-[var(--color-brand-green)] tabular-nums">{formatPrice(totalUpfront)}</span>
+                                </div>
+                            </div>
+
+                            {/* View Mode 1: Grid View (Default) */}
+                            {costViewMode === "grid" ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 animate-in fade-in duration-200">
+                                    {/* Card 1: Annual Rent */}
+                                    <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                                                    <Building2 className="h-4 w-4" />
+                                                </div>
+                                                <span className="text-xs font-bold text-[var(--text-primary)]">Annual Rent</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                                Shown on Listing
+                                            </span>
+                                        </div>
+                                        <p className="text-lg font-black text-[var(--text-primary)] tabular-nums">
+                                            {formatPrice(property.pricePerYear)}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
+                                            The base annual rent advertised on the listing. Locked into escrow for 12 months.
+                                        </p>
+                                    </div>
+
+                                    {/* Card 2: Caution Deposit */}
+                                    <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                                    <ShieldCheck className="h-4 w-4" />
+                                                </div>
+                                                <span className="text-xs font-bold text-[var(--text-primary)]">Caution Deposit</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400">
+                                                100% Refundable
+                                            </span>
+                                        </div>
+                                        <p className="text-lg font-black text-[var(--text-primary)] tabular-nums">
+                                            {formatPrice(property.cautionFee || 0)}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
+                                            Held safely in escrow. Returned in full to your bank upon move-out if no damages occur.
+                                        </p>
+                                    </div>
+
+                                    {/* Card 3: Legal & Tenancy Agreement */}
+                                    <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center shrink-0">
+                                                    <FileText className="h-4 w-4" />
+                                                </div>
+                                                <span className="text-xs font-bold text-[var(--text-primary)]">Legal & Agreement</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400">
+                                                Official Contract
+                                            </span>
+                                        </div>
+                                        <p className="text-lg font-black text-[var(--text-primary)] tabular-nums">
+                                            {formatPrice(property.legalFee || 0)}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
+                                            Covers digitally stamped legal tenancy agreement and statutory registration.
+                                        </p>
+                                    </div>
+
+                                    {/* Card 4: Escrow Protection Fee */}
+                                    <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/50 border border-[var(--border-color)] space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-7 w-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                                                    <Sparkles className="h-4 w-4" />
+                                                </div>
+                                                <span className="text-xs font-bold text-[var(--text-primary)]">RentHub Escrow (2%)</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                                                0% Agent Comm.
+                                            </span>
+                                        </div>
+                                        <p className="text-lg font-black text-[var(--color-brand-green)] tabular-nums">
+                                            {formatPrice(platformFee)}
+                                        </p>
+                                        <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed font-medium">
+                                            Powers secure escrow custody and move-in inspection protection. Saves you {formatPrice(savings)}.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* View Mode 2: List View */
+                                <div className="p-4 rounded-2xl bg-[var(--bg-muted)]/40 border border-[var(--border-color)] space-y-3 animate-in fade-in duration-200">
+                                    <div className="flex justify-between items-center text-xs pb-2 border-b border-[var(--border-color)]">
+                                        <div>
+                                            <p className="font-bold text-[var(--text-primary)]">Annual Property Rent (12 Months)</p>
+                                            <p className="text-[11px] text-[var(--text-secondary)] font-medium">Advertised listing rent</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-extrabold text-[var(--text-primary)] tabular-nums">{formatPrice(property.pricePerYear)}</p>
+                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Shown on Listing</span>
+                                        </div>
+                                    </div>
+
+                                    {property.cautionFee > 0 && (
+                                        <div className="flex justify-between items-center text-xs pb-2 border-b border-[var(--border-color)]">
+                                            <div>
+                                                <p className="font-bold text-[var(--text-primary)]">Caution Deposit</p>
+                                                <p className="text-[11px] text-[var(--text-secondary)] font-medium">Security deposit for property condition</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-extrabold text-[var(--text-primary)] tabular-nums">{formatPrice(property.cautionFee)}</p>
+                                                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">100% Refundable</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {property.legalFee > 0 && (
+                                        <div className="flex justify-between items-center text-xs pb-2 border-b border-[var(--border-color)]">
+                                            <div>
+                                                <p className="font-bold text-[var(--text-primary)]">Legal Agreement & Stamping</p>
+                                                <p className="text-[11px] text-[var(--text-secondary)] font-medium">Tenancy contract drafting and legal execution</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-extrabold text-[var(--text-primary)] tabular-nums">{formatPrice(property.legalFee)}</p>
+                                                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">Official Contract</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {property.serviceFee > 0 && (
+                                        <div className="flex justify-between items-center text-xs pb-2 border-b border-[var(--border-color)]">
+                                            <div>
+                                                <p className="font-bold text-[var(--text-primary)]">Facility Service Charge</p>
+                                                <p className="text-[11px] text-[var(--text-secondary)] font-medium">Estate security, water, and compound maintenance</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-extrabold text-[var(--text-primary)] tabular-nums">{formatPrice(property.serviceFee)}</p>
+                                                <span className="text-[10px] font-bold text-[var(--text-secondary)]">Facility</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between items-center text-xs pb-2 border-b border-[var(--border-color)]">
+                                        <div>
+                                            <p className="font-bold text-[var(--text-primary)]">RentHub Escrow Protection (2%)</p>
+                                            <p className="text-[11px] text-[var(--text-secondary)] font-medium">Funds held safely until key handover</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-extrabold text-[var(--color-brand-green)] tabular-nums">{formatPrice(platformFee)}</p>
+                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">0% Agent Commission</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center pt-1 text-xs">
+                                        <span className="font-black text-sm text-[var(--text-primary)]">Total Upfront Escrow Deposit:</span>
+                                        <span className="font-black text-base text-[var(--color-brand-green)] tabular-nums">{formatPrice(totalUpfront)}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Steps Card */}
-                        <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-xs">
+                        <div className="bg-[var(--bg-card)] p-6 rounded-3xl border border-[var(--border-color)] shadow-xs">
                             <h2 className="text-base font-black text-[var(--text-primary)] mb-5 flex items-center gap-2">
                                 <ShieldCheck className="h-5 w-5 text-[var(--color-brand-green)]" />
-                                How RentHub Escrow Works
+                                How RentHub Escrow Protects Your Money
                             </h2>
 
                             <div className="space-y-5">
@@ -315,7 +542,7 @@ export default function RentPropertyPage() {
                         </div>
 
                         {/* Escrow Guarantee Banner */}
-                        <div className="bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-2xl flex gap-3.5 items-start">
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-3xl flex gap-3.5 items-start">
                             <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                                 <ShieldCheck className="h-5 w-5" />
                             </div>
@@ -426,7 +653,9 @@ export default function RentPropertyPage() {
                             <div className="border-t border-[var(--border-color)] pt-3 flex justify-between items-center">
                                 <div>
                                     <span className="block font-black text-[var(--text-primary)] text-sm">Total Upfront</span>
-                                    <span className="block text-[10px] text-[var(--text-muted)] font-medium">Held safely in escrow</span>
+                                    <span className="block text-[10px] text-[var(--text-muted)] font-medium">
+                                        (Rent: {formatPrice(property.pricePerYear)} + {formatPrice(totalUpfront - property.pricePerYear)} deposits/fees)
+                                    </span>
                                 </div>
                                 <span className="text-xl font-black text-[var(--color-brand-green)] tabular-nums">
                                     {formatPrice(totalUpfront)}
