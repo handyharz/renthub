@@ -44,6 +44,7 @@ import {
     Mail,
     Grid,
     List,
+    LayoutGrid,
     Copy,
     Bed,
     Bath,
@@ -2995,6 +2996,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
     // Search, filter & pagination state
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "CONFIRMED" | "CANCELLED">("ALL");
     const [currentPage, setCurrentPage] = useState(1);
@@ -3303,6 +3305,36 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                         );
                     })}
                 </div>
+
+                {/* View Switcher: Grid View (Default) vs List View */}
+                <div className="flex items-center p-1 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)] shrink-0 self-end md:self-auto">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "grid"
+                                ? "bg-[var(--bg-card)] text-blue-600 dark:text-blue-400 shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="Grid View (Default)"
+                    >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Grid (Default)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "list"
+                                ? "bg-[var(--bg-card)] text-blue-600 dark:text-blue-400 shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="List View"
+                    >
+                        <List className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">List</span>
+                    </button>
+                </div>
             </div>
 
             {/* Tours List */}
@@ -3349,7 +3381,7 @@ function ToursTab({ role }: { role: "LANDLORD" | "TENANT" }) {
                 </div>
             ) : (
                 <div className="space-y-4 w-full min-w-0 max-w-full">
-                    <div className="grid gap-4 w-full min-w-0 max-w-full">
+                    <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0 max-w-full" : "grid grid-cols-1 gap-4 w-full min-w-0 max-w-full"}>
                         {paginatedTours.map((tour: any) => {
                             const displayUser = role === "LANDLORD" ? tour.tenant : tour.landlord;
                             const userLabel = role === "LANDLORD" ? "Prospective Renter" : "Property Owner";
