@@ -1585,7 +1585,16 @@ function DashboardForRentTab() {
                 if (sortBy) params.append("sortBy", sortBy);
 
                 const res = await api.get(`/properties?${params.toString()}`);
-                setProperties(res.data?.data?.properties || []);
+                const rawProperties: Property[] = res.data?.data?.properties || [];
+                // Option 1: Prioritize AVAILABLE listings first, sinking RENTED listings to the bottom
+                const sorted = [...rawProperties].sort((a, b) => {
+                    const isRentedA = a.status === "RENTED" || a.status === "UNAVAILABLE";
+                    const isRentedB = b.status === "RENTED" || b.status === "UNAVAILABLE";
+                    if (isRentedA && !isRentedB) return 1;
+                    if (!isRentedA && isRentedB) return -1;
+                    return 0;
+                });
+                setProperties(sorted);
             } catch (error) {
                 console.error("Failed to fetch dashboard rental properties:", error);
                 setProperties([]);

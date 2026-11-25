@@ -635,7 +635,16 @@ function SearchContent() {
                 if (filters.polygon) params.append("polygon", filters.polygon);
 
                 const res = await api.get(`/properties?${params.toString()}`);
-                setProperties(res.data.data.properties || []);
+                const rawProperties = res.data?.data?.properties || [];
+                // Prioritize AVAILABLE listings first, sinking RENTED listings to the bottom
+                const sorted = [...rawProperties].sort((a: any, b: any) => {
+                    const isRentedA = a.status === "RENTED" || a.status === "UNAVAILABLE";
+                    const isRentedB = b.status === "RENTED" || b.status === "UNAVAILABLE";
+                    if (isRentedA && !isRentedB) return 1;
+                    if (!isRentedA && isRentedB) return -1;
+                    return 0;
+                });
+                setProperties(sorted);
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
                 setProperties([]);

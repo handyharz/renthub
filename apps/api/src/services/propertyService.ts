@@ -175,6 +175,11 @@ export class PropertyService {
 
         const getOrderBy = () => {
             const baseOrder: any[] = [];
+            // Public / tenant discovery: Always show AVAILABLE properties first, sinking RENTED to bottom
+            if (!landlordId && !status) {
+                baseOrder.push({ status: "asc" });
+            }
+
             if (sortBy === "trust_score") baseOrder.push({ trustScore: "desc" });
             else if (sortBy === "price_asc") baseOrder.push({ pricePerYear: "asc" });
             else if (sortBy === "price_desc") baseOrder.push({ pricePerYear: "desc" });
