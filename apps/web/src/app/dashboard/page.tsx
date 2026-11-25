@@ -1523,6 +1523,7 @@ function TenantOverviewTab({
 function DashboardForRentTab() {
     const [properties, setProperties] = useState<Property[]>([]);
     const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedState, setSelectedState] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
@@ -1793,11 +1794,55 @@ function DashboardForRentTab() {
                 </div>
             </div>
 
-            {/* Properties Grid */}
+            {/* Results Header: Count & View Switcher */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 w-full min-w-0">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-[var(--text-primary)]">
+                        {loading ? "Searching verified homes..." : `${properties.length} ${properties.length === 1 ? "home" : "homes"} available`}
+                    </span>
+                    {selectedState && (
+                        <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/20">
+                            in {selectedState === "FCT" ? "Abuja (FCT)" : selectedState}
+                        </span>
+                    )}
+                </div>
+
+                {/* View Switcher: Grid View (Default) vs List View */}
+                <div className="flex items-center p-1 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)] self-start sm:self-auto shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "grid"
+                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="Grid View (Default)"
+                    >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <span>Grid View (Default)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "list"
+                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="List View"
+                    >
+                        <List className="h-3.5 w-3.5" />
+                        <span>List View</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Properties Grid / List */}
             {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6" : "grid grid-cols-1 gap-4 sm:gap-5"}>
                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="bg-[var(--bg-card)] rounded-3xl h-88 animate-pulse border border-[var(--border-color)]" />
+                        <div key={i} className={`bg-[var(--bg-card)] rounded-3xl animate-pulse border border-[var(--border-color)] ${viewMode === "grid" ? "h-88" : "h-48"}`} />
                     ))}
                 </div>
             ) : properties.length === 0 ? (
@@ -1828,10 +1873,11 @@ function DashboardForRentTab() {
                     </Button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+                <div className={viewMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6" : "grid grid-cols-1 gap-4 sm:gap-5"}>
                     {properties.map((property) => (
                         <PropertyCard
                             key={property.id}
+                            viewMode={viewMode}
                             property={{
                                 id: property.id,
                                 title: property.title,

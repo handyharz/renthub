@@ -55,7 +55,7 @@ export interface PropertyCardProps {
 
 const DEFAULT_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
 
-export function PropertyCard({ property }: { property: PropertyCardProps }) {
+export function PropertyCard({ property, viewMode = "grid" }: { property: PropertyCardProps; viewMode?: "grid" | "list" }) {
     const isRented = property.status === "RENTED" || property.status === "UNAVAILABLE";
     
     // Resilient price resolver (supports price, pricePerYear, or numeric string)
@@ -80,17 +80,29 @@ export function PropertyCard({ property }: { property: PropertyCardProps }) {
     return (
         <Link
             href={`/properties/${property.id}`}
-            className={`group flex flex-col bg-[var(--bg-card)] rounded-3xl overflow-hidden border border-[var(--border-color)] transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative ${
+            className={`group flex ${
+                viewMode === "list" ? "flex-col sm:flex-row" : "flex-col"
+            } bg-[var(--bg-card)] rounded-3xl overflow-hidden border border-[var(--border-color)] transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 relative ${
                 property.featured ? "ring-2 ring-emerald-500/20 border-emerald-500/40" : "hover:border-[var(--color-brand-green)]/40"
             }`}
         >
             {/* Property Image Showcase */}
-            <div className="relative aspect-[16/10] w-full bg-[var(--bg-muted)] overflow-hidden">
+            <div
+                className={`relative ${
+                    viewMode === "list"
+                        ? "aspect-[16/10] sm:aspect-auto w-full sm:w-72 md:w-80 sm:min-w-[260px] self-stretch"
+                        : "aspect-[16/10] w-full"
+                } bg-[var(--bg-muted)] overflow-hidden shrink-0`}
+            >
                 <Image
                     src={imgSrc}
                     alt={property.title || "RentHub Property"}
                     fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    sizes={
+                        viewMode === "list"
+                            ? "(max-width: 640px) 100vw, 320px"
+                            : "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    }
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     onError={() => setImgSrc(DEFAULT_FALLBACK_IMAGE)}
                 />
