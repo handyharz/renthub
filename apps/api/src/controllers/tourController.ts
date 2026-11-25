@@ -68,19 +68,36 @@ export class TourController {
 
     async getTourRequests(req: Request, res: Response) {
         try {
-            const userId = req.user?.id;
-            const userRole = req.user?.role;
+            let userId = req.user?.id;
+            let userRole = req.user?.role;
 
-            if (!userId || !userRole) {
+            const queryClerkId = (req.query.clerkId as string) || req.auth?.userId;
+            if (!userId && queryClerkId) {
+                const dbUser = await prisma.user.findUnique({ where: { clerkId: queryClerkId } });
+                if (dbUser) {
+                    userId = dbUser.id;
+                    userRole = dbUser.role;
+                }
+            }
+
+            if (!userId) {
                 return res.status(401).json({
                     success: false,
                     message: "Unauthorized: User identification and role required",
                 });
             }
 
+            // Honor query param role (e.g. ?role=LANDLORD or ?role=TENANT)
+            // This ensures users acting as landlords see their incoming tour requests
+            const queryRole = (req.query.role as string)?.toUpperCase();
+            const effectiveRole: "LANDLORD" | "TENANT" =
+                queryRole === "LANDLORD" || queryRole === "TENANT"
+                    ? (queryRole as "LANDLORD" | "TENANT")
+                    : (userRole as "LANDLORD" | "TENANT") || "TENANT";
+
             const tours = await tourService.getTourRequestsByUser(
                 userId,
-                userRole as "LANDLORD" | "TENANT"
+                effectiveRole
             );
 
             return res.status(200).json({

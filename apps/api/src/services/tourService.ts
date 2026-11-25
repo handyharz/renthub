@@ -36,7 +36,15 @@ export class TourService {
     }
 
     async getTourRequestsByUser(userId: string, role: "LANDLORD" | "TENANT") {
-        const where = role === "LANDLORD" ? { landlordId: userId } : { tenantId: userId };
+        const where =
+            role === "LANDLORD"
+                ? {
+                      OR: [
+                          { landlordId: userId },
+                          { property: { landlordId: userId } },
+                      ],
+                  }
+                : { tenantId: userId };
 
         return await prisma.tourRequest.findMany({
             where,
@@ -44,8 +52,7 @@ export class TourService {
                 property: {
                     include: {
                         images: {
-                            where: { isPrimary: true },
-                            take: 1,
+                            take: 3,
                         },
                     },
                 },
