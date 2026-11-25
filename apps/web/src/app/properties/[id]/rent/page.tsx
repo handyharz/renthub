@@ -16,6 +16,8 @@ import {
     CreditCard,
     AlertCircle,
     CheckCircle2,
+    Lock,
+    Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { PaymentMethodModal } from "@/components/payment/PaymentMethodModal";
@@ -233,21 +235,21 @@ export default function RentPropertyPage() {
     const steps = [
         {
             num: 1,
-            title: "Review Costs & Verification",
-            desc: "Ensure you've reviewed all fees and your profile is 100% complete.",
-            active: true,
+            title: "Review Lease Terms & Verification",
+            desc: "Transparent fees with zero hidden agency costs. Verified landlord.",
+            status: "done",
         },
         {
             num: 2,
-            title: "Sign Digital Lease",
-            desc: "Review and digitally sign the RentHub standard tenancy agreement.",
-            active: false,
+            title: "Secure Escrow Deposit",
+            desc: "Funds are locked safely in RentHub Escrow. Landlord is NOT paid yet.",
+            status: "current",
         },
         {
             num: 3,
-            title: "Secure Escrow Payment",
-            desc: "Pay the total upfront amount to RentHub Escrow. Funds are released only after move-in.",
-            active: false,
+            title: "Move-in Inspection & Key Handover",
+            desc: "Inspect the home in person. Funds release only after you accept the keys.",
+            status: "upcoming",
         },
     ];
 
@@ -273,45 +275,56 @@ export default function RentPropertyPage() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Left: Application Steps */}
+                    {/* Left: Application Steps & Guarantee */}
                     <div className="lg:col-span-2 space-y-5">
                         {/* Steps Card */}
                         <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-xs">
-                            <h2 className="text-base font-black text-[var(--text-primary)] mb-6 flex items-center gap-2">
+                            <h2 className="text-base font-black text-[var(--text-primary)] mb-5 flex items-center gap-2">
                                 <ShieldCheck className="h-5 w-5 text-[var(--color-brand-green)]" />
-                                Application Process
+                                How RentHub Escrow Works
                             </h2>
 
-                            <div className="space-y-6">
+                            <div className="space-y-5">
                                 {steps.map((step) => (
-                                    <div key={step.num} className={`flex gap-4 ${!step.active ? "opacity-50" : ""}`}>
+                                    <div key={step.num} className={`flex gap-4 items-start ${step.status === "upcoming" ? "opacity-50" : ""}`}>
                                         <div
-                                            className={`h-8 w-8 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0 ${
-                                                step.active
-                                                    ? "bg-[var(--color-brand-green)] text-white shadow-sm"
+                                            className={`h-8 w-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 mt-0.5 ${
+                                                step.status === "done"
+                                                    ? "bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)] border border-[var(--color-brand-green)]/30"
+                                                    : step.status === "current"
+                                                    ? "bg-[var(--color-brand-green)] text-white shadow-sm ring-4 ring-[var(--color-brand-green)]/20"
                                                     : "bg-[var(--bg-muted)] text-[var(--text-muted)] border border-[var(--border-color)]"
                                             }`}
                                         >
-                                            {step.active ? <CheckCircle2 className="h-4 w-4" /> : step.num}
+                                            {step.status === "done" ? <CheckCircle2 className="h-4 w-4" /> : step.num}
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-[var(--text-primary)] text-sm mb-0.5">{step.title}</h3>
-                                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-medium">{step.desc}</p>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-[var(--text-primary)] text-sm">{step.title}</h3>
+                                                {step.status === "current" && (
+                                                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[var(--color-brand-green)]/15 text-[var(--color-brand-green)]">
+                                                        Current Step
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-medium mt-0.5">{step.desc}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Guarantee Banner */}
-                        <div className="bg-blue-500/10 border border-blue-500/20 p-5 rounded-2xl flex gap-4">
-                            <AlertCircle className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5 shrink-0" />
-                            <div>
-                                <h3 className="font-black text-blue-600 dark:text-blue-400 text-sm mb-1">
-                                    RentHub 100% Escrow Quality Guarantee
+                        {/* Escrow Guarantee Banner */}
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 p-5 rounded-2xl flex gap-3.5 items-start">
+                            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                                <ShieldCheck className="h-5 w-5" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="font-extrabold text-[var(--text-primary)] text-sm">
+                                    100% Escrow Protection Guarantee
                                 </h3>
-                                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed font-medium">
-                                    Your money is held in escrow. If the property doesn't match the listing during move-in inspection, you get a full refund — guaranteed.
+                                <p className="text-xs text-[var(--text-secondary)] leading-relaxed font-medium">
+                                    Your money is locked in RentHub Escrow. If the property does not match the listing during your move-in inspection, you receive a full refund — guaranteed.
                                 </p>
                             </div>
                         </div>
@@ -328,121 +341,108 @@ export default function RentPropertyPage() {
                         )}
 
                         {/* CTA Button */}
-                        <Button
-                            onClick={handleOpenPaymentModal}
-                            disabled={processing}
-                            className="w-full h-14 text-base font-black bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {processing ? (
-                                <>
-                                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                                    Processing...
-                                </>
-                            ) : (
-                                <>
-                                    Continue to Secure Payment
-                                    <ChevronRight className="h-5 w-5 ml-1" />
-                                </>
+                        <div className="space-y-2">
+                            <Button
+                                onClick={handleOpenPaymentModal}
+                                disabled={processing}
+                                className="w-full h-13 text-base font-black bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                                {processing ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        Continue to Secure Payment
+                                        <ChevronRight className="h-5 w-5 ml-1" />
+                                    </>
+                                )}
+                            </Button>
+                            {!user && (
+                                <p className="text-xs text-center text-[var(--text-muted)] font-medium">
+                                    Please{" "}
+                                    <Link href="/sign-in" className="text-[var(--color-brand-green)] font-bold hover:underline">
+                                        sign in
+                                    </Link>{" "}
+                                    to continue
+                                </p>
                             )}
-                        </Button>
-
-                        {!user && (
-                            <p className="text-xs text-center text-[var(--text-muted)] font-medium">
-                                Please{" "}
-                                <Link href="/sign-in" className="text-[var(--color-brand-green)] font-bold hover:underline">
-                                    sign in
-                                </Link>{" "}
-                                to continue
-                            </p>
-                        )}
+                        </div>
                     </div>
 
                     {/* Right: Payment Summary Card */}
                     <div className="lg:col-span-1">
-                        <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-xs sticky top-32 space-y-5">
-                            <h3 className="text-base font-black text-[var(--text-primary)] border-b border-[var(--border-color)] pb-4">
-                                Payment Summary
-                            </h3>
-
-                            {/* Fee Breakdown */}
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-[var(--text-secondary)] font-semibold">Rent per annum</span>
-                                    <span className="font-black text-[var(--text-primary)] text-sm tabular-nums">{formatPrice(property.pricePerYear)}</span>
+                        <div className="bg-[var(--bg-card)] p-6 rounded-2xl border border-[var(--border-color)] shadow-xs sticky top-32 space-y-4">
+                            {/* Property Mini Header */}
+                            <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-color)]">
+                                <div className="h-10 w-10 rounded-xl bg-[var(--bg-muted)] flex items-center justify-center text-blue-500 shrink-0">
+                                    <Building2 className="h-5 w-5" />
                                 </div>
-                                {property.cautionFee > 0 && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-[var(--text-secondary)] font-semibold">Caution Deposit</span>
-                                        <span className="font-black text-[var(--text-primary)] text-sm tabular-nums">{formatPrice(property.cautionFee)}</span>
-                                    </div>
-                                )}
-                                {property.legalFee > 0 && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-[var(--text-secondary)] font-semibold">Legal Agreement Fee</span>
-                                        <span className="font-black text-[var(--text-primary)] text-sm tabular-nums">{formatPrice(property.legalFee)}</span>
-                                    </div>
-                                )}
-                                {property.serviceFee > 0 && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-[var(--text-secondary)] font-semibold">Service Charge</span>
-                                        <span className="font-black text-[var(--text-primary)] text-sm tabular-nums">{formatPrice(property.serviceFee)}</span>
-                                    </div>
-                                )}
-                                <div className="flex justify-between items-center bg-[var(--color-brand-green)]/8 -mx-2 px-2 py-2 rounded-xl border border-[var(--color-brand-green)]/15">
-                                    <div className="flex flex-col">
-                                        <span className="text-xs text-[var(--text-primary)] font-bold">RentHub Escrow Fee (2%)</span>
-                                        <span className="text-[10px] text-[var(--color-brand-green)] font-semibold">vs 20–24% traditional agent fee</span>
-                                    </div>
-                                    <span className="font-black text-[var(--color-brand-green)] text-sm tabular-nums">{formatPrice(platformFee)}</span>
-                                </div>
-                            </div>
-
-                            {/* Savings Badge */}
-                            <div className="border-t border-[var(--border-color)] pt-4">
-                                <div className="bg-gradient-to-br from-emerald-500/10 to-[var(--color-brand-green)]/5 border border-emerald-500/20 p-4 rounded-2xl">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                                            You Save vs Agent
-                                        </span>
-                                        <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                                    </div>
-                                    <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mb-0.5">
-                                        {formatPrice(savings)}
-                                    </div>
-                                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium">
-                                        vs traditional agent fees ({formatPrice(traditionalAgentFee)})
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="text-xs font-bold text-[var(--text-primary)] truncate" title={property.title}>
+                                        {property.title}
+                                    </h3>
+                                    <p className="text-[11px] text-[var(--text-secondary)] font-medium">
+                                        12 Months Lease • {property.city}
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Total */}
-                            <div className="flex justify-between items-center border-t border-[var(--border-color)] pt-4">
-                                <span className="font-black text-[var(--text-primary)] text-sm">Total Upfront (Escrow)</span>
+                            {/* Fee Breakdown */}
+                            <div className="space-y-2.5">
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-[var(--text-secondary)] font-medium">Annual Rent</span>
+                                    <span className="font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(property.pricePerYear)}</span>
+                                </div>
+                                {property.cautionFee > 0 && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-[var(--text-secondary)] font-medium">Caution Deposit (Refundable)</span>
+                                        <span className="font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(property.cautionFee)}</span>
+                                    </div>
+                                )}
+                                {property.legalFee > 0 && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-[var(--text-secondary)] font-medium">Legal Agreement Fee</span>
+                                        <span className="font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(property.legalFee)}</span>
+                                    </div>
+                                )}
+                                {property.serviceFee > 0 && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-[var(--text-secondary)] font-medium">Service Charge</span>
+                                        <span className="font-bold text-[var(--text-primary)] tabular-nums">{formatPrice(property.serviceFee)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center bg-[var(--color-brand-green)]/8 -mx-2 px-2.5 py-1.5 rounded-xl border border-[var(--color-brand-green)]/15 text-xs">
+                                    <div className="flex flex-col">
+                                        <span className="text-[var(--text-primary)] font-bold">RentHub Escrow Fee (2%)</span>
+                                        <span className="text-[10px] text-[var(--color-brand-green)] font-semibold">0% Agent Commission</span>
+                                    </div>
+                                    <span className="font-black text-[var(--color-brand-green)] tabular-nums">{formatPrice(platformFee)}</span>
+                                </div>
+                            </div>
+
+                            {/* Total Upfront */}
+                            <div className="border-t border-[var(--border-color)] pt-3 flex justify-between items-center">
+                                <div>
+                                    <span className="block font-black text-[var(--text-primary)] text-sm">Total Upfront</span>
+                                    <span className="block text-[10px] text-[var(--text-muted)] font-medium">Held safely in escrow</span>
+                                </div>
                                 <span className="text-xl font-black text-[var(--color-brand-green)] tabular-nums">
                                     {formatPrice(totalUpfront)}
                                 </span>
                             </div>
 
-                            {/* Property Details Strip */}
-                            <div className="bg-[var(--bg-muted)] rounded-2xl p-4 border border-[var(--border-color)] space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] shadow-xs">
-                                        <Building2 className="h-3.5 w-3.5 text-blue-500" />
-                                    </div>
-                                    <span className="text-xs font-bold text-[var(--text-primary)] truncate">{property.title}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] shadow-xs">
-                                        <FileText className="h-3.5 w-3.5 text-orange-500" />
-                                    </div>
-                                    <span className="text-xs font-bold text-[var(--text-secondary)]">12 Months Lease</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-[var(--bg-card)] rounded-xl border border-[var(--border-color)] shadow-xs">
-                                        <CreditCard className="h-3.5 w-3.5 text-[var(--color-brand-green)]" />
-                                    </div>
-                                    <span className="text-xs font-bold text-[var(--color-brand-green)]">100% Escrow Protected</span>
-                                </div>
+                            {/* Sleek Savings Pill */}
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                                <Sparkles className="h-4 w-4 shrink-0 text-emerald-500" />
+                                <span>You save <strong>{formatPrice(savings)}</strong> vs traditional agent commissions</span>
+                            </div>
+
+                            {/* Trust Footer */}
+                            <div className="flex items-center justify-center gap-1.5 text-[11px] text-[var(--text-muted)] font-medium pt-1">
+                                <Lock className="h-3 w-3" />
+                                <span>Bank-grade 256-bit SSL encrypted escrow</span>
                             </div>
                         </div>
                     </div>

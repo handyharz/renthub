@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { Calendar, Clock, DollarSign, FileText, CheckCircle2, ShieldCheck, AlertCircle, X } from "lucide-react";
+import { Calendar, Clock, DollarSign, FileText, CheckCircle2, ShieldCheck, AlertCircle, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
 import api from "@/lib/api";
@@ -35,6 +35,7 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
     const [leaseDuration, setLeaseDuration] = useState("12");
     const [note, setNote] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showBreakdown, setShowBreakdown] = useState(false);
 
     if (!isOpen) return null;
 
@@ -151,37 +152,55 @@ export function ApplicationModal({ isOpen, onClose, property, onSuccess }: Appli
                         />
                     </div>
 
-                    {/* Estimated Cost Breakdown */}
-                    <div className="bg-[var(--bg-muted)] rounded-xl p-4 border border-[var(--border-color)] text-xs space-y-2">
-                        <div className="font-bold text-[var(--text-primary)] mb-1">Estimated Cost Breakdown (If Accepted)</div>
-                        <div className="flex justify-between text-[var(--text-secondary)] font-medium">
-                            <span>
-                                {durationMonths === 12
-                                    ? "Annual Rent (1 Year):"
-                                    : `Rent (${durationYears} Years @ ${formatPrice(property.pricePerYear)}/yr):`}
-                            </span>
-                            <span className="font-bold text-[var(--text-primary)]">{formatPrice(rent)}</span>
+                    {/* Estimated Cost Summary with Collapsible Breakdown */}
+                    <div className="bg-[var(--bg-muted)]/70 rounded-2xl p-3.5 border border-[var(--border-color)] space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                                    Estimated Total (Due on Approval)
+                                </p>
+                                <p className="text-base font-extrabold text-[var(--color-brand-green)] tabular-nums">
+                                    {formatPrice(estimatedTotal)}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowBreakdown((prev) => !prev)}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] px-2.5 py-1.5 rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] transition-all cursor-pointer"
+                            >
+                                <span>{showBreakdown ? "Hide Details" : "View Details"}</span>
+                                {showBreakdown ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                            </button>
                         </div>
-                        {caution > 0 && (
-                            <div className="flex justify-between text-[var(--text-secondary)] font-medium">
-                                <span>Caution Deposit:</span>
-                                <span className="font-bold text-[var(--text-primary)]">{formatPrice(caution)}</span>
+
+                        {showBreakdown && (
+                            <div className="pt-2 border-t border-[var(--border-color)]/70 space-y-1.5 text-xs animate-in fade-in duration-150">
+                                <div className="flex justify-between text-[var(--text-secondary)] font-medium">
+                                    <span>
+                                        {durationMonths === 12
+                                            ? "Annual Rent (1 Year):"
+                                            : `Rent (${durationYears} Years @ ${formatPrice(property.pricePerYear)}/yr):`}
+                                    </span>
+                                    <span className="font-bold text-[var(--text-primary)]">{formatPrice(rent)}</span>
+                                </div>
+                                {caution > 0 && (
+                                    <div className="flex justify-between text-[var(--text-secondary)] font-medium">
+                                        <span>Caution Deposit:</span>
+                                        <span className="font-bold text-[var(--text-primary)]">{formatPrice(caution)}</span>
+                                    </div>
+                                )}
+                                {legal > 0 && (
+                                    <div className="flex justify-between text-[var(--text-secondary)] font-medium">
+                                        <span>Legal Agreement Fee:</span>
+                                        <span className="font-bold text-[var(--text-primary)]">{formatPrice(legal)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between text-[var(--color-brand-green)] font-bold">
+                                    <span>RentHub Escrow Platform Fee (2%):</span>
+                                    <span>{formatPrice(platformFee)}</span>
+                                </div>
                             </div>
                         )}
-                        {legal > 0 && (
-                            <div className="flex justify-between text-[var(--text-secondary)] font-medium">
-                                <span>Legal Agreement Fee:</span>
-                                <span className="font-bold text-[var(--text-primary)]">{formatPrice(legal)}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-[var(--color-brand-green)] font-bold">
-                            <span>RentHub Escrow Platform Fee (2%):</span>
-                            <span>{formatPrice(platformFee)}</span>
-                        </div>
-                        <div className="border-t border-[var(--border-color)] pt-2 flex justify-between font-extrabold text-sm text-[var(--text-primary)]">
-                            <span>Total Estimated Escrow:</span>
-                            <span className="text-[var(--color-brand-green)]">{formatPrice(estimatedTotal)}</span>
-                        </div>
                     </div>
 
                     {isOwner ? (
