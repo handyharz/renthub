@@ -32,7 +32,9 @@ import {
     ShieldAlert,
     Coins,
     Building2,
-    Info
+    Info,
+    LayoutGrid,
+    List
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -95,11 +97,12 @@ export function TransactionsTab() {
     const [handoverModalTx, setHandoverModalTx] = useState<Transaction | null>(null);
     const [moveOutModalTx, setMoveOutModalTx] = useState<Transaction | null>(null);
 
-    // Search, filter & pagination state
+    // Search, filter, view mode & pagination state
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"ALL" | "ESCROWED" | "RELEASED" | "DISPUTED">("ALL");
     const [currentPage, setCurrentPage] = useState(1);
-    const ITEMS_PER_PAGE = 5;
+    const ITEMS_PER_PAGE = viewMode === "grid" ? 6 : 5;
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -542,6 +545,36 @@ export function TransactionsTab() {
                         );
                     })}
                 </div>
+
+                {/* View Switcher: Grid View (Default) vs List View */}
+                <div className="flex items-center p-1 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)] shrink-0 self-end md:self-auto">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("grid")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "grid"
+                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="Grid View (Default)"
+                    >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Grid (Default)</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("list")}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            viewMode === "list"
+                                ? "bg-[var(--bg-card)] text-[var(--color-brand-green)] shadow-xs"
+                                : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        }`}
+                        title="List View"
+                    >
+                        <List className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">List</span>
+                    </button>
+                </div>
             </div>
 
             {/* Transactions List */}
@@ -583,7 +616,7 @@ export function TransactionsTab() {
                 </div>
             ) : (
                 <div className="space-y-4 w-full min-w-0 max-w-full">
-                    <div className="grid gap-4 w-full min-w-0 max-w-full">
+                    <div className={viewMode === "grid" ? "grid grid-cols-1 xl:grid-cols-2 gap-4 w-full min-w-0 max-w-full" : "grid grid-cols-1 gap-4 w-full min-w-0 max-w-full"}>
                         {paginatedTransactions.map((tx) => {
                             const primaryImage =
                                 tx.property?.images?.find((img) => img.isPrimary)?.url ||
@@ -646,7 +679,7 @@ export function TransactionsTab() {
                                     </div>
 
                                     {/* Middle: Tenant Contact & Financial Breakdown */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 w-full min-w-0">
+                                    <div className={`grid grid-cols-1 ${viewMode === "list" ? "lg:grid-cols-3" : ""} gap-3.5 w-full min-w-0`}>
                                         {/* Tenant Card */}
                                         <div className="p-3.5 rounded-2xl bg-[var(--bg-muted)]/70 border border-[var(--border-color)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
                                             <div className="flex items-center gap-3 min-w-0">
@@ -705,7 +738,7 @@ export function TransactionsTab() {
                                         </div>
 
                                         {/* Financial Breakdown Table Card */}
-                                        <div className="lg:col-span-2 p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col justify-center space-y-2 text-xs shadow-2xs w-full min-w-0">
+                                        <div className={`${viewMode === "list" ? "lg:col-span-2" : "col-span-1"} p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] flex flex-col justify-center space-y-2 text-xs shadow-2xs w-full min-w-0`}>
                                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2 border-b border-[var(--border-color)] w-full min-w-0">
                                                 <div className="min-w-0">
                                                     <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block truncate">Annual Rent (Gross)</span>
