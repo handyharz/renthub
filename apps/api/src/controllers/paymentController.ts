@@ -945,6 +945,19 @@ export class PaymentController {
                             data: { status: "RENTED" },
                         });
 
+                        // Sweep earned landlord platform fee to RentHub Revenue Vault upon transfer completion
+                        const landlordFeeKobo = anchorService.nairaToKobo(payout.platformFee);
+                        if (landlordFeeKobo > 0) {
+                            anchorService.sweepPlatformFee(
+                                anchorService.getEscrowPoolId(),
+                                landlordFeeKobo,
+                                payout.transactionId,
+                                `RentHub Revenue Sweep: 2% Landlord Fee for tx=${payout.transactionId}`
+                            ).catch((err) => {
+                                console.warn("[Anchor Webhook] Landlord fee revenue sweep failed:", err.message || err);
+                            });
+                        }
+
                         console.info(
                             `[Anchor Webhook] Transfer confirmed — payout ${payout.id} → COMPLETED. ` +
                             `Property ${payout.transaction.propertyId} → RENTED. ref=${transferRef}`
