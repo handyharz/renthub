@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { createClerkClient, verifyToken } from "@clerk/backend";
 
-const clerkClient = createClerkClient({
+export const clerkClient = createClerkClient({
     secretKey: process.env.CLERK_SECRET_KEY,
 });
 

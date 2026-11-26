@@ -3,6 +3,7 @@ import { userService } from "../services/userService";
 import { UserRole, UserStatus } from "@prisma/client";
 import { canSelfAssignRole, sanitizeSelfServiceRole } from "../utils/identity";
 import { trustScoreService } from "../services/trustScoreService";
+import { clerkClient } from "../middleware/auth";
 
 export class UserController {
     /**
@@ -37,6 +38,23 @@ export class UserController {
 
             // Update last login
             userService.updateLastLogin(clerkId).catch(console.error);
+
+            // Ensure Clerk metadata role stays synchronized with database role (critical for ADMIN portal access)
+            if (user && clerkId && !clerkId.startsWith("user_tenant") && !clerkId.startsWith("user_landlord")) {
+                clerkClient.users.getUser(clerkId).then(async (clerkUser) => {
+                    if (clerkUser?.publicMetadata?.role !== user.role) {
+                        await clerkClient.users.updateUserMetadata(clerkId, {
+                            publicMetadata: {
+                                ...(clerkUser?.publicMetadata || {}),
+                                role: user.role,
+                            },
+                        });
+                        console.log(`[UserController] Synced Clerk role metadata for user ${user.email} (${clerkId}) -> ${user.role}`);
+                    }
+                }).catch((err) => {
+                    console.error(`[UserController] Non-blocking Clerk role sync error for ${clerkId}:`, err?.message || err);
+                });
+            }
 
             return res.status(200).json({
                 success: true,
@@ -201,6 +219,12 @@ export class UserController {
                         role: newRole,
                         onboardingCompleted: Boolean(markOnboarded),
                     });
+
+                    // Sync role metadata to Clerk
+                    clerkClient.users.updateUserMetadata(clerkId, {
+                        publicMetadata: { role: newRole }
+                    }).catch(console.error);
+
                     return res.status(200).json({
                         success: true,
                         message: "User updated",
@@ -228,6 +252,12 @@ export class UserController {
             });
 
             console.log("User created successfully in DB:", user.id);
+
+            // Sync role to Clerk publicMetadata
+            clerkClient.users.updateUserMetadata(clerkId, {
+                publicMetadata: { role: user.role }
+            }).catch(console.error);
+
             return res.status(201).json({
                 success: true,
                 message: "User created successfully",

@@ -405,7 +405,15 @@ function DashboardContent() {
                                 My Profile
                             </Button>
                         </Link>
-                        {role === "TENANT" && (
+                        {dbUser?.role === "ADMIN" && (
+                            <Link href="/admin" className="flex-1 sm:flex-initial">
+                                <Button className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white font-bold h-11 px-5 rounded-xl shadow-xs">
+                                    <ShieldCheck className="mr-2 h-4 w-4" />
+                                    Admin Portal
+                                </Button>
+                            </Link>
+                        )}
+                        {role === "TENANT" && dbUser?.role !== "ADMIN" && (
                             <Link href="/search" className="flex-1 sm:flex-initial">
                                 <Button className="w-full sm:w-auto bg-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)]/90 text-white font-bold h-11 px-5 rounded-xl">
                                     <Search className="mr-2 h-4 w-4" />
