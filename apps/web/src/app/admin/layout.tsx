@@ -17,16 +17,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const claims = sessionClaims as any;
     let role = claims?.publicMetadata?.role || claims?.metadata?.role || claims?.role;
 
-    // Fallback: If session token claims haven't refreshed yet from an active session, fetch live user metadata
+    // Fallback: If session token claims have not refreshed yet from an active session, fetch live user metadata
     if (role !== "ADMIN" && role !== "admin") {
         try {
             const client = await clerkClient();
             const freshUser = await client.users.getUser(userId);
             role = (freshUser?.publicMetadata as any)?.role || (freshUser?.unsafeMetadata as any)?.role;
-            const userEmail = freshUser?.emailAddresses?.[0]?.emailAddress?.toLowerCase();
-            if (userEmail === "handyharz@gmail.com" || userEmail === "admin@renthub.ng") {
-                role = "ADMIN";
-            }
         } catch (e) {
             console.error("[AdminLayout] Error fetching fresh user:", e);
         }

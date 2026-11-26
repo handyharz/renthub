@@ -42,9 +42,8 @@ export function useAuth() {
         fetchDbUser();
     }, [clerkUser, isClerkLoaded]);
 
-    const primaryEmail = clerkUser?.emailAddresses?.[0]?.emailAddress?.toLowerCase();
-    const isHardcodedAdmin = primaryEmail === "handyharz@gmail.com" || primaryEmail === "admin@renthub.ng";
-    const isAdmin = dbUser?.role === "ADMIN" || (clerkUser?.publicMetadata as any)?.role === "ADMIN" || isHardcodedAdmin;
+    const roleFromMetadata = (clerkUser?.publicMetadata as any)?.role || (clerkUser?.unsafeMetadata as any)?.role;
+    const isAdmin = dbUser?.role === "ADMIN" || roleFromMetadata === "ADMIN";
 
     return {
         user: dbUser,

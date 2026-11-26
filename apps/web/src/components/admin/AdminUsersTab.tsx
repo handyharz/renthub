@@ -156,7 +156,7 @@ export function AdminUsersTab() {
                         : error}
                 </p>
                 <div className="mt-4 bg-[var(--bg-muted)] border border-[var(--border-color)] rounded-xl px-4 py-3 text-xs font-bold text-[var(--text-primary)] inline-block">
-                    Admin account: handyharz@gmail.com
+                    Please log in with an authorized Administrator account.
                 </div>
             </div>
         );

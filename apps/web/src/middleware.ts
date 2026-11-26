@@ -17,14 +17,10 @@ export default clerkMiddleware(async (auth, req) => {
         }
         const claims = sessionClaims as any
         const role = claims?.publicMetadata?.role || claims?.metadata?.role || claims?.role
-        // Note: AdminLayout performs secondary server-side check against live user metadata / admin email.
-        // If session claim already says ADMIN, allow immediately; otherwise allow AdminLayout to perform authoritative verification.
+        // If session claim already confirms non-admin, redirect; otherwise allow AdminLayout to perform fresh check
         if (role && role !== 'ADMIN' && role !== 'admin') {
-            // Check if claim email exists in session
-            const email = claims?.email || claims?.primaryEmail;
-            if (email !== 'handyharz@gmail.com' && email !== 'admin@renthub.ng') {
-                // Allow pass-through to AdminLayout which has full clerkClient access
-            }
+            const redirectUrl = new URL('/dashboard', req.url)
+            return Response.redirect(redirectUrl)
         }
     } else if (isProtectedRoute(req)) {
         await auth.protect()
