@@ -160,8 +160,9 @@ export default function RentPropertyPage() {
         } catch (err: any) {
             console.error("Anchor payment initialization failed:", err);
             setError(err.response?.data?.message || "Failed to initialize Anchor bank transfer. Please try again.");
-            setProcessing(false);
             throw err;
+        } finally {
+            setProcessing(false);
         }
     };
 

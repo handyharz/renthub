@@ -281,7 +281,7 @@ export function ApplicationsTab() {
             });
 
             setPaymentModalApp(null);
-            await fetchData();
+            await fetchData(true);
         } catch (error: any) {
             console.error("AfriExchange payment failed:", error);
             toast.error(error.response?.data?.message || "Failed to process AfriExchange payment");
@@ -323,7 +323,7 @@ export function ApplicationsTab() {
                 description: `Transfer ${formatPrice(formatted.totalAmount)} to ${formatted.virtualNuban} (${formatted.bankName}).`
             });
 
-            await fetchData();
+            await fetchData(true);
             return formatted;
         } catch (error: any) {
             console.error("Anchor payment initialization failed:", error);
@@ -341,7 +341,7 @@ export function ApplicationsTab() {
             toast.success("Payment attempt cancelled", {
                 description: "You can now choose a payment method to pay into escrow."
             });
-            await fetchData();
+            await fetchData(true);
         } catch (error: any) {
             console.error("Failed to cancel pending transaction:", error);
             toast.error(error.response?.data?.message || "Failed to cancel payment attempt");
@@ -1706,24 +1706,37 @@ export function ApplicationsTab() {
             )}
 
             {/* Payment Method Gateway Modal */}
-            {paymentModalApp && (
-                <PaymentMethodModal
-                    isOpen={!!paymentModalApp}
-                    onClose={() => setPaymentModalApp(null)}
-                    totalAmount={
-                        paymentModalApp.property?.pricePerYear +
-                        (paymentModalApp.property?.cautionFee || 0) +
-                        (paymentModalApp.property?.legalFee || 0) +
-                        (paymentModalApp.property?.serviceFee || 0) +
-                        Math.round(paymentModalApp.property?.pricePerYear * 0.02)
+            {paymentModalApp && (() => {
+                const txForApp = getTxForApplication(paymentModalApp);
+                const initialAnchorDetails = (txForApp?.paymentGateway === "ANCHOR" && txForApp?.anchorVirtualNuban)
+                    ? {
+                        virtualNuban: txForApp.anchorVirtualNuban,
+                        bankName: txForApp.anchorBankName || "PROVIDUS BANK",
+                        accountName: "RentHub Escrow",
+                        reference: txForApp.anchorCollectionRef || "",
                     }
-                    propertyTitle={paymentModalApp.property?.title}
-                    defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
-                    onPaystack={handlePaystackPayment}
-                    onAfriExchange={handleAfriExchangePayment}
-                    onAnchor={handleAnchorPayment}
-                />
-            )}
+                    : null;
+
+                return (
+                    <PaymentMethodModal
+                        isOpen={!!paymentModalApp}
+                        onClose={() => setPaymentModalApp(null)}
+                        initialAnchorDetails={initialAnchorDetails}
+                        totalAmount={
+                            paymentModalApp.property?.pricePerYear +
+                            (paymentModalApp.property?.cautionFee || 0) +
+                            (paymentModalApp.property?.legalFee || 0) +
+                            (paymentModalApp.property?.serviceFee || 0) +
+                            Math.round(paymentModalApp.property?.pricePerYear * 0.02)
+                        }
+                        propertyTitle={paymentModalApp.property?.title}
+                        defaultEmail={user?.emailAddresses?.[0]?.emailAddress || ""}
+                        onPaystack={handlePaystackPayment}
+                        onAfriExchange={handleAfriExchangePayment}
+                        onAnchor={handleAnchorPayment}
+                    />
+                );
+            })()}
         </div>
     );
 }

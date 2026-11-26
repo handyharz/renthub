@@ -345,6 +345,19 @@ export class PayoutController {
                                 p.status = "COMPLETED";
                                 p.processedAt = new Date();
 
+                                // Ensure landlord platform fee is swept to revenue account
+                                const landlordFeeKobo = anchorService.nairaToKobo(p.platformFee);
+                                if (landlordFeeKobo > 0 && p.transactionId) {
+                                    anchorService.sweepPlatformFee(
+                                        anchorService.getEscrowPoolId(),
+                                        landlordFeeKobo,
+                                        p.transactionId,
+                                        `RentHub Landlord Platform Fee 2pct - Ref ${p.transactionId}`
+                                    ).catch((sweepErr) => {
+                                        console.warn("[payoutController] Landlord fee revenue sweep failed:", sweepErr.message || sweepErr);
+                                    });
+                                }
+
                                 if (p.transactionId) {
                                     const tx = await prisma.transaction.findUnique({
                                         where: { id: p.transactionId },

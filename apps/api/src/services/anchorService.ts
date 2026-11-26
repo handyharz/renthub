@@ -305,7 +305,10 @@ export class AnchorService {
         transactionId: string,
         description?: string
     ): Promise<AnchorCustomFeeResult> {
-        const idempotencyKey = `sweep_${transactionId}_${Date.now()}`;
+        const isLandlord = description?.toLowerCase().includes("landlord");
+        const idempotencyKey = isLandlord
+            ? `sweep_ll_${transactionId}`
+            : `sweep_tn_${transactionId}`;
 
         // Ensure we always transfer from the actual FBO deposit account (not virtual account number IDs)
         const effectiveSourceAccountId = (sourceLedgerId && sourceLedgerId.endsWith("-anc_acc"))
@@ -842,7 +845,7 @@ export class AnchorService {
                 destinationBankCode: bankCode,
                 destinationAccountNumber: accountNumber,
                 destinationAccountName: accountName,
-                narration: `RentHub Escrow Release for ${transaction.property.title}`,
+                narration: `RentHub Escrow Payout - Ref ${transaction.id}`,
             });
 
             // Fix (Claude): Only mark COMPLETED when Anchor confirms the transfer.
@@ -866,6 +869,19 @@ export class AnchorService {
                 },
             });
 
+            // Auto-sweep earned landlord platform fee to RentHub Revenue Vault upon payout dispatch
+            const landlordFeeKobo = this.nairaToKobo(platformFee);
+            if (landlordFeeKobo > 0) {
+                this.sweepPlatformFee(
+                    this.escrowPoolId,
+                    landlordFeeKobo,
+                    transaction.id,
+                    `RentHub Landlord Platform Fee 2pct - Ref ${transaction.id}`
+                ).catch((sweepErr) => {
+                    console.warn("[AnchorService] Landlord fee revenue sweep failed:", sweepErr.message || sweepErr);
+                });
+            }
+
             // Fix (Claude): Only mark property RENTED and notify landlord when
             // the transfer is confirmed SUCCESSFUL, not while it's still PROCESSING.
             if (payoutStatus === "COMPLETED") {
@@ -873,19 +889,6 @@ export class AnchorService {
                     where: { id: transaction.propertyId },
                     data: { status: "RENTED" },
                 });
-
-                // Auto-sweep earned landlord platform fee to RentHub Revenue Vault upon successful disbursement
-                const landlordFeeKobo = this.nairaToKobo(platformFee);
-                if (landlordFeeKobo > 0) {
-                    this.sweepPlatformFee(
-                        this.escrowPoolId,
-                        landlordFeeKobo,
-                        transaction.id,
-                        `RentHub Landlord Platform Fee 2pct - Ref ${transaction.id}`
-                    ).catch((sweepErr) => {
-                        console.warn("[AnchorService] Landlord fee revenue sweep failed:", sweepErr.message || sweepErr);
-                    });
-                }
 
                 // Dispatch in-app notification to landlord
                 try {

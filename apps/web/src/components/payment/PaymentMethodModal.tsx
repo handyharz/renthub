@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import {
@@ -80,6 +80,12 @@ interface PaymentMethodModalProps {
         tokenType: AfriExchangeTokenType;
         amountInToken: number;
     }) => Promise<void>;
+    initialAnchorDetails?: {
+        virtualNuban: string;
+        bankName: string;
+        accountName: string;
+        reference: string;
+    } | null;
     onAnchor?: () => Promise<{
         virtualNuban: string;
         bankName: string;
@@ -96,6 +102,7 @@ export function PaymentMethodModal({
     totalAmount,
     propertyTitle,
     defaultEmail = "",
+    initialAnchorDetails = null,
     onPaystack,
     onAfriExchange,
     onAnchor,
@@ -119,8 +126,22 @@ export function PaymentMethodModal({
         bankName: string;
         accountName: string;
         reference: string;
-    } | null>(null);
+    } | null>(initialAnchorDetails || null);
     const [copiedField, setCopiedField] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            if (initialAnchorDetails?.virtualNuban) {
+                setAnchorDetails(initialAnchorDetails);
+                setStep("ANCHOR");
+            } else {
+                setStep("SELECT");
+                setAnchorDetails(null);
+            }
+            setErrorMessage(null);
+            setErrorDetails(null);
+        }
+    }, [isOpen, initialAnchorDetails]);
 
     const isServicePayment =
         propertyTitle.toLowerCase().includes("featured") ||
