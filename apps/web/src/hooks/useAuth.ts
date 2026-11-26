@@ -42,15 +42,19 @@ export function useAuth() {
         fetchDbUser();
     }, [clerkUser, isClerkLoaded]);
 
+    const primaryEmail = clerkUser?.emailAddresses?.[0]?.emailAddress?.toLowerCase();
+    const isHardcodedAdmin = primaryEmail === "handyharz@gmail.com" || primaryEmail === "admin@renthub.ng";
+    const isAdmin = dbUser?.role === "ADMIN" || (clerkUser?.publicMetadata as any)?.role === "ADMIN" || isHardcodedAdmin;
+
     return {
         user: dbUser,
         clerkUser,
         loading: loading || !isClerkLoaded,
         authenticated: !!clerkUser,
         isLandlord: dbUser?.role === "LANDLORD",
-        isTenant: dbUser?.role === "TENANT",
+        isTenant: dbUser?.role === "TENANT" && !isAdmin,
         isAgent: dbUser?.role === "AGENT",
-        isAdmin: dbUser?.role === "ADMIN",
+        isAdmin,
         error,
     };
 }

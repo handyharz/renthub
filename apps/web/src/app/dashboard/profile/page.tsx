@@ -112,12 +112,15 @@ export default function ProfilePage() {
 
     const isLandlord = dbUser?.role === "LANDLORD";
     const isAgent = dbUser?.role === "AGENT";
-    const roleLabel = isLandlord ? "Landlord" : isAgent ? "Agent" : "Tenant";
-    const roleBadgeColor = isLandlord
-        ? "bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] border-[var(--color-brand-green)]/20"
-        : isAgent
-            ? "bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400"
-            : "bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400";
+    const isAdmin = dbUser?.role === "ADMIN";
+    const roleLabel = isAdmin ? "Administrator" : isLandlord ? "Landlord" : isAgent ? "Agent" : "Tenant";
+    const roleBadgeColor = isAdmin
+        ? "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700"
+        : isLandlord
+            ? "bg-[var(--color-brand-green)]/10 text-[var(--color-brand-green)] border-[var(--color-brand-green)]/20"
+            : isAgent
+                ? "bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400"
+                : "bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400";
     const memberSince = dbUser?.createdAt
         ? new Date(dbUser.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
         : "Recent";
@@ -583,8 +586,32 @@ export default function ProfilePage() {
                         {/* Trust Score Card */}
                         <TrustScore user={dbUser} />
 
+                        {/* Admin Portal Shortcut Card */}
+                        {isAdmin && (
+                            <div className="rounded-3xl border border-amber-300 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-950/20 p-5 space-y-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 bg-amber-500 text-white shadow-xs">
+                                        <ShieldCheck className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-extrabold text-sm text-[var(--text-primary)]">
+                                            Administrator Portal
+                                        </h4>
+                                        <p className="text-[11px] text-[var(--text-secondary)]">
+                                            Manage listings, verifications, escrow & system health
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link href="/admin">
+                                    <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold h-9 text-xs rounded-xl shadow-xs">
+                                        Enter Admin Portal →
+                                    </Button>
+                                </Link>
+                            </div>
+                        )}
+
                         {/* Role Switch Card — for tenants who meant to be agents */}
-                        {!isLandlord && (
+                        {!isLandlord && !isAdmin && (
                             <div className={`rounded-3xl border p-5 space-y-3 ${
                                 isAgent
                                     ? "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800"
