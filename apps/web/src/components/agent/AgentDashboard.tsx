@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
     Briefcase, MapPin, Star, CheckCircle2, Clock, XCircle,
     Building2, Phone, ChevronRight, AlertCircle, Plus,
     TrendingUp, Users, FileCheck, Wallet, Edit3, Send,
     ShieldCheck, ArrowRight, RefreshCw, X, Home,
-    Upload, FileText, ExternalLink, PlusSquare
+    Upload, FileText, ExternalLink, PlusSquare,
+    LayoutGrid, List, ChevronDown
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -794,47 +795,47 @@ function ProfileEditModal({
 
 // ─── DELEGATION CARD ──────────────────────────────────────────────────────────
 
-function DelegationCard({ delegation }: { delegation: AgentDelegation }) {
+function DelegationCard({ delegation, viewMode = "grid" }: { delegation: AgentDelegation; viewMode?: "grid" | "list" }) {
     const img = delegation.property.images?.[0]?.url;
     const isDraft = delegation.property.status === "DRAFT";
     const isLive = delegation.property.status === "AVAILABLE";
 
     return (
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
-            <div>
-                <div className="relative h-36 bg-[var(--bg-muted)]">
-                    {img ? (
-                        <Image src={img} alt={delegation.property.title} fill className="object-cover" />
+        <div className={`bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex ${viewMode === "list" ? "flex-col sm:flex-row items-stretch" : "flex-col justify-between"}`}>
+            <div className={`relative ${viewMode === "list" ? "h-48 sm:h-auto sm:w-64 md:w-72 shrink-0" : "h-36"} bg-[var(--bg-muted)] overflow-hidden`}>
+                {img ? (
+                    <Image src={img} alt={delegation.property.title} fill className="object-cover" />
+                ) : (
+                    <div className="flex items-center justify-center h-full">
+                        <Home className="h-10 w-10 text-[var(--text-muted)]" />
+                    </div>
+                )}
+                {/* Top Left: Property Live/Draft Status Badge */}
+                <div className="absolute top-2 left-2 flex gap-1 z-10">
+                    {isDraft ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/90 text-white backdrop-blur-sm shadow-sm flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5" /> Draft (Pending Review)
+                        </span>
+                    ) : isLive ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600/90 text-white backdrop-blur-sm shadow-sm flex items-center gap-1">
+                            <CheckCircle2 className="h-2.5 w-2.5" /> Published & Live
+                        </span>
                     ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <Home className="h-10 w-10 text-[var(--text-muted)]" />
-                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700/90 text-white backdrop-blur-sm shadow-sm">
+                            {delegation.property.status}
+                        </span>
                     )}
-                    {/* Top Left: Property Live/Draft Status Badge */}
-                    <div className="absolute top-2 left-2 flex gap-1">
-                        {isDraft ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/90 text-white backdrop-blur-sm shadow-sm flex items-center gap-1">
-                                <Clock className="h-2.5 w-2.5" /> Draft (Pending Review)
-                            </span>
-                        ) : isLive ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-600/90 text-white backdrop-blur-sm shadow-sm flex items-center gap-1">
-                                <CheckCircle2 className="h-2.5 w-2.5" /> Published & Live
-                            </span>
-                        ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-700/90 text-white backdrop-blur-sm shadow-sm">
-                                {delegation.property.status}
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Top Right: Delegation Status */}
-                    <div className="absolute top-2 right-2">
-                        <StatusBadge status={delegation.status} />
-                    </div>
                 </div>
 
-                <div className="p-4">
-                    <h3 className="font-bold text-[var(--text-primary)] text-sm line-clamp-1">{delegation.property.title}</h3>
+                {/* Top Right: Delegation Status */}
+                <div className="absolute top-2 right-2 z-10">
+                    <StatusBadge status={delegation.status} />
+                </div>
+            </div>
+
+            <div className={`p-4 flex-1 flex flex-col justify-between ${viewMode === "list" ? "sm:p-5" : ""}`}>
+                <div>
+                    <h3 className="font-bold text-[var(--text-primary)] text-sm sm:text-base line-clamp-1">{delegation.property.title}</h3>
                     <p className="text-xs text-[var(--text-muted)] mt-0.5 flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
                         {delegation.property.city}, {delegation.property.state}
@@ -890,14 +891,14 @@ function DelegationCard({ delegation }: { delegation: AgentDelegation }) {
                         </div>
                     )}
                 </div>
-            </div>
 
-            <div className="p-4 pt-0">
-                <Link href={`/properties/${delegation.property.id}`}>
-                    <Button variant="outline" size="sm" className="w-full text-xs h-8 border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)]">
-                        View Property <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
-                </Link>
+                <div className={`pt-3 mt-3 border-t border-[var(--border-color)] flex ${viewMode === "list" ? "justify-end" : ""}`}>
+                    <Link href={`/properties/${delegation.property.id}`} className={viewMode === "list" ? "w-full sm:w-auto" : "w-full"}>
+                        <Button variant="outline" size="sm" className={`text-xs h-8 border-[var(--border-color)] text-[var(--text-secondary)] hover:bg-[var(--bg-muted)] ${viewMode === "list" ? "w-full sm:w-auto px-4" : "w-full"}`}>
+                            View Property <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
+                    </Link>
+                </div>
             </div>
         </div>
     );
@@ -961,9 +962,39 @@ export default function AgentDashboard() {
         }
     };
 
+    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+    const [visibleCount, setVisibleCount] = useState(12);
+    const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+
     const filteredDelegations = delegations.filter(d =>
         activeFilter === "ALL" || d.status === activeFilter
     );
+
+    useEffect(() => {
+        setVisibleCount(12);
+    }, [activeFilter]);
+
+    const displayedDelegations = filteredDelegations.slice(0, visibleCount);
+    const hasMore = visibleCount < filteredDelegations.length;
+
+    // Auto-trigger infinite scroll
+    useEffect(() => {
+        if (!hasMore || loading) return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    setVisibleCount((prev) => prev + 12);
+                }
+            },
+            { rootMargin: "300px" }
+        );
+
+        const current = loadMoreSentinelRef.current;
+        if (current) observer.observe(current);
+        return () => {
+            if (current) observer.unobserve(current);
+        };
+    }, [hasMore, loading, filteredDelegations.length]);
 
     if (loading) {
         return (
@@ -1168,9 +1199,44 @@ export default function AgentDashboard() {
             {/* Delegations */}
             {profile?.status === "ACTIVE" && (
                 <div>
-                    <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                        <h3 className="text-lg font-bold text-[var(--text-primary)]">My Listings</h3>
-                        <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-lg font-bold text-[var(--text-primary)]">My Listings</h3>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                {filteredDelegations.length} {filteredDelegations.length === 1 ? "Listing" : "Listings"}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* View Switcher: Grid View (Default) vs List View */}
+                            <div className="flex items-center p-1 bg-[var(--bg-muted)] rounded-xl border border-[var(--border-color)] shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode("grid")}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                        viewMode === "grid"
+                                            ? "bg-[var(--bg-card)] text-blue-600 dark:text-blue-400 shadow-xs"
+                                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                    }`}
+                                    title="Grid View (Default)"
+                                >
+                                    <LayoutGrid className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Grid (Default)</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode("list")}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                        viewMode === "list"
+                                            ? "bg-[var(--bg-card)] text-blue-600 dark:text-blue-400 shadow-xs"
+                                            : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                                    }`}
+                                    title="List View"
+                                >
+                                    <List className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">List</span>
+                                </button>
+                            </div>
+
                             <Link href="/properties/new-for-client">
                                 <Button
                                     size="sm"
@@ -1227,11 +1293,33 @@ export default function AgentDashboard() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredDelegations.map(d => (
-                                <DelegationCard key={d.id} delegation={d} />
-                            ))}
-                        </div>
+                        <>
+                            <div className={viewMode === "grid" ? "grid sm:grid-cols-2 lg:grid-cols-3 gap-4" : "grid grid-cols-1 gap-4"}>
+                                {displayedDelegations.map(d => (
+                                    <DelegationCard key={d.id} delegation={d} viewMode={viewMode} />
+                                ))}
+                            </div>
+
+                            {/* Infinite Scroll Sentinel & Load More Action */}
+                            <div className="py-6 flex flex-col items-center justify-center gap-3 w-full">
+                                <div ref={loadMoreSentinelRef} className="h-2 w-full pointer-events-none" />
+                                {hasMore ? (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setVisibleCount((prev) => prev + 12)}
+                                        className="rounded-2xl px-6 h-11 border-[var(--border-color)] hover:border-blue-500 hover:bg-[var(--bg-muted)] text-xs font-extrabold text-[var(--text-primary)] gap-2 shadow-2xs cursor-pointer"
+                                    >
+                                        <ChevronDown className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        <span>Load More Listings ({filteredDelegations.length - displayedDelegations.length} remaining)</span>
+                                    </Button>
+                                ) : filteredDelegations.length >= 12 ? (
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)] py-2">
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                        <span>You have viewed all {filteredDelegations.length} listings</span>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </>
                     )}
                 </div>
             )}

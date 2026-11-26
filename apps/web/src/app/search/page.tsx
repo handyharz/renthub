@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense, useRef } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -26,6 +26,7 @@ import {
     Bed,
     Bath,
     RotateCcw,
+    RefreshCw,
     Building2,
     Flame,
     Calendar,
@@ -554,6 +555,9 @@ function SearchContent() {
     const searchParams = useSearchParams();
     const [properties, setProperties] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
     const [showFilters, setShowFilters] = useState(true);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
@@ -562,6 +566,9 @@ function SearchContent() {
     const [shouldAutoFit, setShouldAutoFit] = useState(true);
     const [mapKey, setMapKey] = useState(0);
     const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+    const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+    const PAGE_SIZE = 12;
 
     const placeholders = [
         'Try "3 bedroom flat in Lekki"',
@@ -606,36 +613,47 @@ function SearchContent() {
         setFilters(initialFilters);
     }, [searchParams]);
 
+    const buildSearchParams = (offset: number) => {
+        const params = new URLSearchParams();
+        if (filters.city) params.append("city", filters.city);
+        if (filters.state) params.append("state", filters.state);
+        if (filters.propertyType) params.append("propertyType", filters.propertyType);
+        if (filters.minPrice) params.append("minPrice", filters.minPrice.toString());
+        if (filters.maxPrice) params.append("maxPrice", filters.maxPrice.toString());
+        if (filters.bedrooms) params.append("bedrooms", filters.bedrooms.toString());
+        if (filters.bathrooms) params.append("bathrooms", filters.bathrooms.toString());
+        if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        if (filters.powerSupply) params.append("powerSupply", filters.powerSupply);
+        if (filters.waterSupply) params.append("waterSupply", filters.waterSupply);
+        if (filters.parkingSpaces) params.append("parkingSpaces", filters.parkingSpaces.toString());
+        if (filters.serviced !== undefined) params.append("serviced", filters.serviced.toString());
+        if (filters.furnished !== undefined) params.append("furnished", filters.furnished.toString());
+        if (filters.verified !== undefined) params.append("verified", filters.verified.toString());
+        if (filters.q) params.append("q", filters.q);
+        if (filters.neLat) params.append("neLat", filters.neLat.toString());
+        if (filters.neLng) params.append("neLng", filters.neLng.toString());
+        if (filters.swLat) params.append("swLat", filters.swLat.toString());
+        if (filters.swLng) params.append("swLng", filters.swLng.toString());
+        if (filters.amenities && filters.amenities.length > 0) params.append("amenities", filters.amenities.join(","));
+        if (filters.polygon) params.append("polygon", filters.polygon);
+
+        params.append("limit", PAGE_SIZE.toString());
+        params.append("offset", offset.toString());
+        return params;
+    };
+
     // Fetch properties whenever filters change
     useEffect(() => {
+        let isMounted = true;
         const fetchProperties = async () => {
             setLoading(true);
             try {
-                const params = new URLSearchParams();
-                if (filters.city) params.append("city", filters.city);
-                if (filters.state) params.append("state", filters.state);
-                if (filters.propertyType) params.append("propertyType", filters.propertyType);
-                if (filters.minPrice) params.append("minPrice", filters.minPrice.toString());
-                if (filters.maxPrice) params.append("maxPrice", filters.maxPrice.toString());
-                if (filters.bedrooms) params.append("bedrooms", filters.bedrooms.toString());
-                if (filters.bathrooms) params.append("bathrooms", filters.bathrooms.toString());
-                if (filters.sortBy) params.append("sortBy", filters.sortBy);
-                if (filters.powerSupply) params.append("powerSupply", filters.powerSupply);
-                if (filters.waterSupply) params.append("waterSupply", filters.waterSupply);
-                if (filters.parkingSpaces) params.append("parkingSpaces", filters.parkingSpaces.toString());
-                if (filters.serviced !== undefined) params.append("serviced", filters.serviced.toString());
-                if (filters.furnished !== undefined) params.append("furnished", filters.furnished.toString());
-                if (filters.verified !== undefined) params.append("verified", filters.verified.toString());
-                if (filters.q) params.append("q", filters.q);
-                if (filters.neLat) params.append("neLat", filters.neLat.toString());
-                if (filters.neLng) params.append("neLng", filters.neLng.toString());
-                if (filters.swLat) params.append("swLat", filters.swLat.toString());
-                if (filters.swLng) params.append("swLng", filters.swLng.toString());
-                if (filters.amenities && filters.amenities.length > 0) params.append("amenities", filters.amenities.join(","));
-                if (filters.polygon) params.append("polygon", filters.polygon);
-
+                const params = buildSearchParams(0);
                 const res = await api.get(`/properties?${params.toString()}`);
+                if (!isMounted) return;
+
                 const rawProperties = res.data?.data?.properties || [];
+                const total = res.data?.data?.total ?? rawProperties.length;
                 // Prioritize AVAILABLE listings first, sinking RENTED listings to the bottom
                 const sorted = [...rawProperties].sort((a: any, b: any) => {
                     const isRentedA = a.status === "RENTED" || a.status === "UNAVAILABLE";
@@ -645,17 +663,79 @@ function SearchContent() {
                     return 0;
                 });
                 setProperties(sorted);
+                setTotalCount(total);
+                setHasMore(sorted.length < total && rawProperties.length >= PAGE_SIZE);
             } catch (error) {
                 console.error("Failed to fetch properties:", error);
-                setProperties([]);
+                if (isMounted) {
+                    setProperties([]);
+                    setTotalCount(0);
+                    setHasMore(false);
+                }
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
         const timer = setTimeout(fetchProperties, 250);
-        return () => clearTimeout(timer);
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
     }, [filters]);
+
+    // Lazy load next batch (Infinite scroll)
+    const loadMoreProperties = async () => {
+        if (loadingMore || !hasMore || loading) return;
+        setLoadingMore(true);
+        try {
+            const nextOffset = properties.length;
+            const params = buildSearchParams(nextOffset);
+            const res = await api.get(`/properties?${params.toString()}`);
+            const newProps = res.data?.data?.properties || [];
+            const total = res.data?.data?.total ?? (properties.length + newProps.length);
+
+            // Deduplicate incoming properties
+            const existingIds = new Set(properties.map((p) => p.id));
+            const uniqueNewProps = newProps.filter((p: any) => !existingIds.has(p.id));
+
+            const combined = [...properties, ...uniqueNewProps];
+            const sorted = combined.sort((a: any, b: any) => {
+                const isRentedA = a.status === "RENTED" || a.status === "UNAVAILABLE";
+                const isRentedB = b.status === "RENTED" || b.status === "UNAVAILABLE";
+                if (isRentedA && !isRentedB) return 1;
+                if (!isRentedA && isRentedB) return -1;
+                return 0;
+            });
+
+            setProperties(sorted);
+            setTotalCount(total);
+            setHasMore(sorted.length < total && newProps.length >= PAGE_SIZE);
+        } catch (error) {
+            console.error("Failed to lazy load more properties:", error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
+
+    // Auto-trigger infinite scroll
+    useEffect(() => {
+        if (!hasMore || loading || loadingMore || viewMode === "map") return;
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    loadMoreProperties();
+                }
+            },
+            { rootMargin: "300px" }
+        );
+
+        const current = loadMoreSentinelRef.current;
+        if (current) observer.observe(current);
+        return () => {
+            if (current) observer.unobserve(current);
+        };
+    }, [hasMore, loading, loadingMore, properties.length, viewMode]);
 
     const updateFilter = (key: keyof SearchFilters, value: any) => {
         setShouldAutoFit(true);
@@ -876,7 +956,7 @@ function SearchContent() {
                                         "Searching homes..."
                                     ) : (
                                         <>
-                                            {properties.length} {properties.length === 1 ? "Home" : "Homes"} For Rent in {locationDisplay}
+                                            {(totalCount || properties.length)} {(totalCount || properties.length) === 1 ? "Home" : "Homes"} For Rent in {locationDisplay}
                                         </>
                                     )}
                                 </h1>
@@ -1017,27 +1097,54 @@ function SearchContent() {
                                 ))}
                             </div>
                         ) : properties.length > 0 ? (
-                            <div className={`grid gap-5 ${showFilters ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}>
-                                {properties.map((property) => (
-                                    <PropertyCard
-                                        key={property.id}
-                                        property={{
-                                            id: property.id,
-                                            title: property.title,
-                                            address: property.address,
-                                            price: property.pricePerYear,
-                                            bedrooms: property.bedrooms,
-                                            bathrooms: property.bathrooms,
-                                            image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
-                                            verified: property.verified,
-                                            featured: property.featured,
-                                            landlordVerified: property.landlord?.verified,
-                                            type: property.propertyType.replace(/_/g, " "),
-                                            status: property.status,
-                                        }}
-                                    />
-                                ))}
-                            </div>
+                            <>
+                                <div className={`grid gap-5 ${showFilters ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}>
+                                    {properties.map((property) => (
+                                        <PropertyCard
+                                            key={property.id}
+                                            property={{
+                                                id: property.id,
+                                                title: property.title,
+                                                address: property.address,
+                                                price: property.pricePerYear,
+                                                bedrooms: property.bedrooms,
+                                                bathrooms: property.bathrooms,
+                                                image: property.images?.[0]?.url || "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+                                                verified: property.verified,
+                                                featured: property.featured,
+                                                landlordVerified: property.landlord?.verified,
+                                                type: property.propertyType.replace(/_/g, " "),
+                                                status: property.status,
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Infinite Scroll / Lazy Loading Sentinel & Load More Action */}
+                                <div className="py-6 flex flex-col items-center justify-center gap-3 w-full">
+                                    <div ref={loadMoreSentinelRef} className="h-2 w-full pointer-events-none" />
+                                    {loadingMore ? (
+                                        <div className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-xs text-xs font-bold text-[var(--color-brand-green)]">
+                                            <RefreshCw className="h-4 w-4 animate-spin text-[var(--color-brand-green)]" />
+                                            <span>Lazy loading more verified homes...</span>
+                                        </div>
+                                    ) : hasMore ? (
+                                        <Button
+                                            variant="outline"
+                                            onClick={loadMoreProperties}
+                                            className="rounded-2xl px-6 h-11 border-[var(--border-color)] hover:border-[var(--color-brand-green)] hover:bg-[var(--bg-muted)] text-xs font-extrabold text-[var(--text-primary)] gap-2 shadow-2xs cursor-pointer"
+                                        >
+                                            <ChevronDown className="h-4 w-4 text-[var(--color-brand-green)]" />
+                                            <span>Load More Properties ({Math.max(0, totalCount - properties.length)} remaining)</span>
+                                        </Button>
+                                    ) : properties.length >= 12 ? (
+                                        <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)] py-2">
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                            <span>You have viewed all {properties.length} homes</span>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </>
                         ) : (
                             <div className="text-center py-16 px-6 bg-[var(--bg-card)] rounded-3xl border border-dashed border-[var(--border-color)]">
                                 <div className="h-16 w-16 rounded-2xl bg-[var(--bg-muted)] flex items-center justify-center mx-auto mb-4 text-[var(--text-muted)]">
