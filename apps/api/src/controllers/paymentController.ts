@@ -815,7 +815,12 @@ export class PaymentController {
                 // Deduct platform fee
                 const feeKobo = anchorService.nairaToKobo(transaction.platformFee);
                 if (transaction.anchorEscrowLedgerId && feeKobo > 0) {
-                    anchorService.deductPlatformFee(transaction.anchorEscrowLedgerId, feeKobo, transaction.id).catch(console.warn);
+                    anchorService.deductPlatformFee(
+                        transaction.anchorEscrowLedgerId,
+                        feeKobo,
+                        transaction.id,
+                        `RentHub Tenant Platform Fee 2pct - Ref ${transaction.id}`
+                    ).catch(console.warn);
                 }
             }
 
@@ -952,7 +957,7 @@ export class PaymentController {
                                 anchorService.getEscrowPoolId(),
                                 landlordFeeKobo,
                                 payout.transactionId,
-                                `RentHub Revenue Sweep: 2% Landlord Fee for tx=${payout.transactionId}`
+                                `RentHub Landlord Platform Fee 2pct - Ref ${payout.transactionId}`
                             ).catch((err) => {
                                 console.warn("[Anchor Webhook] Landlord fee revenue sweep failed:", err.message || err);
                             });
@@ -1139,7 +1144,8 @@ export class PaymentController {
                                     await anchorService.deductPlatformFee(
                                         transaction.anchorEscrowLedgerId,
                                         feeKobo,
-                                        transaction.id
+                                        transaction.id,
+                                        `RentHub Tenant Platform Fee 2pct - Ref ${transaction.id}`
                                     );
                                 } catch (feeErr) {
                                     console.warn("[Anchor Webhook] Platform fee transfer error:", feeErr);

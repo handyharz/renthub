@@ -331,7 +331,7 @@ export class AnchorService {
                         attributes: {
                             currency: "NGN",
                             amount: feeKobo,
-                            reason: description || `RentHub Revenue Sweep for tx=${transactionId}`,
+                            reason: description || `RentHub Tenant Platform Fee 2pct - Ref ${transactionId}`,
                             reference: idempotencyKey,
                         },
                         relationships: {
@@ -380,9 +380,15 @@ export class AnchorService {
     async deductPlatformFee(
         sourceLedgerId: string,
         feeKobo: number,
-        transactionId: string
+        transactionId: string,
+        description?: string
     ): Promise<AnchorCustomFeeResult> {
-        return this.sweepPlatformFee(sourceLedgerId, feeKobo, transactionId);
+        return this.sweepPlatformFee(
+            sourceLedgerId,
+            feeKobo,
+            transactionId,
+            description || `RentHub Tenant Platform Fee 2pct - Ref ${transactionId}`
+        );
     }
 
     /**
@@ -477,7 +483,7 @@ export class AnchorService {
                     attributes: {
                         amount: amountKobo,
                         currency: "NGN",
-                        reason: narration || `RentHub Escrow Release for tx=${transactionId}`,
+                        reason: narration || `RentHub Escrow Payout - Ref ${transactionId}`,
                         reference: idempotencyKey,
                     },
                     relationships: {
@@ -875,7 +881,7 @@ export class AnchorService {
                         this.escrowPoolId,
                         landlordFeeKobo,
                         transaction.id,
-                        `RentHub Revenue Sweep: 2% Landlord Fee for tx=${transaction.id}`
+                        `RentHub Landlord Platform Fee 2pct - Ref ${transaction.id}`
                     ).catch((sweepErr) => {
                         console.warn("[AnchorService] Landlord fee revenue sweep failed:", sweepErr.message || sweepErr);
                     });
